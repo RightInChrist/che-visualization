@@ -3,7 +3,8 @@ import {
     StandardMaterial, 
     Color3, 
     Texture, 
-    Vector3
+    Vector3,
+    DynamicTexture
 } from '@babylonjs/core';
 
 /**
@@ -37,8 +38,63 @@ export class GroundModel {
         groundMaterial.diffuseColor = new Color3(0.2, 0.5, 0.2);
         groundMaterial.specularColor = new Color3(0.1, 0.1, 0.1);
         
-        // Create grid texture
-        const gridTexture = new Texture('https://assets.babylonjs.com/textures/floor_grid.png', this.scene);
+        // Create a procedural grid texture instead of loading from URL
+        const textureSize = 1024;
+        const gridTexture = new DynamicTexture('gridTexture', textureSize, this.scene, true);
+        const textureContext = gridTexture.getContext();
+        
+        // Set background color
+        textureContext.fillStyle = "#366936";
+        textureContext.fillRect(0, 0, textureSize, textureSize);
+        
+        // Draw grid lines
+        textureContext.lineWidth = 2;
+        textureContext.strokeStyle = "#488A48";
+        
+        // Draw major grid lines
+        textureContext.lineWidth = 4;
+        const majorGridSize = textureSize / 10;
+        for (let i = 0; i <= 10; i++) {
+            const pos = i * majorGridSize;
+            
+            // Horizontal lines
+            textureContext.beginPath();
+            textureContext.moveTo(0, pos);
+            textureContext.lineTo(textureSize, pos);
+            textureContext.stroke();
+            
+            // Vertical lines
+            textureContext.beginPath();
+            textureContext.moveTo(pos, 0);
+            textureContext.lineTo(pos, textureSize);
+            textureContext.stroke();
+        }
+        
+        // Draw minor grid lines
+        textureContext.lineWidth = 1;
+        const minorGridSize = majorGridSize / 10;
+        for (let i = 0; i <= 100; i++) {
+            if (i % 10 === 0) continue; // Skip major lines
+            
+            const pos = i * minorGridSize;
+            
+            // Horizontal lines
+            textureContext.beginPath();
+            textureContext.moveTo(0, pos);
+            textureContext.lineTo(textureSize, pos);
+            textureContext.stroke();
+            
+            // Vertical lines
+            textureContext.beginPath();
+            textureContext.moveTo(pos, 0);
+            textureContext.lineTo(pos, textureSize);
+            textureContext.stroke();
+        }
+        
+        // Update the texture
+        gridTexture.update();
+        
+        // Set texture parameters
         gridTexture.uScale = this.size / 100;
         gridTexture.vScale = this.size / 100;
         groundMaterial.diffuseTexture = gridTexture;
