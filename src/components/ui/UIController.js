@@ -35,6 +35,9 @@ export class UIController {
                 document.body.classList.toggle('show-controls');
             }
         });
+        
+        // Initialize with camera info visible
+        this.cameraInfo.style.display = 'block';
     }
     
     /**

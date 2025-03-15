@@ -17,19 +17,23 @@
             height: 100%;
             touch-action: none;
         }
-        #uiOverlay {
+        /* UI Panel Container for all controls */
+        #controlPanels {
             position: absolute;
             top: 10px;
             left: 10px;
+            width: 350px; /* Consistent width for all control panels */
             color: white;
             font-family: Arial, sans-serif;
             pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
         #cameraInfo {
             background-color: rgba(0, 0, 0, 0.5);
             padding: 10px;
             border-radius: 5px;
-            margin-bottom: 10px;
         }
         #controlsInfo {
             background-color: rgba(0, 0, 0, 0.5);
@@ -40,23 +44,22 @@
         .show-controls #controlsInfo {
             display: block;
         }
-        /* Control button container */
+        /* Control button container - horizontal layout */
         #controlButtons {
             position: absolute;
             bottom: 20px;
             left: 20px;
             display: flex;
-            flex-direction: column; /* Stack buttons vertically */
+            flex-direction: row; /* Arrange buttons horizontally */
             gap: 10px;
             pointer-events: auto;
-            width: 50px; /* Set consistent width for the container */
         }
         /* Common button styles */
         .control-button {
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 100%; /* Use full width of container */
+            width: 40px; /* Fixed width for each button */
             height: 40px;
             border-radius: 20px;
             background-color: #00aaff;
@@ -121,6 +124,7 @@
             visibility: hidden;
             opacity: 0;
             transition: all 0.3s ease;
+            pointer-events: none; /* Make sure tooltip doesn't interfere with clicking */
         }
         .tooltip:hover::after {
             visibility: visible;
@@ -130,7 +134,9 @@
 </head>
 <body>
     <canvas id="renderCanvas"></canvas>
-    <div id="uiOverlay">
+    
+    <!-- All control panels container -->
+    <div id="controlPanels">
         <div id="cameraInfo">
             <div>Position: <span id="positionText">0, 0, 0</span></div>
             <div>Height: <span id="heightText">0m</span> (<span id="heightPercentText">0%</span>)</div>
@@ -148,6 +154,7 @@
             <p>Use the Scene Editor to toggle visibility of scene objects</p>
             <p>Objects are organized hierarchically, with pipes and panels nested under the SingleCUT model</p>
         </div>
+        <!-- Radius control panel will be added here by RadiusControls.js -->
     </div>
     
     <!-- Control buttons container -->

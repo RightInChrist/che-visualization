@@ -55,80 +55,53 @@ export class RadiusControls {
         try {
             console.log("Creating RadiusControls UI");
             
-            // Create AdvancedDynamicTexture for UI
-            this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("RadiusControlsUI", true, this.scene);
-            console.log("AdvancedDynamicTexture created:", this.advancedTexture);
+            // Find the control panels container
+            this.controlPanels = document.getElementById('controlPanels');
+            if (!this.controlPanels) {
+                console.error("Control panels container not found");
+                return;
+            }
             
-            // Create a panel to hold the controls
-            this.panel = new Rectangle();
-            this.panel.width = this.options.width + "px";
-            this.panel.height = this.options.height + "px";
-            this.panel.cornerRadius = 10;
-            this.panel.color = "#666666";
-            this.panel.thickness = 2;
-            this.panel.background = this.options.backgroundColor;
-            this.panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-            this.panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-            this.panel.left = this.options.position.x + "px";
-            this.panel.top = this.options.position.y + "px";
-            this.panel.zIndex = 10;
-            this.panel.isVisible = this.options.isVisible;
-            this.advancedTexture.addControl(this.panel);
-            console.log("Panel created and added to texture");
+            // Create HTML panel for radius controls
+            this.panel = document.createElement('div');
+            this.panel.id = 'radiusControlPanel';
+            this.panel.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+            this.panel.style.padding = '10px';
+            this.panel.style.borderRadius = '5px';
+            this.panel.style.color = this.options.textColor;
+            this.panel.style.display = this.options.isVisible ? 'block' : 'none';
+            this.panel.style.pointerEvents = 'auto'; // Enable pointer events for sliders
             
-            // Create a grid for organizing the controls
-            this.grid = new Grid();
-            this.grid.addRowDefinition(0.1, true); // Title
-            this.grid.addRowDefinition(0.4, true); // Seven CUTs radius
-            this.grid.addRowDefinition(0.4, true); // SingleCUT radius
-            this.grid.addRowDefinition(0.1, true); // Bottom spacing
-            this.grid.addColumnDefinition(1); // Full width
-            this.panel.addControl(this.grid);
+            // Create title
+            const title = document.createElement('h3');
+            title.textContent = 'Radius Controls';
+            title.style.margin = '0 0 10px 0';
+            this.panel.appendChild(title);
             
-            // Title text
-            const titleText = new TextBlock();
-            titleText.text = "Radius Controls";
-            titleText.color = this.options.textColor;
-            titleText.fontSize = 16;
-            titleText.height = "30px";
-            this.grid.addControl(titleText, 0, 0);
-            
-            // Create containers for each slider row
-            const outerRadiusRow = this.createSliderRow(
+            // Create outer radius control
+            const outerRadiusContainer = this.createSliderRow(
                 "Seven CUTs Radius",
                 this.options.outerRadiusMin,
                 this.options.outerRadiusMax,
                 this.currentOuterRadius,
                 (value) => this.onOuterRadiusChange(value)
             );
-            this.grid.addControl(outerRadiusRow, 1, 0);
+            this.panel.appendChild(outerRadiusContainer);
             
-            const singleCutRadiusRow = this.createSliderRow(
+            // Create SingleCUT radius control
+            const singleCutRadiusContainer = this.createSliderRow(
                 "SingleCUT Radius",
                 this.options.singleCutRadiusMin,
                 this.options.singleCutRadiusMax,
                 this.currentSingleCutRadius,
                 (value) => this.onSingleCutRadiusChange(value)
             );
-            this.grid.addControl(singleCutRadiusRow, 2, 0);
+            this.panel.appendChild(singleCutRadiusContainer);
             
-            // Create close button
-            const closeButton = Button.CreateSimpleButton("closeButton", "X");
-            closeButton.width = "24px";
-            closeButton.height = "24px";
-            closeButton.color = this.options.textColor;
-            closeButton.background = "#aa0000";
-            closeButton.cornerRadius = 12;
-            closeButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-            closeButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-            closeButton.top = "5px";
-            closeButton.left = "-5px";
-            closeButton.onPointerClickObservable.add(() => {
-                this.panel.isVisible = false;
-            });
-            this.panel.addControl(closeButton);
+            // Add the panel to the control panels container
+            this.controlPanels.appendChild(this.panel);
             
-            // Create HTML button for radius controls toggle (instead of using GUI)
+            // Create HTML button for radius controls toggle
             this.createHTMLToggleButton();
             
             console.log("RadiusControls UI created successfully");
@@ -144,58 +117,50 @@ export class RadiusControls {
      * @param {number} max - Maximum value
      * @param {number} initial - Initial value
      * @param {Function} onChange - Callback when value changes
-     * @returns {BABYLON.GUI.Container} - The container with the row controls
+     * @returns {HTMLElement} - The container with the row controls
      */
     createSliderRow(label, min, max, initial, onChange) {
-        const container = new Grid();
-        container.addRowDefinition(1);
-        container.addColumnDefinition(0.3); // Label
-        container.addColumnDefinition(0.5); // Slider
-        container.addColumnDefinition(0.2); // Value
+        // Create container
+        const container = document.createElement('div');
+        container.style.marginBottom = '15px';
         
-        // Label
-        const labelText = new TextBlock();
-        labelText.text = label;
-        labelText.color = this.options.textColor;
-        labelText.fontSize = 14;
-        labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-        labelText.paddingLeft = "10px";
-        container.addControl(labelText, 0, 0);
+        // Create label
+        const labelElement = document.createElement('div');
+        labelElement.textContent = label;
+        labelElement.style.marginBottom = '5px';
+        container.appendChild(labelElement);
         
-        // Slider
-        const slider = new Slider();
-        slider.minimum = min;
-        slider.maximum = max;
+        // Create slider row (slider and value display)
+        const sliderRow = document.createElement('div');
+        sliderRow.style.display = 'flex';
+        sliderRow.style.alignItems = 'center';
+        sliderRow.style.gap = '10px';
+        
+        // Create slider
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = min;
+        slider.max = max;
         slider.value = initial;
-        slider.height = "20px";
-        slider.width = "100%";
-        slider.color = this.options.sliderBarColor;
-        slider.background = this.options.backgroundColor;
-        slider.borderColor = this.options.sliderBarColor;
-        slider.isThumbCircle = true;
-        slider.thumbWidth = 15;
-        slider.barOffset = 0;
+        slider.style.flex = '1';
         
-        // Value display
-        const valueText = new TextBlock();
-        valueText.text = Math.round(initial).toString();
-        valueText.color = this.options.textColor;
-        valueText.fontSize = 14;
-        valueText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        valueText.width = "100%";
-        valueText.paddingRight = "10px";
-        container.addControl(valueText, 0, 2);
+        // Create value display
+        const valueDisplay = document.createElement('span');
+        valueDisplay.textContent = Math.round(initial);
+        valueDisplay.style.minWidth = '30px';
+        valueDisplay.style.textAlign = 'right';
         
-        // Add the slider to the container after creating value text
-        container.addControl(slider, 0, 1);
-        
-        // Set up the observable for value changes
-        slider.onValueChangedObservable.add((value) => {
-            // Update the value display
-            valueText.text = Math.round(value).toString();
-            // Call the change handler
+        // Add event listener
+        slider.addEventListener('input', (event) => {
+            const value = parseInt(event.target.value);
+            valueDisplay.textContent = value;
             onChange(value);
         });
+        
+        // Add elements to the row
+        sliderRow.appendChild(slider);
+        sliderRow.appendChild(valueDisplay);
+        container.appendChild(sliderRow);
         
         return container;
     }
@@ -232,21 +197,37 @@ export class RadiusControls {
      * Show the controls panel
      */
     show() {
-        this.panel.isVisible = true;
+        if (this.panel) {
+            this.panel.style.display = 'block';
+        }
     }
     
     /**
      * Hide the controls panel
      */
     hide() {
-        this.panel.isVisible = false;
+        if (this.panel) {
+            this.panel.style.display = 'none';
+        }
     }
     
     /**
      * Toggle the visibility of the controls panel
      */
     toggle() {
-        this.panel.isVisible = !this.panel.isVisible;
+        if (this.panel) {
+            const isVisible = this.panel.style.display !== 'none';
+            this.panel.style.display = isVisible ? 'none' : 'block';
+            
+            // Update button active state if available
+            if (this.htmlToggleButton) {
+                if (!isVisible) {
+                    this.htmlToggleButton.classList.add('active');
+                } else {
+                    this.htmlToggleButton.classList.remove('active');
+                }
+            }
+        }
     }
     
     /**
@@ -270,16 +251,16 @@ export class RadiusControls {
         
         // Add click event
         button.addEventListener('click', () => {
-            this.panel.isVisible = !this.panel.isVisible;
+            this.panel.style.display = this.panel.style.display === 'none' ? 'block' : 'none';
             
             // Update button active state
-            if (this.panel.isVisible) {
+            if (this.panel.style.display === 'block') {
                 button.classList.add('active');
             } else {
                 button.classList.remove('active');
             }
             
-            console.log("Panel visibility toggled:", this.panel.isVisible);
+            console.log("Panel visibility toggled:", this.panel.style.display === 'block');
         });
         
         // Add to container
