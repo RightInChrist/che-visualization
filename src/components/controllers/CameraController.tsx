@@ -22,16 +22,19 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
   const { camera, scene } = useThree();
   const [isLocked, setIsLocked] = useState(false);
   
-  // Track arrow key states
-  const arrowKeys = useRef({
+  // Track key states
+  const keyStates = useRef({
     ArrowUp: false,
     ArrowDown: false,
     ArrowLeft: false,
     ArrowRight: false,
+    ' ': false,     // Space key
+    'Shift': false  // Shift key
   });
   
-  // Movement speed with arrow keys (adjust as needed)
-  const ARROW_MOVE_SPEED = 2;
+  // Movement speed with keys (adjust as needed)
+  const MOVE_SPEED = 2;
+  const VERTICAL_SPEED = 2;
 
   // Make controller change accessible from outside via window object for UI controls
   useEffect(() => {
@@ -61,18 +64,30 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
     setIsLocked(isLocked);
   };
   
-  // Set up arrow key controls that work across all controller types
+  // Set up keyboard controls that work across all controller types
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        e.preventDefault(); // Prevent default browser scrolling
-        arrowKeys.current[e.key as keyof typeof arrowKeys.current] = true;
+      // Check for arrow keys
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        e.preventDefault(); // Prevent default browser scrolling/actions
+        keyStates.current[e.key as keyof typeof keyStates.current] = true;
+      }
+      
+      // Check for shift key
+      if (e.key === 'Shift') {
+        keyStates.current['Shift'] = true;
       }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
-        arrowKeys.current[e.key as keyof typeof arrowKeys.current] = false;
+      // Check for arrow keys
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+        keyStates.current[e.key as keyof typeof keyStates.current] = false;
+      }
+      
+      // Check for shift key
+      if (e.key === 'Shift') {
+        keyStates.current['Shift'] = false;
       }
     };
     
@@ -85,9 +100,9 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
     };
   }, []);
   
-  // Camera movement with arrow keys
+  // Camera movement with keyboard
   useFrame(() => {
-    // Only apply arrow key movement when not using pointer lock controls
+    // Only apply keyboard movement when not using pointer lock controls
     // or if pointer lock controls are locked
     if (!((activeController === 'firstPerson' || activeController === 'flight') && !isLocked)) {
       const moveDirection = new Vector3(0, 0, 0);
@@ -95,38 +110,48 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
       // Get camera's forward direction (z-axis)
       const forward = new Vector3(0, 0, -1);
       forward.applyQuaternion(camera.quaternion);
-      forward.y = 0; // Keep movement horizontal
+      forward.y = 0; // Keep horizontal movement horizontal
       forward.normalize();
       
       // Get camera's right direction (x-axis)
       const right = new Vector3(1, 0, 0);
       right.applyQuaternion(camera.quaternion);
-      right.y = 0; // Keep movement horizontal
+      right.y = 0; // Keep horizontal movement horizontal
       right.normalize();
       
       // Apply movement based on arrow keys
-      if (arrowKeys.current.ArrowUp) {
-        moveDirection.add(forward.clone().multiplyScalar(ARROW_MOVE_SPEED));
+      if (keyStates.current.ArrowUp) {
+        moveDirection.add(forward.clone().multiplyScalar(MOVE_SPEED));
       }
-      if (arrowKeys.current.ArrowDown) {
-        moveDirection.add(forward.clone().multiplyScalar(-ARROW_MOVE_SPEED));
+      if (keyStates.current.ArrowDown) {
+        moveDirection.add(forward.clone().multiplyScalar(-MOVE_SPEED));
       }
-      if (arrowKeys.current.ArrowRight) {
-        moveDirection.add(right.clone().multiplyScalar(ARROW_MOVE_SPEED));
+      if (keyStates.current.ArrowRight) {
+        moveDirection.add(right.clone().multiplyScalar(MOVE_SPEED));
       }
-      if (arrowKeys.current.ArrowLeft) {
-        moveDirection.add(right.clone().multiplyScalar(-ARROW_MOVE_SPEED));
+      if (keyStates.current.ArrowLeft) {
+        moveDirection.add(right.clone().multiplyScalar(-MOVE_SPEED));
+      }
+      
+      // Apply vertical movement based on space and shift keys
+      if (keyStates.current[' ']) {
+        moveDirection.y += VERTICAL_SPEED; // Move up with spacebar
+      }
+      if (keyStates.current['Shift']) {
+        moveDirection.y -= VERTICAL_SPEED; // Move down with shift
       }
       
       // Apply the movement to the camera position
       if (moveDirection.length() > 0) {
         camera.position.add(moveDirection);
         
-        // If using OrbitControls, update the target position to follow the camera
+        // If using OrbitControls, update the target position to follow the camera horizontally
         if (activeController === 'orbit' && orbitRef.current) {
           // @ts-ignore - OrbitControls has a target property
           const target = orbitRef.current.target;
-          target.add(moveDirection);
+          // Only update X and Z for target (not Y) to maintain proper orbital behavior
+          target.x += moveDirection.x;
+          target.z += moveDirection.z;
         }
       }
     }
