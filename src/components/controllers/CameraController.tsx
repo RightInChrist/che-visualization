@@ -29,7 +29,15 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
     ArrowLeft: false,
     ArrowRight: false,
     ' ': false,     // Space key
-    'Shift': false  // Shift key
+    'Shift': false, // Shift key
+    'w': false,     // WASD keys
+    'a': false,
+    's': false,
+    'd': false,
+    'W': false,     // Capital WASD keys
+    'A': false,
+    'S': false,
+    'D': false
   });
   
   // Movement speed with keys (adjust as needed)
@@ -70,8 +78,9 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
   // Set up keyboard controls that work across all controller types
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for arrow keys and space
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+      // Check for arrow keys, WASD and space
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 
+           'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
         e.preventDefault(); // Prevent default browser scrolling/actions
         keyStates.current[e.key as keyof typeof keyStates.current] = true;
       }
@@ -83,8 +92,9 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
-      // Check for arrow keys and space
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+      // Check for arrow keys, WASD and space
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 
+           'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
         keyStates.current[e.key as keyof typeof keyStates.current] = false;
       }
       
@@ -105,78 +115,75 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
   
   // Camera movement with keyboard
   useFrame(() => {
-    // Only apply keyboard movement when not using pointer lock controls
-    // or if pointer lock controls are locked
-    if (!((activeController === 'firstPerson' || activeController === 'flight') && !isLocked)) {
-      const moveDirection = new Vector3(0, 0, 0);
+    // Always apply keyboard movement, regardless of controller type
+    const moveDirection = new Vector3(0, 0, 0);
+    
+    // Get camera's forward direction (z-axis)
+    const forward = new Vector3(0, 0, -1);
+    forward.applyQuaternion(camera.quaternion);
+    forward.y = 0; // Keep horizontal movement horizontal
+    forward.normalize();
+    
+    // Get camera's right direction (x-axis)
+    const right = new Vector3(1, 0, 0);
+    right.applyQuaternion(camera.quaternion);
+    right.y = 0; // Keep horizontal movement horizontal
+    right.normalize();
+    
+    // Apply movement based on arrow keys AND WASD
+    if (keyStates.current.ArrowUp || keyStates.current.w || keyStates.current.W) {
+      moveDirection.add(forward.clone().multiplyScalar(MOVE_SPEED));
+    }
+    if (keyStates.current.ArrowDown || keyStates.current.s || keyStates.current.S) {
+      moveDirection.add(forward.clone().multiplyScalar(-MOVE_SPEED));
+    }
+    if (keyStates.current.ArrowRight || keyStates.current.d || keyStates.current.D) {
+      moveDirection.add(right.clone().multiplyScalar(MOVE_SPEED));
+    }
+    if (keyStates.current.ArrowLeft || keyStates.current.a || keyStates.current.A) {
+      moveDirection.add(right.clone().multiplyScalar(-MOVE_SPEED));
+    }
+    
+    // Apply vertical movement based on space and shift keys
+    let verticalMovement = 0;
+    if (keyStates.current[' ']) {
+      verticalMovement += VERTICAL_SPEED; // Move up with spacebar
+    }
+    if (keyStates.current['Shift']) {
+      verticalMovement -= VERTICAL_SPEED; // Move down with shift
+    }
+    
+    // Check for minimum height constraint
+    if (camera.position.y + verticalMovement < MIN_HEIGHT && verticalMovement < 0) {
+      // If would go below minimum height, set to exactly minimum height
+      verticalMovement = MIN_HEIGHT - camera.position.y;
+    }
+    
+    moveDirection.y += verticalMovement;
+    
+    // Apply the movement to the camera position
+    if (moveDirection.length() > 0) {
+      camera.position.add(moveDirection);
       
-      // Get camera's forward direction (z-axis)
-      const forward = new Vector3(0, 0, -1);
-      forward.applyQuaternion(camera.quaternion);
-      forward.y = 0; // Keep horizontal movement horizontal
-      forward.normalize();
-      
-      // Get camera's right direction (x-axis)
-      const right = new Vector3(1, 0, 0);
-      right.applyQuaternion(camera.quaternion);
-      right.y = 0; // Keep horizontal movement horizontal
-      right.normalize();
-      
-      // Apply movement based on arrow keys
-      if (keyStates.current.ArrowUp) {
-        moveDirection.add(forward.clone().multiplyScalar(MOVE_SPEED));
-      }
-      if (keyStates.current.ArrowDown) {
-        moveDirection.add(forward.clone().multiplyScalar(-MOVE_SPEED));
-      }
-      if (keyStates.current.ArrowRight) {
-        moveDirection.add(right.clone().multiplyScalar(MOVE_SPEED));
-      }
-      if (keyStates.current.ArrowLeft) {
-        moveDirection.add(right.clone().multiplyScalar(-MOVE_SPEED));
-      }
-      
-      // Apply vertical movement based on space and shift keys
-      let verticalMovement = 0;
-      if (keyStates.current[' ']) {
-        verticalMovement += VERTICAL_SPEED; // Move up with spacebar
-      }
-      if (keyStates.current['Shift']) {
-        verticalMovement -= VERTICAL_SPEED; // Move down with shift
-      }
-      
-      // Check for minimum height constraint
-      if (camera.position.y + verticalMovement < MIN_HEIGHT && verticalMovement < 0) {
-        // If would go below minimum height, set to exactly minimum height
-        verticalMovement = MIN_HEIGHT - camera.position.y;
-      }
-      
-      moveDirection.y += verticalMovement;
-      
-      // Apply the movement to the camera position
-      if (moveDirection.length() > 0) {
-        camera.position.add(moveDirection);
+      // Special handling for orbit controls to maintain proper view of the scene
+      if (activeController === 'orbit' && orbitRef.current) {
+        // @ts-ignore - OrbitControls has a target property
+        const target = orbitRef.current.target;
         
-        // Special handling for orbit controls to maintain proper view of the scene
-        if (activeController === 'orbit' && orbitRef.current) {
-          // @ts-ignore - OrbitControls has a target property
-          const target = orbitRef.current.target;
-          
-          // For orbit camera, we want to:
-          // 1. Always update X and Z to follow the camera horizontally
-          // 2. For Y, we want to adjust it based on camera height to maintain a reasonable viewing angle
-          target.x += moveDirection.x;
-          target.z += moveDirection.z;
-          
-          // Dynamic target height adjustment:
-          // - At lower camera heights, keep target near ground
-          // - At higher heights, gradually raise target to look more downward
-          const cameraHeight = camera.position.y;
-          const targetHeight = Math.max(0, cameraHeight * 0.3 - 5);
-          
-          // Smoothly interpolate the target height toward the desired value
-          target.y += (targetHeight - target.y) * 0.1;
-        }
+        // For orbit camera, we want to:
+        // 1. Always update X and Z to follow the camera horizontally
+        // 2. For Y, we want to adjust it based on camera height to maintain a reasonable viewing angle
+        target.x += moveDirection.x;
+        target.z += moveDirection.z;
+        
+        // Dynamic target height adjustment:
+        // - At lower camera heights, keep target near ground
+        // - At higher heights, gradually raise target to look more downward
+        const cameraHeight = camera.position.y;
+        const targetHeight = Math.max(0, cameraHeight * 0.3 - 5);
+        
+        // Smoothly interpolate the target height toward the desired value
+        target.y += (targetHeight - target.y) * 0.1;
       }
     }
   });
@@ -211,44 +218,22 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
         />
       )}
       
-      {/* First person controls - WASD + mouse movement */}
+      {/* First person controls - mouse movement only for looking */}
       {activeController === 'firstPerson' && (
-        <>
-          <PointerLockControls 
-            ref={pointerLockRef}
-            onLock={() => handleLockChange(true)}
-            onUnlock={() => handleLockChange(false)}
-          />
-          {isLocked && (
-            <FirstPersonControls
-              ref={firstPersonRef}
-              makeDefault
-              lookSpeed={0.1}
-              movementSpeed={50}
-              lookVertical={true}
-            />
-          )}
-        </>
+        <PointerLockControls 
+          ref={pointerLockRef}
+          onLock={() => handleLockChange(true)}
+          onUnlock={() => handleLockChange(false)}
+        />
       )}
       
       {/* Flight controls - more free movement in all directions */}
       {activeController === 'flight' && (
-        <>
-          <PointerLockControls 
-            ref={pointerLockRef}
-            onLock={() => handleLockChange(true)}
-            onUnlock={() => handleLockChange(false)}
-          />
-          {isLocked && (
-            <FlyControls
-              ref={flyRef}
-              makeDefault
-              movementSpeed={100}
-              rollSpeed={0.5}
-              dragToLook={false}
-            />
-          )}
-        </>
+        <PointerLockControls 
+          ref={pointerLockRef}
+          onLock={() => handleLockChange(true)}
+          onUnlock={() => handleLockChange(false)}
+        />
       )}
     </>
   );
