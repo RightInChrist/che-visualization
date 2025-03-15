@@ -15,6 +15,7 @@ export class LayerOneStarModel extends CompositeModel {
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
             rotationAngle: 60, // Default rotation angle in degrees
+            singleCutRotationAngle: 0, // Default rotation angle for all SingleCUT models
         };
 
         // Call parent constructor
@@ -56,13 +57,10 @@ export class LayerOneStarModel extends CompositeModel {
             
             this.debugLog(`Creating SingleCUT #${i+1} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
             
-            // Default rotation angle for SingleCUTs - using a fixed value for all SingleCUTs
-            const singleCutRotationAngle = 0; // No rotation for Star model's SingleCUTs
-            
             // Create a SingleCUT with individual panels
             const singleCut = new SingleCutModel(this.scene, position, {
                 radius: this.options.singleCutRadius,
-                rotationAngle: singleCutRotationAngle,
+                rotationAngle: this.options.singleCutRotationAngle,
                 parent: this // Reference to parent for reverse lookup
             });
             
@@ -368,5 +366,50 @@ export class LayerOneStarModel extends CompositeModel {
     getChildren() {
         // Use the parent class implementation from CompositeModel
         return super.getChildren();
+    }
+    
+    /**
+     * Update the rotation of all child SingleCUT models to the same value
+     * @param {number} rotationAngleDegrees - New rotation angle in degrees for all SingleCUTs
+     */
+    updateAllSingleCutRotations(rotationAngleDegrees) {
+        this.debugLog(`Setting all SingleCUT rotations to ${rotationAngleDegrees} degrees`);
+        
+        // Store this as the common SingleCUT rotation value
+        this.options.singleCutRotationAngle = rotationAngleDegrees;
+        
+        // Update all child SingleCUT models
+        if (this.childModels && this.childModels.length > 0) {
+            this.childModels.forEach(singleCut => {
+                if (singleCut && typeof singleCut.updateRotation === 'function') {
+                    singleCut.updateRotation(rotationAngleDegrees);
+                }
+            });
+        }
+    }
+    
+    /**
+     * Get the default SingleCut rotation value for all child models
+     * @returns {number} - Default SingleCut rotation in degrees
+     */
+    getDefaultSingleCutRotation() {
+        // Use the stored value or fall back to a default
+        return this.options.singleCutRotationAngle || 0;
+    }
+    
+    /**
+     * Get the min SingleCut rotation value
+     * @returns {number} - Minimum SingleCut rotation in degrees
+     */
+    getMinSingleCutRotation() {
+        return 0;
+    }
+    
+    /**
+     * Get the max SingleCut rotation value
+     * @returns {number} - Maximum SingleCut rotation in degrees
+     */
+    getMaxSingleCutRotation() {
+        return 360;
     }
 } 

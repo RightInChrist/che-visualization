@@ -182,6 +182,32 @@ export class RotationControls {
             modelSection.appendChild(zRotationContainer);
         }
         
+        // Add a separator before SingleCut rotation control if available
+        if (config.singleCutRotation) {
+            const separator = document.createElement('div');
+            separator.style.margin = '15px 0';
+            separator.style.borderTop = '1px dashed #444';
+            modelSection.appendChild(separator);
+            
+            // Create SingleCut rotation control for all child SingleCUT models
+            console.log(`Creating All SingleCUTs rotation slider for ${config.name} with value ${config.singleCutRotation.default}`);
+            
+            const singleCutRotationContainer = this.createSliderRow(
+                "All SingleCUTs Rotation",
+                config.singleCutRotation.min,
+                config.singleCutRotation.max,
+                config.singleCutRotation.default,
+                (value) => this.onSingleCutRotationChange(config.model, value)
+            );
+            
+            // Style the SingleCut rotation control differently
+            singleCutRotationContainer.style.paddingLeft = '10px';
+            singleCutRotationContainer.style.borderLeft = '3px solid #3399ff';
+            singleCutRotationContainer.style.backgroundColor = 'rgba(51, 153, 255, 0.1)';
+            
+            modelSection.appendChild(singleCutRotationContainer);
+        }
+        
         // Recursively create sections for children if enabled
         if (this.options.recursive && config.children && config.children.length > 0) {
             const childrenContainer = document.createElement('div');
@@ -449,6 +475,22 @@ export class RotationControls {
         // Update the model's rotation
         if (model && typeof model.updateRotation === 'function') {
             model.updateRotation(axis, valueInRadians);
+        }
+    }
+    
+    /**
+     * Handle changes to all SingleCut rotations for a parent model
+     * @param {Object} model - The parent model
+     * @param {number} value - New rotation value in degrees for all SingleCUTs
+     */
+    onSingleCutRotationChange(model, value) {
+        if (!model) return;
+        
+        console.log(`All SingleCUTs rotation change: model=${model.constructor.name}, value=${value}`);
+        
+        // Call the updateAllSingleCutRotations method if available
+        if (typeof model.updateAllSingleCutRotations === 'function') {
+            model.updateAllSingleCutRotations(value);
         }
     }
     

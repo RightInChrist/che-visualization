@@ -19,6 +19,14 @@ export class ModelConfigHelper {
             typeof model.getMaxRotation === 'function'
         );
         
+        // Check if this model has SingleCut rotation control
+        const hasSingleCutRotationControl = (
+            typeof model.updateAllSingleCutRotations === 'function' &&
+            typeof model.getDefaultSingleCutRotation === 'function' &&
+            typeof model.getMinSingleCutRotation === 'function' &&
+            typeof model.getMaxSingleCutRotation === 'function'
+        );
+        
         // Check if this is a SingleCutModel
         const isSingleCutModel = model.constructor && model.constructor.name === 'SingleCutModel';
         
@@ -49,6 +57,12 @@ export class ModelConfigHelper {
                 min: this.getDefaultValue(model, 'getMinRotation', 0),
                 max: this.getDefaultValue(model, 'getMaxRotation', 360)
             },
+            // Add SingleCut rotation configuration if available
+            singleCutRotation: hasSingleCutRotationControl ? {
+                default: this.getDefaultValue(model, 'getDefaultSingleCutRotation', 0),
+                min: this.getDefaultValue(model, 'getMinSingleCutRotation', 0),
+                max: this.getDefaultValue(model, 'getMaxSingleCutRotation', 360)
+            } : undefined,
             children: []
         };
         
