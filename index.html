@@ -46,15 +46,17 @@
             bottom: 20px;
             left: 20px;
             display: flex;
+            flex-direction: column; /* Stack buttons vertically */
             gap: 10px;
             pointer-events: auto;
+            width: 50px; /* Set consistent width for the container */
         }
         /* Common button styles */
         .control-button {
             display: flex;
             justify-content: center;
             align-items: center;
-            width: 40px;
+            width: 100%; /* Use full width of container */
             height: 40px;
             border-radius: 20px;
             background-color: #00aaff;
