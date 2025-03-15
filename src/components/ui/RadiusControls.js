@@ -128,22 +128,8 @@ export class RadiusControls {
             });
             this.panel.addControl(closeButton);
             
-            // Create toggle button in the corner of the screen
-            this.toggleButton = Button.CreateSimpleButton("toggleRadiusControls", "R");
-            this.toggleButton.width = "40px";
-            this.toggleButton.height = "40px";
-            this.toggleButton.color = this.options.textColor;
-            this.toggleButton.background = this.options.sliderThumbColor;
-            this.toggleButton.cornerRadius = 20;
-            this.toggleButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
-            this.toggleButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
-            this.toggleButton.top = "-20px";
-            this.toggleButton.left = "-20px";
-            this.toggleButton.onPointerClickObservable.add(() => {
-                this.panel.isVisible = !this.panel.isVisible;
-                console.log("Panel visibility toggled:", this.panel.isVisible);
-            });
-            this.advancedTexture.addControl(this.toggleButton);
+            // Create HTML button for radius controls toggle (instead of using GUI)
+            this.createHTMLToggleButton();
             
             console.log("RadiusControls UI created successfully");
         } catch (error) {
@@ -264,11 +250,50 @@ export class RadiusControls {
     }
     
     /**
+     * Create an HTML toggle button that matches the style of other UI controls
+     */
+    createHTMLToggleButton() {
+        // Find the control buttons container
+        const controlButtonsContainer = document.getElementById('controlButtons');
+        if (!controlButtonsContainer) {
+            console.error("Control buttons container not found");
+            return;
+        }
+        
+        // Create button element
+        const button = document.createElement('button');
+        button.id = 'radiusToggle';
+        button.className = 'control-button tooltip';
+        button.setAttribute('data-tooltip', 'Toggle Radius Controls');
+        button.textContent = 'R';
+        button.style.backgroundColor = '#9C27B0'; // Purple
+        
+        // Add click event
+        button.addEventListener('click', () => {
+            this.panel.isVisible = !this.panel.isVisible;
+            console.log("Panel visibility toggled:", this.panel.isVisible);
+        });
+        
+        // Add to container
+        controlButtonsContainer.appendChild(button);
+        
+        // Store reference
+        this.htmlToggleButton = button;
+        
+        console.log("HTML toggle button created for radius controls");
+    }
+    
+    /**
      * Dispose of all resources
      */
     dispose() {
         if (this.advancedTexture) {
             this.advancedTexture.dispose();
+        }
+        
+        // Remove HTML button if it exists
+        if (this.htmlToggleButton && this.htmlToggleButton.parentNode) {
+            this.htmlToggleButton.parentNode.removeChild(this.htmlToggleButton);
         }
     }
 } 

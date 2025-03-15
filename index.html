@@ -40,17 +40,84 @@
         .show-controls #controlsInfo {
             display: block;
         }
-        #modeToggle {
+        /* Control button container */
+        #controlButtons {
             position: absolute;
             bottom: 20px;
             left: 20px;
+            display: flex;
+            gap: 10px;
             pointer-events: auto;
         }
+        /* Common button styles */
+        .control-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background-color: #00aaff;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+        .control-button:hover {
+            background-color: #0088cc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .control-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+        }
+        /* Remove old positioning */
+        #modeToggle {
+            position: static;
+        }
         #debugToggle {
+            position: static;
+        }
+        /* Button specific colors */
+        #modeToggle {
+            background-color: #4CAF50; /* Green */
+        }
+        #modeToggle:hover {
+            background-color: #3e8e41;
+        }
+        #debugToggle {
+            background-color: #F44336; /* Red */
+        }
+        #debugToggle:hover {
+            background-color: #d32f2f;
+        }
+        /* Button tooltips */
+        .tooltip {
+            position: relative;
+        }
+        .tooltip::after {
+            content: attr(data-tooltip);
             position: absolute;
-            bottom: 20px;
-            right: 20px;
-            pointer-events: auto;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            white-space: nowrap;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .tooltip:hover::after {
+            visibility: visible;
+            opacity: 1;
         }
     </style>
 </head>
@@ -75,8 +142,14 @@
             <p>Objects are organized hierarchically, with pipes and panels nested under the SingleCUT model</p>
         </div>
     </div>
-    <button id="modeToggle">Toggle Camera Mode</button>
-    <button id="debugToggle">Toggle Debug Info</button>
+    
+    <!-- Control buttons container -->
+    <div id="controlButtons">
+        <button id="modeToggle" class="control-button tooltip" data-tooltip="Toggle Camera Mode">C</button>
+        <button id="debugToggle" class="control-button tooltip" data-tooltip="Toggle Debug Info">D</button>
+        <!-- The radius control button will be added in RadiusControls.js -->
+    </div>
+    
     <script type="module" src="/src/main.js"></script>
 </body>
 </html> 
