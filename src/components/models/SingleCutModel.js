@@ -22,6 +22,7 @@ export class SingleCutModel {
             panelDepth: 2, // meters
             panelColor: new Color3(0.2, 0.6, 0.8),
             radius: 150, // Distance from center to each pipe in hexagonal pattern
+            debug: true, // Enable/disable debug logging
             ...options
         };
         
@@ -31,6 +32,25 @@ export class SingleCutModel {
         
         // Create models
         this.createModels();
+    }
+    
+    /**
+     * Helper function to convert radians to degrees and format for display
+     * @param {number} radians - Angle in radians
+     * @returns {string} - Formatted string with angle in degrees
+     */
+    radToDeg(radians) {
+        return (radians * 180 / Math.PI).toFixed(2) + '°';
+    }
+    
+    /**
+     * Debug logging function that only logs when debug is enabled
+     * @param {...any} args - Arguments to log
+     */
+    debugLog(...args) {
+        if (this.options.debug) {
+            console.log('[SingleCUT Debug]', ...args);
+        }
     }
     
     /**
@@ -58,6 +78,10 @@ export class SingleCutModel {
         const pipeRadius = this.options.pipeRadius || 0.5;
         const width = distance - (2 * pipeRadius);
         
+        // Debug log
+        this.debugLog(`Panel Transform: Position (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}), ` + 
+                      `Rotation Y: ${this.radToDeg(angle)}, Width: ${width.toFixed(2)}`);
+        
         return { position, rotation, width };
     }
     
@@ -80,6 +104,9 @@ export class SingleCutModel {
         // Apply base rotation from the angle between pipes
         panel.rootNode.rotation = rotation;
         
+        this.debugLog(`Panel ${index+1}: Initial rotation: ` +
+                     `X: ${this.radToDeg(rotation.x)}, Y: ${this.radToDeg(rotation.y)}, Z: ${this.radToDeg(rotation.z)}`);
+        
         // Apply panel-specific rotations
         // For most panels, a 90-degree rotation works
         // For panels 2 and 5, we need a different rotation
@@ -87,14 +114,22 @@ export class SingleCutModel {
         
         if (index === 1 || index === 4) { // Panels 2 and 5
             rotationAngle = 0; // No additional rotation for these panels
-            console.log(`Panel ${index+1}: No additional rotation (panel 2 or 5)`);
+            this.debugLog(`Panel ${index+1}: No additional rotation (panel 2 or 5)`);
         } else {
             rotationAngle = Math.PI/2; // 90-degree rotation for other panels
-            console.log(`Panel ${index+1}: Applied 90-degree rotation`);
+            this.debugLog(`Panel ${index+1}: Adding ${this.radToDeg(rotationAngle)} rotation`);
         }
         
         // Apply the rotation
         panel.rootNode.rotate(BABYLON.Axis.Y, rotationAngle, BABYLON.Space.LOCAL);
+        
+        // Log final rotation
+        const finalRotation = panel.rootNode.rotation;
+        this.debugLog(`Panel ${index+1}: Final position and rotation: ` +
+                     `Position (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}), ` +
+                     `Rotation X: ${this.radToDeg(finalRotation.x)}, ` + 
+                     `Y: ${this.radToDeg(finalRotation.y)}, ` + 
+                     `Z: ${this.radToDeg(finalRotation.z)}`);
         
         // Set parent to the root node
         panel.rootNode.parent = this.rootNode;
@@ -110,6 +145,9 @@ export class SingleCutModel {
         this.pipes = [];
         this.panels = [];
         
+        // Debug log
+        this.debugLog('Creating SingleCUT model with', this.options.pipesCount, 'pipes and panels');
+        
         // Create an array to store pipe positions for panel connections
         const pipePositions = [];
         
@@ -122,6 +160,8 @@ export class SingleCutModel {
             // Create pipe at current position
             const position = new BABYLON.Vector3(x, 0, z);
             pipePositions.push(position); // Store position for panel creation
+            
+            this.debugLog(`Pipe ${i+1}: Position (${x.toFixed(2)}, 0, ${z.toFixed(2)}), Angle: ${this.radToDeg(angle)}`);
             
             const pipe = new PipeModel(this.scene, position, {
                 height: this.options.pipeHeight,
@@ -137,6 +177,8 @@ export class SingleCutModel {
         for (let i = 0; i < this.options.pipesCount; i++) {
             const nextIndex = (i + 1) % this.options.pipesCount;
             
+            this.debugLog(`Creating panel ${i+1} between pipes ${i+1} and ${nextIndex+1}`);
+            
             // Get the transform for the panel (position, rotation, width)
             const transform = this.calculatePanelTransform(
                 pipePositions[i], 
@@ -148,6 +190,8 @@ export class SingleCutModel {
             
             this.panels.push(panel);
         }
+        
+        this.debugLog('SingleCUT model creation complete');
     }
     
     /**
