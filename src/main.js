@@ -47,8 +47,8 @@ class CHEVisualization {
             
             // Create Seven CUTs model
             this.cheModel = new SevenCutsModel(scene, new Vector3(0, 0, 0), {
-                outerRadius: 500,
-                singleCutRadius: 150
+                outerRadius: 42,
+                singleCutRadius: 21
             });
             
             // Add shadows to all pipes and panels from all SingleCUTs
@@ -108,7 +108,7 @@ class CHEVisualization {
             // Create the radius controls
             const radiusControls = new RadiusControls(scene, this.cheModel, {
                 position: { x: 10, y: 10 },
-                isVisible: true
+                isVisible: false
             });
             
             // Register before render callback for LOD updates

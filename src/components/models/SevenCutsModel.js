@@ -13,7 +13,7 @@ export class SevenCutsModel extends CompositeModel {
             outerRadius: 42, // Distance from center to outer SingleCUTs (2x SingleCutModel radius for proper spacing)
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging,
-            showRadiusLines: true, // Whether to show radius lines on the ground
+            showRadiusLines: false, // Whether to show radius lines on the ground (changed to false by default)
         };
 
         // Call parent constructor
