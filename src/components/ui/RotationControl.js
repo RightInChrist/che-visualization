@@ -60,7 +60,8 @@ export class RotationControl {
                 model: this.models[0],
                 name: this.options.modelName,
                 currentRotation: this.options.rotationDefault,
-                singleCuts: this.getSingleCutsFromModel(this.models[0])
+                hasSingleCuts: this.hasSingleCuts(this.models[0]),
+                singleCutsRotation: this.options.singleCutRotationDefault
             });
             return;
         }
@@ -83,48 +84,37 @@ export class RotationControl {
                 currentRotation = model.options.rotationAngle;
             }
             
-            // Get SingleCUT models if this is a composite model
-            const singleCuts = this.getSingleCutsFromModel(model);
+            // Check if this model has SingleCUT models
+            const hasSingleCuts = this.hasSingleCuts(model);
+            
+            // Get current rotation for SingleCUTs if any (use the first one's value)
+            let singleCutsRotation = this.options.singleCutRotationDefault;
+            if (hasSingleCuts && model.singleCuts && model.singleCuts.length > 0 && 
+                model.singleCuts[0].options && model.singleCuts[0].options.rotationAngle !== undefined) {
+                singleCutsRotation = model.singleCuts[0].options.rotationAngle;
+            }
             
             this.modelConfigs.push({
                 model,
                 name: modelName,
                 currentRotation,
-                singleCuts
+                hasSingleCuts,
+                singleCutsRotation
             });
         });
     }
     
     /**
-     * Get SingleCUT models from a composite model if available
-     * @param {Object} model - The model to check for SingleCUT models
-     * @returns {Array} - Array of SingleCUT models with their configurations
+     * Check if a model has SingleCUT models
+     * @param {Object} model - The model to check
+     * @returns {boolean} - Whether the model has SingleCUT models
      */
-    getSingleCutsFromModel(model) {
+    hasSingleCuts(model) {
         if (!this.options.includeSingleCuts) {
-            return [];
+            return false;
         }
         
-        const singleCuts = [];
-        
-        // Check if the model has SingleCUT models
-        if (model && model.singleCuts && Array.isArray(model.singleCuts) && model.singleCuts.length > 0) {
-            model.singleCuts.forEach((singleCut, index) => {
-                // Get current rotation for this SingleCUT if available
-                let currentRotation = this.options.singleCutRotationDefault;
-                if (singleCut.options && singleCut.options.rotationAngle !== undefined) {
-                    currentRotation = singleCut.options.rotationAngle;
-                }
-                
-                singleCuts.push({
-                    model: singleCut,
-                    name: `SingleCUT #${index + 1}`,
-                    currentRotation
-                });
-            });
-        }
-        
-        return singleCuts;
+        return !!(model && model.singleCuts && Array.isArray(model.singleCuts) && model.singleCuts.length > 0);
     }
     
     /**
@@ -181,41 +171,33 @@ export class RotationControl {
                     this.options.rotationMin,
                     this.options.rotationMax,
                     config.currentRotation,
-                    (value) => this.onRotationChange(modelIndex, null, value)
+                    (value) => this.onRotationChange(modelIndex, 'model', value)
                 );
                 modelSection.appendChild(rotationContainer);
                 
-                // Create rotation controls for SingleCUT models if available
-                if (config.singleCuts && config.singleCuts.length > 0) {
+                // Create a single rotation control for all SingleCUT models if available
+                if (config.hasSingleCuts) {
                     // Create a separator
                     const separator = document.createElement('div');
                     separator.style.margin = '15px 0';
                     separator.style.borderTop = '1px dashed #444';
                     modelSection.appendChild(separator);
                     
-                    // Create a subheader for SingleCUT rotations
-                    const singleCutHeader = document.createElement('h5');
-                    singleCutHeader.textContent = 'SingleCUT Rotations';
-                    singleCutHeader.style.margin = '10px 0';
-                    modelSection.appendChild(singleCutHeader);
+                    // Create a single rotation control for all SingleCUTs
+                    const singleCutRotationContainer = this.createSliderRow(
+                        `All SingleCUTs Rotation`,
+                        this.options.singleCutRotationMin,
+                        this.options.singleCutRotationMax,
+                        config.singleCutsRotation,
+                        (value) => this.onRotationChange(modelIndex, 'singleCuts', value)
+                    );
                     
-                    // Create rotation controls for each SingleCUT
-                    config.singleCuts.forEach((singleCut, singleCutIndex) => {
-                        const singleCutRotationContainer = this.createSliderRow(
-                            singleCut.name,
-                            this.options.singleCutRotationMin,
-                            this.options.singleCutRotationMax,
-                            singleCut.currentRotation,
-                            (value) => this.onRotationChange(modelIndex, singleCutIndex, value)
-                        );
-                        
-                        // Add smaller indentation to show it's a child control
-                        singleCutRotationContainer.style.paddingLeft = '10px';
-                        singleCutRotationContainer.style.borderLeft = '2px solid #555';
-                        singleCutRotationContainer.style.marginBottom = '10px';
-                        
-                        modelSection.appendChild(singleCutRotationContainer);
-                    });
+                    // Add smaller indentation to show it's a child control
+                    singleCutRotationContainer.style.paddingLeft = '10px';
+                    singleCutRotationContainer.style.borderLeft = '2px solid #555';
+                    singleCutRotationContainer.style.marginBottom = '10px';
+                    
+                    modelSection.appendChild(singleCutRotationContainer);
                 }
                 
                 // Add model section to the panel
@@ -374,12 +356,12 @@ export class RotationControl {
     }
     
     /**
-     * Handle changes to rotation angle for a specific model or SingleCUT
+     * Handle changes to rotation angle for a model or all of its SingleCUTs
      * @param {number} modelIndex - Index of the model to update
-     * @param {number|null} singleCutIndex - Index of the SingleCUT to update, or null for main model
+     * @param {string} target - Target to update ('model' or 'singleCuts')
      * @param {number} value - New rotation angle value in degrees
      */
-    onRotationChange(modelIndex, singleCutIndex, value) {
+    onRotationChange(modelIndex, target, value) {
         if (modelIndex < 0 || modelIndex >= this.modelConfigs.length) {
             console.error(`Invalid model index: ${modelIndex}`);
             return;
@@ -387,7 +369,7 @@ export class RotationControl {
         
         const config = this.modelConfigs[modelIndex];
         
-        if (singleCutIndex === null) {
+        if (target === 'model') {
             // Update main model rotation
             config.currentRotation = value;
             
@@ -396,18 +378,21 @@ export class RotationControl {
             if (model && typeof model.updateRotation === 'function') {
                 model.updateRotation(value);
             }
-        } else if (config.singleCuts && singleCutIndex >= 0 && singleCutIndex < config.singleCuts.length) {
-            // Update SingleCUT rotation
-            const singleCutConfig = config.singleCuts[singleCutIndex];
-            singleCutConfig.currentRotation = value;
+        } else if (target === 'singleCuts') {
+            // Update rotation for all SingleCUTs
+            config.singleCutsRotation = value;
             
-            // Update the SingleCUT rotation
-            const singleCut = singleCutConfig.model;
-            if (singleCut && typeof singleCut.updateRotation === 'function') {
-                singleCut.updateRotation(value);
+            // Update all SingleCUT rotations
+            const model = config.model;
+            if (model && model.singleCuts && Array.isArray(model.singleCuts)) {
+                model.singleCuts.forEach(singleCut => {
+                    if (singleCut && typeof singleCut.updateRotation === 'function') {
+                        singleCut.updateRotation(value);
+                    }
+                });
             }
         } else {
-            console.error(`Invalid SingleCUT index: ${singleCutIndex}`);
+            console.error(`Invalid rotation target: ${target}`);
         }
     }
     
