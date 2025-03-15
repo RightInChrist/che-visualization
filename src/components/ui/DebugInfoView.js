@@ -7,29 +7,30 @@ export class DebugInfoView {
      * @param {Object} options - Additional options
      */
     constructor(options = {}) {
-        // Default options
-        const defaultOptions = {
-            isVisible: false,        // Initially hidden to avoid clutter
-            maxLogEntries: 50,       // Maximum log entries to keep
-            textColor: "#ffffff",    // Text color
-            backgroundColor: "rgba(0, 0, 0, 0.7)", // Background color
-            position: "top",         // Position in the control panels stack
-            cameraController: null   // Reference to the camera controller
-        };
+        this.options = Object.assign({
+            maxLogEntries: 100,        // Maximum number of log entries to keep
+            isVisible: false,          // Whether the panel is initially visible
+            position: 'top-right',     // Position of the panel: 'top-right', 'top-left', 'bottom-right', 'bottom-left'
+            width: '350px',            // Width of the panel
+            zIndex: 1000,              // z-index of the panel
+        }, options);
         
-        this.options = { ...defaultOptions, ...options };
+        // Store main app and controllers if provided
+        this.app = options.app || null;
+        this.cameraController = options.cameraController || null;
         
-        // Store reference to camera controller if provided
-        this.cameraController = this.options.cameraController;
-        
-        // Initialize logs array
+        // Initialize log storage
         this.logs = [];
-        
-        // Create the UI for the debug info view
         this.createUI();
+        this.createLogContainer();
+        this.createShowButton();
+        this.createTabs();
         
-        // Set up console log interception
-        this.setupConsoleInterception();
+        // Intercept console methods
+        this.interceptConsoleMethods();
+        
+        // Set up a timer to update the camera info regularly
+        this.setupCameraUpdateInterval();
         
         console.log("DebugInfoView initialized");
     }
@@ -147,12 +148,15 @@ export class DebugInfoView {
         tabContainer.style.marginBottom = '10px';
         tabContainer.style.borderBottom = '1px solid rgba(255, 255, 255, 0.3)';
         
-        // Define tabs
+        // Define tabs - reorder to put Camera first
         const tabs = [
+            { id: 'camera', label: 'Camera' },
             { id: 'log', label: 'Console' },
-            { id: 'models', label: 'Models' },
-            { id: 'camera', label: 'Camera' }
+            { id: 'models', label: 'Models' }
         ];
+        
+        // Store the default tab
+        const defaultTab = 'camera';
         
         // Create tab buttons
         tabs.forEach(tab => {
@@ -161,8 +165,8 @@ export class DebugInfoView {
             tabButton.dataset.tabId = tab.id;
             tabButton.style.background = 'transparent';
             tabButton.style.border = 'none';
-            tabButton.style.borderBottom = tab.id === 'log' ? '2px solid #4CAF50' : '2px solid transparent';
-            tabButton.style.color = tab.id === 'log' ? '#4CAF50' : '#aaa';
+            tabButton.style.borderBottom = tab.id === defaultTab ? '2px solid #4CAF50' : '2px solid transparent';
+            tabButton.style.color = tab.id === defaultTab ? '#4CAF50' : '#aaa';
             tabButton.style.padding = '5px 10px';
             tabButton.style.cursor = 'pointer';
             tabButton.style.margin = '0 5px 0 0';
@@ -189,7 +193,7 @@ export class DebugInfoView {
         tabs.forEach(tab => {
             const contentDiv = document.createElement('div');
             contentDiv.id = `tab-content-${tab.id}`;
-            contentDiv.style.display = tab.id === 'log' ? 'block' : 'none';
+            contentDiv.style.display = tab.id === defaultTab ? 'block' : 'none';
             contentDiv.style.overflow = 'auto';
             contentDiv.style.maxHeight = '20vh';
             
@@ -199,6 +203,9 @@ export class DebugInfoView {
         
         // Move log container into the log tab
         this.tabContents.log.appendChild(this.logContainer);
+        
+        // Immediately initialize the camera tab content
+        this.updateCameraInfo();
     }
     
     /**
@@ -287,37 +294,42 @@ export class DebugInfoView {
                 const camera = scene.activeCamera;
                 const pos = camera.position;
                 
-                // Basic camera information
+                // Format compact camera information header
                 let cameraHTML = `
-                    <div style="margin-bottom: 5px;">
-                        <strong>Position:</strong> 
-                        <span>X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}</span>
+                    <div style="background-color: rgba(50, 50, 50, 0.6); padding: 8px; border-radius: 4px; margin-bottom: 10px;">
+                        <div style="font-size: 16px; font-weight: bold; margin-bottom: 5px;">
+                            ${this.cameraController ? this.cameraController.currentMode : camera.getClassName()}
+                        </div>
+                        <div>
+                            Position: X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}
+                        </div>
+                `;
+                
+                // Add height information if available
+                if (this.cameraController) {
+                    const height = pos.y;
+                    const maxPipeHeight = this.cameraController.maxPipeHeight || 1000;
+                    const heightPercent = (height / maxPipeHeight) * 100;
+                    
+                    cameraHTML += `
+                        <div>
+                            Height: ${height.toFixed(1)}m (${heightPercent.toFixed(1)}%)
+                        </div>
                     </div>
-                    <div style="margin-bottom: 5px;">
-                        <strong>Type:</strong> 
-                        <span>${camera.getClassName()}</span>
-                    </div>
-                    <div style="margin-bottom: 5px;">
-                        <strong>FOV:</strong> 
-                        <span>${(camera.fov * 180 / Math.PI).toFixed(1)}°</span>
-                    </div>
+                    `;
+                } else {
+                    cameraHTML += `</div>`;
+                }
+                
+                // Add additional camera details in separate section
+                cameraHTML += `
+                    <div style="margin-top: 15px; border-top: 1px solid rgba(255, 255, 255, 0.2); padding-top: 10px;">
+                        <h4 style="margin-top: 0; margin-bottom: 10px; color: #aaa; font-size: 14px;">Additional Camera Details</h4>
                 `;
                 
                 // Add camera controller specific information if available
                 if (this.cameraController) {
-                    const height = pos.y;
-                    const maxPipeHeight = this.cameraController.maxPipeHeight || 1000; // Default if not defined
-                    const heightPercent = (height / maxPipeHeight) * 100;
-                    
                     cameraHTML += `
-                        <div style="margin-bottom: 5px;">
-                            <strong>Camera Mode:</strong> 
-                            <span>${this.cameraController.currentMode || "Unknown"}</span>
-                        </div>
-                        <div style="margin-bottom: 5px;">
-                            <strong>Height:</strong> 
-                            <span>${height.toFixed(1)}m (${heightPercent.toFixed(1)}%)</span>
-                        </div>
                         <div style="margin-bottom: 5px;">
                             <strong>Min Ground Height:</strong> 
                             <span>${this.cameraController.minHeightAboveGround || 0}m</span>
@@ -331,13 +343,30 @@ export class DebugInfoView {
                             <span>${this.cameraController.showCollisionRays ? "Yes" : "No"}</span>
                         </div>
                     `;
-                    
-                    // Add toggle button for collision rays
+                }
+                
+                // Add camera type information
+                cameraHTML += `
+                    <div style="margin-bottom: 5px;">
+                        <strong>Camera Type:</strong> 
+                        <span>${camera.getClassName()}</span>
+                    </div>
+                    <div style="margin-bottom: 5px;">
+                        <strong>FOV:</strong> 
+                        <span>${(camera.fov * 180 / Math.PI).toFixed(1)}°</span>
+                    </div>
+                </div>
+                `;
+                
+                cameraInfo.innerHTML = cameraHTML;
+                
+                // Add toggle button for collision rays if camera controller is available
+                if (this.cameraController) {
                     const toggleRaysButton = document.createElement('button');
                     toggleRaysButton.textContent = this.cameraController.showCollisionRays ? 
                         "Hide Collision Rays" : "Show Collision Rays";
-                    toggleRaysButton.style.padding = '4px 8px';
-                    toggleRaysButton.style.margin = '5px 0';
+                    toggleRaysButton.style.padding = '6px 12px';
+                    toggleRaysButton.style.margin = '10px 0';
                     toggleRaysButton.style.backgroundColor = '#555';
                     toggleRaysButton.style.color = '#fff';
                     toggleRaysButton.style.border = 'none';
@@ -349,30 +378,22 @@ export class DebugInfoView {
                             this.cameraController.showCollisionRays = !this.cameraController.showCollisionRays;
                             toggleRaysButton.textContent = this.cameraController.showCollisionRays ? 
                                 "Hide Collision Rays" : "Show Collision Rays";
+                            
+                            // Update button style based on state
+                            toggleRaysButton.style.backgroundColor = this.cameraController.showCollisionRays ? 
+                                '#4CAF50' : '#555';
                         }
                     });
                     
-                    cameraInfo.innerHTML = cameraHTML;
                     cameraInfo.appendChild(toggleRaysButton);
-                } else {
-                    cameraInfo.innerHTML = cameraHTML;
-                    cameraInfo.innerHTML += `<div style="color: #FFCC00;">Camera controller not available for additional details</div>`;
                 }
             } else {
-                cameraInfo.innerHTML = `<div style="color: #ffaa55;">No active camera found</div>`;
+                cameraInfo.innerHTML = `<div style="color: #ffaa55; padding: 10px;">No active camera found</div>`;
             }
         } catch (error) {
-            cameraInfo.innerHTML = `<div style="color: #ff5555;">Error getting camera info: ${error.message}</div>`;
+            cameraInfo.innerHTML = `<div style="color: #ff5555; padding: 10px;">Error getting camera info: ${error.message}</div>`;
         }
         
-        // Add auto-refresh note
-        const refreshNote = document.createElement('div');
-        refreshNote.style.fontStyle = 'italic';
-        refreshNote.style.color = '#aaa';
-        refreshNote.style.marginTop = '15px';
-        refreshNote.textContent = 'Camera information updates automatically';
-        
-        cameraInfo.appendChild(refreshNote);
         this.tabContents.camera.appendChild(cameraInfo);
     }
     
@@ -381,7 +402,7 @@ export class DebugInfoView {
      */
     setupConsoleInterception() {
         // Store original console methods
-        this.originalConsole = {
+        this.originalConsoleMethods = {
             log: console.log,
             warn: console.warn,
             error: console.error,
@@ -390,25 +411,25 @@ export class DebugInfoView {
         
         // Override console.log
         console.log = (...args) => {
-            this.originalConsole.log(...args);
+            this.originalConsoleMethods.log(...args);
             this.addLogEntry('log', args);
         };
         
         // Override console.warn
         console.warn = (...args) => {
-            this.originalConsole.warn(...args);
+            this.originalConsoleMethods.warn(...args);
             this.addLogEntry('warn', args);
         };
         
         // Override console.error
         console.error = (...args) => {
-            this.originalConsole.error(...args);
+            this.originalConsoleMethods.error(...args);
             this.addLogEntry('error', args);
         };
         
         // Override console.info
         console.info = (...args) => {
-            this.originalConsole.info(...args);
+            this.originalConsoleMethods.info(...args);
             this.addLogEntry('info', args);
         };
     }
@@ -573,7 +594,7 @@ export class DebugInfoView {
             console.log("Added debug info toggle button to container");
             
             // Store button reference
-            this.toggleButton = button;
+            this.showButton = button;
         } catch (error) {
             console.error("Error creating debug info toggle button:", error);
         }
@@ -592,8 +613,8 @@ export class DebugInfoView {
             this.panel.style.display = newVisibility ? 'block' : 'none';
         }
         
-        if (this.toggleButton) {
-            this.toggleButton.style.backgroundColor = newVisibility ? '#4CAF50' : '#444444';
+        if (this.showButton) {
+            this.showButton.style.backgroundColor = newVisibility ? '#4CAF50' : '#444444';
         }
         
         // Store the visibility state
@@ -650,11 +671,10 @@ export class DebugInfoView {
      */
     dispose() {
         // Restore original console methods
-        if (this.originalConsole) {
-            console.log = this.originalConsole.log;
-            console.warn = this.originalConsole.warn;
-            console.error = this.originalConsole.error;
-            console.info = this.originalConsole.info;
+        if (this.originalConsoleMethods) {
+            Object.keys(this.originalConsoleMethods).forEach(method => {
+                console[method] = this.originalConsoleMethods[method];
+            });
         }
         
         // Remove panel
@@ -663,8 +683,52 @@ export class DebugInfoView {
         }
         
         // Remove button
-        if (this.toggleButton && this.toggleButton.parentNode) {
-            this.toggleButton.parentNode.removeChild(this.toggleButton);
+        if (this.showButton && this.showButton.parentNode) {
+            this.showButton.parentNode.removeChild(this.showButton);
+        }
+    }
+    
+    /**
+     * Set up a timer to update camera information regularly
+     */
+    setupCameraUpdateInterval() {
+        // Update camera info immediately
+        this.updateCameraInfo();
+        
+        // Set up an interval to update camera information every 500ms
+        this.cameraUpdateInterval = setInterval(() => {
+            if (this.panel && this.panel.style.display !== 'none' && 
+                this.tabContents && this.tabContents.camera && 
+                this.tabContents.camera.style.display !== 'none') {
+                this.updateCameraInfo();
+            }
+        }, 500);
+    }
+    
+    /**
+     * Clean up any intervals or listeners when destroying the view
+     */
+    destroy() {
+        // Clear the camera update interval if it exists
+        if (this.cameraUpdateInterval) {
+            clearInterval(this.cameraUpdateInterval);
+        }
+        
+        // Remove the panel from the DOM if it exists
+        if (this.panel && this.panel.parentNode) {
+            this.panel.parentNode.removeChild(this.panel);
+        }
+        
+        // Remove the show button from the DOM if it exists
+        if (this.showButton && this.showButton.parentNode) {
+            this.showButton.parentNode.removeChild(this.showButton);
+        }
+        
+        // Restore original console methods
+        if (this.originalConsoleMethods) {
+            Object.keys(this.originalConsoleMethods).forEach(method => {
+                console[method] = this.originalConsoleMethods[method];
+            });
         }
     }
 } 
