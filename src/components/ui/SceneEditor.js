@@ -95,6 +95,11 @@ export class SceneEditor {
     toggle() {
         this.isVisible = !this.isVisible;
         this.container.style.display = this.isVisible ? 'block' : 'none';
+        
+        // If showing, update immediately
+        if (this.isVisible) {
+            this.renderSceneObjects();
+        }
     }
     
     /**
@@ -109,94 +114,22 @@ export class SceneEditor {
         objectTree.style.listStyleType = 'none';
         objectTree.style.paddingLeft = '0';
         
-        // Add scene objects to the tree
-        this.addTopLevelObjectsToTree(objectTree, this.sceneObjects);
+        // Process each top-level object
+        Object.entries(this.sceneObjects).forEach(([key, value]) => {
+            const objectItem = this.createObjectListItem(key, value);
+            objectTree.appendChild(objectItem);
+        });
         
         this.objectListContainer.appendChild(objectTree);
     }
     
     /**
-     * Add top-level objects to the tree structure
-     * @param {HTMLElement} parentElement - Parent DOM element to add to
-     * @param {Object} objects - Objects to add to the tree
-     */
-    addTopLevelObjectsToTree(parentElement, objects) {
-        // This method ensures we only add top-level objects and let the nested structure
-        // be handled by addObjectsToTree
-        Object.entries(objects).forEach(([key, value]) => {
-            const objectItem = document.createElement('li');
-            objectItem.style.margin = '5px 0';
-            
-            const objectContainer = document.createElement('div');
-            objectContainer.style.display = 'flex';
-            objectContainer.style.alignItems = 'center';
-            
-            // Create visibility toggle checkbox for items with a mesh
-            if (value.mesh || (value.pipeMesh || value.panelMesh)) {
-                const toggleCheckbox = document.createElement('input');
-                toggleCheckbox.type = 'checkbox';
-                toggleCheckbox.checked = value.mesh ? value.mesh.isVisible : 
-                                        (value.pipeMesh ? value.pipeMesh.isVisible : 
-                                        (value.panelMesh ? value.panelMesh.isVisible : true));
-                                        
-                toggleCheckbox.addEventListener('change', (e) => {
-                    this.toggleObjectVisibility(value, e.target.checked);
-                });
-                
-                objectContainer.appendChild(toggleCheckbox);
-            } else {
-                // Add a spacer for consistent alignment
-                const spacer = document.createElement('div');
-                spacer.style.width = '20px';
-                objectContainer.appendChild(spacer);
-            }
-            
-            // Create object label
-            const objectLabel = document.createElement('span');
-            objectLabel.textContent = key;
-            objectLabel.style.marginLeft = '5px';
-            objectContainer.appendChild(objectLabel);
-            
-            objectItem.appendChild(objectContainer);
-            
-            // Add child objects if this is a container
-            if (value.pipes || value.panels || value.children) {
-                const childList = document.createElement('ul');
-                childList.style.listStyleType = 'none';
-                childList.style.paddingLeft = '20px';
-                
-                // Handle pipes and panels for SingleCUT model
-                if (key === 'Single CUT #1') {
-                    if (value.pipes) {
-                        value.pipes.forEach((pipe, index) => {
-                            this.addNestedObject(childList, `Pipe #${index + 1}`, pipe);
-                        });
-                    }
-                    
-                    if (value.panels) {
-                        value.panels.forEach((panel, index) => {
-                            this.addNestedObject(childList, `Panel #${index + 1}`, panel);
-                        });
-                    }
-                } else if (key === 'Lights' || key === 'Camera Controller' || value.children) {
-                    // Handle any other nested objects
-                    this.addNestedChildren(childList, value);
-                }
-                
-                objectItem.appendChild(childList);
-            }
-            
-            parentElement.appendChild(objectItem);
-        });
-    }
-    
-    /**
-     * Add a nested object to the tree
-     * @param {HTMLElement} parentElement - Parent element to add to
+     * Creates a list item for an object in the scene hierarchy
      * @param {string} name - Name of the object
-     * @param {Object} object - The object to add
+     * @param {Object} object - The object to create a list item for
+     * @returns {HTMLElement} - The created list item
      */
-    addNestedObject(parentElement, name, object) {
+    createObjectListItem(name, object) {
         const objectItem = document.createElement('li');
         objectItem.style.margin = '5px 0';
         
@@ -204,25 +137,27 @@ export class SceneEditor {
         objectContainer.style.display = 'flex';
         objectContainer.style.alignItems = 'center';
         
-        // Create visibility toggle checkbox
-        if (object.mesh || object.pipeMesh || object.panelMesh) {
-            const toggleCheckbox = document.createElement('input');
-            toggleCheckbox.type = 'checkbox';
-            toggleCheckbox.checked = object.mesh ? object.mesh.isVisible : 
-                                    (object.pipeMesh ? object.pipeMesh.isVisible : 
-                                    (object.panelMesh ? object.panelMesh.isVisible : true));
-                                    
-            toggleCheckbox.addEventListener('change', (e) => {
-                this.toggleObjectVisibility(object, e.target.checked);
-            });
-            
-            objectContainer.appendChild(toggleCheckbox);
+        // Create visibility toggle checkbox - ALL objects should have one
+        const toggleCheckbox = document.createElement('input');
+        toggleCheckbox.type = 'checkbox';
+        
+        // Determine if the object should be checked based on its type
+        if (object.mesh) {
+            toggleCheckbox.checked = object.mesh.isVisible;
+        } else if (object.pipeMesh) {
+            toggleCheckbox.checked = object.pipeMesh.isVisible;
+        } else if (object.panelMesh) {
+            toggleCheckbox.checked = object.panelMesh.isVisible;
         } else {
-            // Add a spacer for consistent alignment
-            const spacer = document.createElement('div');
-            spacer.style.width = '20px';
-            objectContainer.appendChild(spacer);
+            // Default to checked for container objects
+            toggleCheckbox.checked = true;
         }
+        
+        toggleCheckbox.addEventListener('change', (e) => {
+            this.toggleObjectVisibility(object, e.target.checked);
+        });
+        
+        objectContainer.appendChild(toggleCheckbox);
         
         // Create object label
         const objectLabel = document.createElement('span');
@@ -231,27 +166,59 @@ export class SceneEditor {
         objectContainer.appendChild(objectLabel);
         
         objectItem.appendChild(objectContainer);
-        parentElement.appendChild(objectItem);
+        
+        // Create child list for objects with children
+        if (this.hasChildren(object)) {
+            const childList = document.createElement('ul');
+            childList.style.listStyleType = 'none';
+            childList.style.paddingLeft = '20px';
+            
+            // Add nested objects
+            this.addNestedObjects(childList, object);
+            
+            objectItem.appendChild(childList);
+        }
+        
+        return objectItem;
     }
     
     /**
-     * Add nested children to the tree from objects with 'children' property
-     * @param {HTMLElement} parentElement - Parent element to add to
-     * @param {Object} parentObject - Object containing the children
+     * Check if an object has children
+     * @param {Object} object - The object to check
+     * @returns {boolean} - Whether the object has children
      */
-    addNestedChildren(parentElement, parentObject) {
-        // For objects like Lights that have named properties
+    hasChildren(object) {
+        return object.pipes || object.panels || object.children;
+    }
+    
+    /**
+     * Add nested objects to a parent element
+     * @param {HTMLElement} parentElement - The parent element to add to
+     * @param {Object} parentObject - The parent object
+     */
+    addNestedObjects(parentElement, parentObject) {
+        // Add pipes if present
+        if (parentObject.pipes) {
+            parentObject.pipes.forEach((pipe, index) => {
+                const pipeItem = this.createObjectListItem(`Pipe #${index + 1}`, pipe);
+                parentElement.appendChild(pipeItem);
+            });
+        }
+        
+        // Add panels if present
+        if (parentObject.panels) {
+            parentObject.panels.forEach((panel, index) => {
+                const panelItem = this.createObjectListItem(`Panel #${index + 1}`, panel);
+                parentElement.appendChild(panelItem);
+            });
+        }
+        
+        // Add other children if present
         if (parentObject.children) {
             Object.entries(parentObject.children).forEach(([key, value]) => {
-                this.addNestedObject(parentElement, key, value);
+                const childItem = this.createObjectListItem(key, value);
+                parentElement.appendChild(childItem);
             });
-        } else {
-            // For objects that have properties directly
-            for (const key in parentObject) {
-                if (parentObject.hasOwnProperty(key) && key !== 'pipes' && key !== 'panels' && typeof parentObject[key] === 'object') {
-                    this.addNestedObject(parentElement, key, parentObject[key]);
-                }
-            }
         }
     }
     
@@ -261,17 +228,16 @@ export class SceneEditor {
      * @param {boolean} isVisible - Whether the object should be visible
      */
     toggleObjectVisibility(object, isVisible) {
+        // Toggle this object's visibility
         if (object.mesh) {
             object.mesh.isVisible = isVisible;
         } else if (object.pipeMesh) {
             object.pipeMesh.isVisible = isVisible;
         } else if (object.panelMesh) {
             object.panelMesh.isVisible = isVisible;
-        } else if (object.setVisible) {
-            object.setVisible(isVisible);
         }
         
-        // Toggle children if needed
+        // Toggle visibility of child objects
         if (object.pipes) {
             object.pipes.forEach(pipe => {
                 this.toggleObjectVisibility(pipe, isVisible);
@@ -283,6 +249,15 @@ export class SceneEditor {
                 this.toggleObjectVisibility(panel, isVisible);
             });
         }
+        
+        if (object.children) {
+            Object.values(object.children).forEach(child => {
+                this.toggleObjectVisibility(child, isVisible);
+            });
+        }
+        
+        // Update the UI to reflect changes
+        this.renderSceneObjects();
     }
     
     /**
