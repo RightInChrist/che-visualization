@@ -53,6 +53,8 @@ export function Sidebar({ setController }: SidebarProps) {
   const [activeController, setActiveController] = useState<ControllerType>('orbit');
   const [expandedModels, setExpandedModels] = useState<Record<string, boolean>>({});
   const [expandedInstances, setExpandedInstances] = useState<Record<string, boolean>>({});
+  // Add a state to force re-renders when visibility changes
+  const [visibilityVersion, setVisibilityVersion] = useState(0);
 
   // Generate instance counters for each model type
   const instanceCounters = useMemo(() => {
@@ -112,6 +114,13 @@ export function Sidebar({ setController }: SidebarProps) {
     }));
   };
 
+  // Modified toggle function that ensures UI updates
+  const handleToggleInstanceVisibility = (instanceId: string) => {
+    toggleInstanceVisibility(instanceId);
+    // Force a re-render to update all checkbox states
+    setVisibilityVersion(prev => prev + 1);
+  };
+
   // Toggle visibility for all instances of a model type
   const toggleModelTypeVisibility = (modelId: string, currentVisibility: boolean) => {
     const modelInstances = getInstancesByModelId(modelId);
@@ -121,6 +130,8 @@ export function Sidebar({ setController }: SidebarProps) {
         toggleInstanceVisibility(instance.instanceId);
       }
     });
+    // Force a re-render to update all checkbox states
+    setVisibilityVersion(prev => prev + 1);
   };
 
   // Check if all instances of a model have the same visibility
@@ -147,6 +158,17 @@ export function Sidebar({ setController }: SidebarProps) {
     }).filter(Boolean);
   };
 
+  // Handle toggling visibility for all instances
+  const toggleAllVisibility = (setVisible: boolean) => {
+    instances.forEach(instance => {
+      if (instance.visible !== setVisible) {
+        toggleInstanceVisibility(instance.instanceId);
+      }
+    });
+    // Force a re-render to update all checkbox states
+    setVisibilityVersion(prev => prev + 1);
+  };
+
   // Listen for controller changes from other components
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -169,6 +191,12 @@ export function Sidebar({ setController }: SidebarProps) {
       ? "bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded font-semibold"
       : "bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded";
   };
+
+  // This effect reruns whenever visibilityVersion changes, but doesn't do anything
+  // other than forcing the component to re-render
+  useEffect(() => {
+    // Just using visibilityVersion as a dependency to force re-renders
+  }, [visibilityVersion]);
 
   return (
     <div className="bg-gray-800 text-white p-4 w-64 h-full overflow-y-auto flex flex-col">
@@ -246,7 +274,7 @@ export function Sidebar({ setController }: SidebarProps) {
                         type="checkbox"
                         id={`instance-${instance.instanceId}`}
                         checked={instance.visible}
-                        onChange={() => toggleInstanceVisibility(instance.instanceId)}
+                        onChange={() => handleToggleInstanceVisibility(instance.instanceId)}
                         className="mr-2"
                       />
                       <label htmlFor={`instance-${instance.instanceId}`} className="text-gray-300">
@@ -285,14 +313,16 @@ export function Sidebar({ setController }: SidebarProps) {
               type="checkbox"
               id="scene-che-visibility"
               checked={instances.some(i => i.visible)}
+              ref={el => {
+                if (el) {
+                  // Make the checkbox indeterminate if some but not all instances are visible
+                  const visibleCount = instances.filter(i => i.visible).length;
+                  el.indeterminate = visibleCount > 0 && visibleCount < instances.length;
+                }
+              }}
               onChange={() => {
-                // Toggle all instances based on whether any are currently visible
                 const anyVisible = instances.some(i => i.visible);
-                instances.forEach(instance => {
-                  if (instance.visible === anyVisible) {
-                    toggleInstanceVisibility(instance.instanceId);
-                  }
-                });
+                toggleAllVisibility(!anyVisible);
               }}
               className="ml-2"
             />
@@ -313,7 +343,7 @@ export function Sidebar({ setController }: SidebarProps) {
                         type="checkbox"
                         id={`scene-item-${instance.instanceId}`}
                         checked={instance.visible}
-                        onChange={() => toggleInstanceVisibility(instance.instanceId)}
+                        onChange={() => handleToggleInstanceVisibility(instance.instanceId)}
                         className="mr-2"
                       />
                       <label 
@@ -354,7 +384,7 @@ export function Sidebar({ setController }: SidebarProps) {
                           type="checkbox"
                           id={`scene-item-${instance.instanceId}`}
                           checked={instance.visible}
-                          onChange={() => toggleInstanceVisibility(instance.instanceId)}
+                          onChange={() => handleToggleInstanceVisibility(instance.instanceId)}
                           className="ml-2"
                         />
                       </div>
@@ -371,7 +401,7 @@ export function Sidebar({ setController }: SidebarProps) {
                                   type="checkbox"
                                   id={`scene-child-${childInstance.instanceId}`}
                                   checked={childInstance.visible}
-                                  onChange={() => toggleInstanceVisibility(childInstance.instanceId)}
+                                  onChange={() => handleToggleInstanceVisibility(childInstance.instanceId)}
                                   className="mr-2"
                                 />
                                 <label 
