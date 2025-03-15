@@ -347,11 +347,27 @@ export class RadiusControls {
         panelDistanceDisplay.style.minWidth = '65px';
         panelDistanceDisplay.style.textAlign = 'right';
         
-        // Set a unique id so we can update it later
-        const modelId = model.rootNode ? model.rootNode.id : Math.random().toString(36).substring(2, 9);
+        // Get model type and index for more specific identification
         const modelType = model.constructor ? model.constructor.name : "unknown";
-        panelDistanceDisplay.id = `panel-distance-${modelId}`;
+        const modelIndex = model.options && model.options.modelIndex !== undefined ? 
+                          model.options.modelIndex : 
+                          Math.random().toString(36).substring(2, 9);
+        
+        // Set specific identifiers
         panelDistanceDisplay.dataset.modelType = modelType;
+        panelDistanceDisplay.dataset.modelIndex = modelIndex;
+        
+        // Create a unique ID that includes model type and index
+        panelDistanceDisplay.id = `panel-distance-${modelType}-${modelIndex}`;
+        
+        // Add a specific class for easier selection
+        panelDistanceDisplay.className = 'panel-distance-display';
+        
+        // Store original model reference as a data attribute for debugging
+        panelDistanceDisplay.dataset.originalModel = model.rootNode ? model.rootNode.id : "none";
+        
+        // Log what we're creating
+        console.log(`Creating panel distance display for ${modelType} (index: ${modelIndex})`);
         
         // Add label and value to the row
         row.appendChild(label);
@@ -376,9 +392,13 @@ export class RadiusControls {
         let panelDistance = 0;
         let calculationMethod = "unknown";
         
-        // Debug the model type
+        // Get model type and index for precise targeting
         const modelType = model.constructor ? model.constructor.name : "unknown";
-        console.log(`Calculating panel distance for model type: ${modelType}`);
+        const modelIndex = model.options && model.options.modelIndex !== undefined ? 
+                          model.options.modelIndex : 
+                          "unknown";
+        
+        console.log(`Calculating panel distance for ${modelType} (index: ${modelIndex})`);
         
         // Method 1: Check if model has a calculatePanelDistance method
         if (model && typeof model.calculatePanelDistance === 'function') {
@@ -403,61 +423,51 @@ export class RadiusControls {
             console.log(`Using formula calculation: ${model.options.outerRadius} * √3 = ${panelDistance}`);
         }
         
-        // For debugging - log model properties
-        if (modelType === "LayerOneStarModel") {
-            console.log("LayerOneStarModel properties:", {
-                "Has calculatePanelDistance": typeof model.calculatePanelDistance === 'function',
-                "Has getChildren": typeof model.getChildren === 'function',
-                "Children count": model.getChildren ? model.getChildren().length : "N/A",
-                "Has options": model.options ? "Yes" : "No",
-                "outerRadius": model.options ? model.options.outerRadius : "N/A",
-                "calculationMethod": calculationMethod
-            });
+        // Try to find the specific display element for this model
+        // First try with ID that includes model type and index
+        let displayElement = document.getElementById(`panel-distance-${modelType}-${modelIndex}`);
+        
+        if (displayElement) {
+            console.log(`Found panel distance display by ID for ${modelType} (index: ${modelIndex})`);
+        } else {
+            // If not found by ID, try by data attributes
+            console.log(`Trying to find panel distance display by data attributes for ${modelType} (index: ${modelIndex})`);
+            const elements = document.querySelectorAll(`[data-model-type="${modelType}"][data-model-index="${modelIndex}"]`);
+            
+            if (elements.length > 0) {
+                displayElement = elements[0];
+                console.log(`Found ${elements.length} panel distance display(s) by data attributes`);
+            } else {
+                // Last attempt: find any element with matching model type in matching section
+                console.warn(`No display found by ID or data attributes for ${modelType} (index: ${modelIndex}), trying section lookup`);
+                
+                // Find the model section for this model index
+                const modelSection = document.querySelector(`.model-radius-section[data-model-index="${modelIndex}"]`);
+                
+                if (modelSection) {
+                    // Find any panel distance displays within this section
+                    const sectionDisplays = modelSection.querySelectorAll('.panel-distance-display');
+                    if (sectionDisplays.length > 0) {
+                        displayElement = sectionDisplays[0];
+                        console.log(`Found display in model section ${modelIndex}`);
+                    }
+                }
+            }
         }
         
-        // Find and update the display element using both model ID and type
-        const modelId = model.rootNode ? model.rootNode.id : Math.random().toString(36).substring(2, 9);
-        const displayElement = document.getElementById(`panel-distance-${modelId}`);
-        
-        // First try to find by ID
+        // Update the display element if found
         if (displayElement) {
-            console.log(`Updating panel distance display for ${modelType} with ID ${modelId}: ${Math.round(panelDistance)} meters`);
             displayElement.textContent = `${Math.round(panelDistance)} meters`;
-        } 
-        // If not found by ID, try to find by model type as a fallback
-        else {
-            console.warn(`Panel distance display element not found by ID for model ${modelId}`);
-            const modelTypeDisplays = document.querySelectorAll(`[data-model-type="${modelType}"]`);
-            if (modelTypeDisplays.length > 0) {
-                console.log(`Found ${modelTypeDisplays.length} displays for model type ${modelType}`);
-                
-                // Look for the display within the appropriate parent section
-                let foundDisplay = false;
-                modelTypeDisplays.forEach(display => {
-                    // Find the model section containing this display
-                    const parentSection = display.closest('.model-radius-section');
-                    if (parentSection) {
-                        const sectionModelIndex = parentSection.dataset.modelIndex;
-                        const modelIndex = model.options ? model.options.modelIndex : undefined;
-                        
-                        // If model indices match, update this display
-                        if (sectionModelIndex !== undefined && modelIndex !== undefined && 
-                            sectionModelIndex === modelIndex.toString()) {
-                            display.textContent = `${Math.round(panelDistance)} meters`;
-                            foundDisplay = true;
-                        }
-                    }
-                });
-                
-                if (!foundDisplay) {
-                    // If we still couldn't find a matching display, just update the first one
-                    // This is a fallback and not ideal
-                    modelTypeDisplays[0].textContent = `${Math.round(panelDistance)} meters`;
-                    console.warn(`Used fallback approach to update panel distance for ${modelType}`);
-                }
-            } else {
-                console.warn(`No panel distance display elements found for model type ${modelType}`);
-            }
+            console.log(`Updated panel distance for ${modelType} (index: ${modelIndex}) to ${Math.round(panelDistance)} meters`);
+        } else {
+            console.warn(`⚠️ Failed to find panel distance display for ${modelType} (index: ${modelIndex})`);
+            
+            // Debug: list all distance displays
+            const allDisplays = document.querySelectorAll('.panel-distance-display');
+            console.log(`All panel distance displays (${allDisplays.length}):`);
+            allDisplays.forEach(display => {
+                console.log(`- Type: ${display.dataset.modelType}, Index: ${display.dataset.modelIndex}, ID: ${display.id}`);
+            });
         }
     }
     
@@ -469,7 +479,12 @@ export class RadiusControls {
     onOuterRadiusChange(model, value) {
         if (!model) return;
         
-        console.log(`Outer radius change: model=${model.constructor.name}, value=${value}`);
+        const modelType = model.constructor ? model.constructor.name : "unknown";
+        const modelIndex = model.options && model.options.modelIndex !== undefined ? 
+                          model.options.modelIndex : 
+                          "unknown";
+        
+        console.log(`Outer radius change: model=${modelType} (index: ${modelIndex}), value=${value}`);
         
         // Get current singleCutRadius if available
         let singleCutRadius = 21; // Default
@@ -495,7 +510,11 @@ export class RadiusControls {
         if (!model) return;
         
         const modelType = model.constructor ? model.constructor.name : "unknown";
-        console.log(`SingleCut radius change: model=${modelType}, value=${value}`);
+        const modelIndex = model.options && model.options.modelIndex !== undefined ? 
+                          model.options.modelIndex : 
+                          "unknown";
+        
+        console.log(`SingleCut radius change: model=${modelType} (index: ${modelIndex}), value=${value}`);
         
         // Get current outerRadius if available
         let outerRadius = 42; // Default
