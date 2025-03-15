@@ -329,4 +329,16 @@ export class SingleCutModel extends BaseModel {
     getChildren() {
         return [];
     }
+    
+    /**
+     * Check if the model is visible
+     * @returns {boolean} - Whether the model is visible
+     */
+    isVisible() {
+        // Check root node visibility first
+        if (this.rootNode) {
+            return this.rootNode.isEnabled();
+        }
+        return false;
+    }
 } 

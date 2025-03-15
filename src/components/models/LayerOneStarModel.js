@@ -418,9 +418,24 @@ export class LayerOneStarModel extends CompositeModel {
      * @returns {number} - Distance in meters
      */
     calculatePanelDistance() {
+        if (this.childModels && this.childModels.length > 0) {
+            return this.childModels[0].calculatePanelDistance();
+        }
         // For a star-shaped hexagonal pattern, the distance between opposite panels
         // is outerRadius * √3, not outerRadius * 2 (which would be the distance between opposite corners)
         const distanceBetweenPanels = this.options.outerRadius * Math.sqrt(3);
         return distanceBetweenPanels;
+    }
+    
+    /**
+     * Check if the model is visible
+     * @returns {boolean} - Whether the model is visible
+     */
+    isVisible() {
+        // Check root node visibility first
+        if (this.rootNode) {
+            return this.rootNode.isEnabled();
+        }
+        return false;
     }
 } 

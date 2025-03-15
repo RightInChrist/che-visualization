@@ -554,7 +554,10 @@ export class RadiusControls {
         // Toggle radius lines visibility in the models
         this.models.forEach(model => {
             if (model && typeof model.setRadiusLinesVisible === 'function') {
+                console.log(`Calling setRadiusLinesVisible(${newVisibility}) on model type: ${model.constructor.name}`);
                 model.setRadiusLinesVisible(newVisibility);
+            } else {
+                console.warn(`Model does not have setRadiusLinesVisible method:`, model);
             }
         });
         
