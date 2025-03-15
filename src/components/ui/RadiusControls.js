@@ -314,20 +314,22 @@ export class RadiusControls {
     createPanelDistanceIndicator(container, model) {
         // Create container
         const indicatorContainer = document.createElement('div');
-        indicatorContainer.style.marginTop = '15px';
+        indicatorContainer.style.marginTop = '10px';
         indicatorContainer.style.padding = '8px';
         indicatorContainer.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+        indicatorContainer.style.fontSize = '12px'; // Smaller font size
         
         // Create label
         const label = document.createElement('div');
         label.textContent = 'Distance between opposite panels:';
-        label.style.marginBottom = '5px';
+        label.style.marginBottom = '3px';
         indicatorContainer.appendChild(label);
         
         // Create value display
         const panelDistanceDisplay = document.createElement('div');
-        panelDistanceDisplay.style.fontSize = '16px';
+        panelDistanceDisplay.style.fontSize = '14px';
         panelDistanceDisplay.style.fontWeight = 'bold';
+        panelDistanceDisplay.style.whiteSpace = 'nowrap'; // Prevent wrapping
         
         // Set a unique id so we can update it later
         const modelId = model.rootNode ? model.rootNode.id : Math.random().toString(36).substring(2, 9);
@@ -350,11 +352,20 @@ export class RadiusControls {
         // Calculate the panel distance for this model
         let panelDistance = 0;
         
-        if (model && model.options) {
-            const outerRadius = model.options.outerRadius;
-            
-            // Calculate panel distance (roughly 2 * outerRadius for hexagonal pattern)
-            panelDistance = Math.round(outerRadius * 2);
+        // Method 1: Check if model has a calculatePanelDistance method
+        if (model && typeof model.calculatePanelDistance === 'function') {
+            panelDistance = Math.round(model.calculatePanelDistance());
+        }
+        // Method 2: Check if it's a model with a star pattern (LayerOneStarModel)
+        else if (model && model.constructor && model.constructor.name === 'LayerOneStarModel' && model.options) {
+            // For star model, the panel distance is different due to the star pattern
+            // Using 1.73 (approximately sqrt(3)) for better hexagonal accuracy 
+            panelDistance = Math.round(model.options.outerRadius * 1.73);
+        }
+        // Method 3: Default calculation for standard hexagonal models (LayerOneModel)
+        else if (model && model.options && model.options.outerRadius !== undefined) {
+            // For hexagonal model, distance between opposite panels is roughly 2 * outerRadius
+            panelDistance = Math.round(model.options.outerRadius * 2);
         }
         
         // Find and update the display element
