@@ -403,76 +403,19 @@ export class SceneEditor {
     }
     
     /**
-     * Toggle the visibility of an object
-     * @param {string} path - Path of the object
-     * @param {Object} object - The object to toggle
-     * @param {boolean} isVisible - Whether the object should be visible
-     */
-    toggleObjectVisibility(path, object, isVisible) {
-        // Prevent multiple rapid toggles
-        if (this.isTogglingVisibility) return;
-        this.isTogglingVisibility = true;
-        
-        try {
-            // Log for debugging
-            console.log(`Toggling ${path} visibility to ${isVisible}`);
-            
-            // Store the desired state for this object
-            if (!this.desiredVisibilityState) {
-                this.desiredVisibilityState = {};
-            }
-            this.desiredVisibilityState[path] = isVisible;
-            
-            // Special handling for panel paths
-            const isPanelPath = path.includes('/Panel #');
-            if (isPanelPath) {
-                console.log('Panel path detected:', path);
-                console.log('Panel object:', object);
-            }
-            
-            // Use recursive function to set visibility on the object and all its children
-            this.setObjectVisibility(object, isVisible);
-            
-            // Force scene to update
-            this.scene.render();
-            
-            // For panels, do an extra check to ensure visibility was updated
-            if (isPanelPath && object.panelMesh) {
-                console.log('Additional check for panel visibility:');
-                console.log('Current panel mesh visibility:', object.panelMesh.isVisible);
-                
-                // Force visibility again directly
-                object.panelMesh.isVisible = isVisible;
-                if (object.rootNode) {
-                    object.rootNode.setEnabled(isVisible);
-                }
-                
-                // Force another render
-                this.scene.render();
-            }
-            
-            // Update nested checkboxes to match the visibility state
-            this.updateNestedCheckboxes(path, isVisible);
-            
-            // Ensure the checkbox stays in the correct state 
-            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
-                this.checkboxElements[path].element.checked = isVisible;
-            }
-        } finally {
-            // Clear the flag after a short delay to prevent rapid toggling
-            setTimeout(() => {
-                this.isTogglingVisibility = false;
-            }, 50);
-        }
-    }
-    
-    /**
      * Recursively set visibility on an object and all its children
      * @param {Object} object - The object to set visibility on
      * @param {boolean} isVisible - Whether the object should be visible
+     * @param {string} path - Optional path to the object for checking permanent hidden status
      */
-    setObjectVisibility(object, isVisible) {
+    setObjectVisibility(object, isVisible, path = '') {
         if (!object) return;
+        
+        // Skip if this is a permanently hidden element
+        if (path && this.isElementPermanentlyHidden(path, object)) {
+            console.log(`Skipping permanently hidden element: ${path}`);
+            return;
+        }
         
         // For panel debugging
         if (object.panelMesh) {
@@ -522,8 +465,10 @@ export class SceneEditor {
         // 1. Handle SevenCutsModel case
         if (object.model && object.model.singleCuts) {
             // Process all SingleCut models
-            object.model.singleCuts.forEach(singleCut => {
-                this.setObjectVisibility(singleCut, isVisible);
+            object.model.singleCuts.forEach((singleCut, index) => {
+                // Build the path for the SingleCUT
+                const singleCutPath = `Single CUT #${index + 1}`;
+                this.setObjectVisibility(singleCut, isVisible, singleCutPath);
             });
         }
         
@@ -536,14 +481,18 @@ export class SceneEditor {
         
         // 3. Handle SingleCutModel pipes and panels
         if (object.pipes && Array.isArray(object.pipes)) {
-            object.pipes.forEach(pipe => {
-                this.setObjectVisibility(pipe, isVisible);
+            object.pipes.forEach((pipe, index) => {
+                // Build the path for the pipe
+                const pipePath = path ? `${path}/Pipe #${index + 1}` : `Pipe #${index + 1}`;
+                this.setObjectVisibility(pipe, isVisible, pipePath);
             });
         }
         
         if (object.panels && Array.isArray(object.panels)) {
-            object.panels.forEach(panel => {
-                this.setObjectVisibility(panel, isVisible);
+            object.panels.forEach((panel, index) => {
+                // Build the path for the panel
+                const panelPath = path ? `${path}/Panel #${index + 1}` : `Panel #${index + 1}`;
+                this.setObjectVisibility(panel, isVisible, panelPath);
             });
         }
         
@@ -552,6 +501,70 @@ export class SceneEditor {
             Object.values(object.children).forEach(child => {
                 this.setObjectVisibility(child, isVisible);
             });
+        }
+    }
+    
+    /**
+     * Toggle the visibility of an object
+     * @param {string} path - Path of the object
+     * @param {Object} object - The object to toggle
+     * @param {boolean} isVisible - Whether the object should be visible
+     */
+    toggleObjectVisibility(path, object, isVisible) {
+        // Prevent multiple rapid toggles
+        if (this.isTogglingVisibility) return;
+        this.isTogglingVisibility = true;
+        
+        try {
+            // Log for debugging
+            console.log(`Toggling ${path} visibility to ${isVisible}`);
+            
+            // Store the desired state for this object
+            if (!this.desiredVisibilityState) {
+                this.desiredVisibilityState = {};
+            }
+            this.desiredVisibilityState[path] = isVisible;
+            
+            // Special handling for panel paths
+            const isPanelPath = path.includes('/Panel #');
+            if (isPanelPath) {
+                console.log('Panel path detected:', path);
+                console.log('Panel object:', object);
+            }
+            
+            // Use recursive function to set visibility on the object and all its children
+            this.setObjectVisibility(object, isVisible, path);
+            
+            // Force scene to update
+            this.scene.render();
+            
+            // For panels, do an extra check to ensure visibility was updated
+            if (isPanelPath && object.panelMesh) {
+                console.log('Additional check for panel visibility:');
+                console.log('Current panel mesh visibility:', object.panelMesh.isVisible);
+                
+                // Force visibility again directly
+                object.panelMesh.isVisible = isVisible;
+                if (object.rootNode) {
+                    object.rootNode.setEnabled(isVisible);
+                }
+                
+                // Force another render
+                this.scene.render();
+            }
+            
+            // Update nested checkboxes to match the visibility state
+            this.updateNestedCheckboxes(path, isVisible);
+            
+            // Ensure the checkbox stays in the correct state 
+            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
+                this.checkboxElements[path].element.checked = isVisible;
+            }
+        } finally {
+            // Clear the flag after a short delay to prevent rapid toggling
+            setTimeout(() => {
+                this.isTogglingVisibility = false;
+            }, 50);
         }
     }
     
@@ -583,8 +596,12 @@ export class SceneEditor {
         // For Seven CUTs parent, collect all children paths
         if (parentPath === 'Seven CUTs #1') {
             for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
-                if ((path.startsWith('Single CUT #') || path.includes('/Pipe #') || path.includes('/Panel #')) &&
-                    !checkboxInfo.isPermanentlyHidden) {
+                // Skip permanently hidden elements
+                if (checkboxInfo.isPermanentlyHidden) {
+                    continue;
+                }
+                
+                if ((path.startsWith('Single CUT #') || path.includes('/Pipe #') || path.includes('/Panel #'))) {
                     if (isChecked) {
                         pathsToCheck.add(path);
                     } else {
@@ -597,7 +614,12 @@ export class SceneEditor {
         } else {
             // For regular parent-child relationships
             for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
-                if (path !== parentPath && path.startsWith(parentPath + '/') && !checkboxInfo.isPermanentlyHidden) {
+                // Skip permanently hidden elements
+                if (checkboxInfo.isPermanentlyHidden) {
+                    continue;
+                }
+                
+                if (path !== parentPath && path.startsWith(parentPath + '/')) {
                     if (isChecked) {
                         pathsToCheck.add(path);
                     } else {
