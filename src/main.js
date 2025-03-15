@@ -43,8 +43,8 @@ class CHEVisualization {
             
             // Create CHE model
             this.cheModel = new SingleCutModel(scene, new Vector3(0, 0, 0), {
-                pipesCount: 7,
-                hexRadius: 150
+                pipesCount: 6,
+                radius: 150
             });
             
             // Add shadows to models
