@@ -17,7 +17,7 @@ export class SingleCutModel extends BaseModel {
             pipeColor: new Color3(0.7, 0.7, 0.7),
             panelWidth: 50, // meters
             panelHeight: 1000, // meters
-            panelDepth: 2, // meters
+            panelDepth: 0.1, // meters (changed from 2 to 0.1 for thinner panels)
             panelColor: new Color3(0.2, 0.6, 0.8),
             radius: 21, // Distance from center to each pipe in hexagonal pattern (changed from 150 to 21)
             debug: false, // Enable/disable debug logging
