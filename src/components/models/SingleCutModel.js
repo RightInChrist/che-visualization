@@ -46,17 +46,15 @@ export class SingleCutModel {
         // Calculate direction vector from current pipe to next pipe
         const direction = nextPipePos.subtract(pipePos).normalize();
         
-        // Calculate rotation to face correctly between pipes
+        // Calculate base rotation from angle between pipes
+        // No additional rotation here - we'll handle all rotations in createPanel
         const angle = Math.atan2(direction.z, direction.x);
-        
-        // Add 90-degree rotation to make panels connect properly to the pipes
-        const rotation = new BABYLON.Vector3(0, angle + Math.PI/2, 0);
+        const rotation = new BABYLON.Vector3(0, angle, 0);
         
         // Calculate distance between pipes for panel width
         const distance = BABYLON.Vector3.Distance(pipePos, nextPipePos);
         
         // Adjust panel width to account for pipe radius on both ends
-        // Subtract twice the pipe radius from the distance to make panels connect perfectly
         const pipeRadius = this.options.pipeRadius || 0.5;
         const width = distance - (2 * pipeRadius);
         
@@ -82,14 +80,21 @@ export class SingleCutModel {
         // Apply base rotation from the angle between pipes
         panel.rootNode.rotation = rotation;
         
-        // Only panels 2 and 5 need a special rotation adjustment
-        if (index === 1 || index === 4) { // Panels 2 and 5 (indexes 1 and 4)
-            // Apply a 180-degree rotation to flip these panels around
-            panel.rootNode.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
-            console.log(`Panel ${index+1}: Applied 180-degree additional rotation`);
+        // Apply panel-specific rotations
+        // For most panels, a 90-degree rotation works
+        // For panels 2 and 5, we need a different rotation
+        let rotationAngle;
+        
+        if (index === 1 || index === 4) { // Panels 2 and 5
+            rotationAngle = 0; // No additional rotation for these panels
+            console.log(`Panel ${index+1}: No additional rotation (panel 2 or 5)`);
         } else {
-            console.log(`Panel ${index+1}: No additional rotation needed`);
+            rotationAngle = Math.PI/2; // 90-degree rotation for other panels
+            console.log(`Panel ${index+1}: Applied 90-degree rotation`);
         }
+        
+        // Apply the rotation
+        panel.rootNode.rotate(BABYLON.Axis.Y, rotationAngle, BABYLON.Space.LOCAL);
         
         // Set parent to the root node
         panel.rootNode.parent = this.rootNode;
