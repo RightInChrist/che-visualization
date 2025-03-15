@@ -1,6 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
-import { OrbitControls, FlyControls, FirstPersonControls } from '@react-three/drei';
+import { OrbitControls, FlyControls, FirstPersonControls, PointerLockControls } from '@react-three/drei';
 
 type ControllerType = 'orbit' | 'firstPerson' | 'flight';
 
@@ -17,23 +17,42 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
   const orbitRef = useRef(null);
   const flyRef = useRef(null);
   const firstPersonRef = useRef(null);
+  const pointerLockRef = useRef(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { camera } = useThree();
+  const [isLocked, setIsLocked] = useState(false);
 
   // Make controller change accessible from outside via window object for UI controls
-  React.useEffect(() => {
+  useEffect(() => {
     if (typeof window !== 'undefined') {
       const customWindow = window as WindowWithController;
       customWindow.setController = (type: ControllerType) => {
         if (['orbit', 'firstPerson', 'flight'].includes(type)) {
           setActiveController(type);
+          
+          // If switching to a mode that requires pointer lock
+          if ((type === 'firstPerson' || type === 'flight') && pointerLockRef.current) {
+            // Small timeout to ensure component is ready
+            setTimeout(() => {
+              if (pointerLockRef.current) {
+                // @ts-ignore - PointerLockControls has a lock method
+                pointerLockRef.current.lock();
+              }
+            }, 100);
+          }
         }
       };
     }
   }, []);
 
+  // Handle lock change
+  const handleLockChange = (isLocked: boolean) => {
+    setIsLocked(isLocked);
+  };
+
   return (
     <>
+      {/* Orbit controls - standard camera rotation around a target */}
       {activeController === 'orbit' && (
         <OrbitControls
           ref={orbitRef}
@@ -46,24 +65,44 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
         />
       )}
       
+      {/* First person controls - WASD + mouse movement */}
       {activeController === 'firstPerson' && (
-        <FirstPersonControls
-          ref={firstPersonRef}
-          makeDefault
-          lookSpeed={0.1}
-          movementSpeed={50}
-          lookVertical={true}
-        />
+        <>
+          <PointerLockControls 
+            ref={pointerLockRef}
+            onLock={() => handleLockChange(true)}
+            onUnlock={() => handleLockChange(false)}
+          />
+          {isLocked && (
+            <FirstPersonControls
+              ref={firstPersonRef}
+              makeDefault
+              lookSpeed={0.1}
+              movementSpeed={50}
+              lookVertical={true}
+            />
+          )}
+        </>
       )}
       
+      {/* Flight controls - more free movement in all directions */}
       {activeController === 'flight' && (
-        <FlyControls
-          ref={flyRef}
-          makeDefault
-          movementSpeed={100}
-          rollSpeed={0.5}
-          dragToLook={true}
-        />
+        <>
+          <PointerLockControls 
+            ref={pointerLockRef}
+            onLock={() => handleLockChange(true)}
+            onUnlock={() => handleLockChange(false)}
+          />
+          {isLocked && (
+            <FlyControls
+              ref={flyRef}
+              makeDefault
+              movementSpeed={100}
+              rollSpeed={0.5}
+              dragToLook={false}
+            />
+          )}
+        </>
       )}
     </>
   );
