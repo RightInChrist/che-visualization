@@ -66,31 +66,6 @@ const groundInstance: ModelInstance = {
 // Add ground to instances
 initialInstances.push(groundInstance);
 
-// Independent primitive model instances
-const standaloneInstances: ModelInstance[] = [
-  {
-    instanceId: 'instance-pipe-standalone',
-    modelId: 'big-pipe',
-    name: 'Standalone Pipe',
-    visible: true,
-    position: [50, 0, 50],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-panel-standalone',
-    modelId: 'big-panel',
-    name: 'Standalone Panel',
-    visible: true,
-    position: [-50, 0, 50],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  }
-];
-
-// Add standalone instances to initial instances
-initialInstances.push(...standaloneInstances);
-
 // Pre-create pipe and panel instances for the hexagon
 const hexPipeInstances: ModelInstance[] = [
   {
@@ -201,7 +176,7 @@ initialInstances.push(...hexPipeInstances, ...hexPanelInstances);
 const singleCutInstance: ModelInstance = {
   instanceId: 'instance-single-cut',
   modelId: 'single-cut',
-  name: 'Hexagonal Single Cut',
+  name: 'Single CUT',
   visible: true,
   position: [0, 0, 0],
   rotation: [0, 0, 0],
@@ -233,8 +208,7 @@ if (singleCutModel) {
   singleCutModel.references = singleCutReferences;
 }
 
-// Define scene structure (future enhancement)
-// This doesn't change the instances yet, but prepares for future multi-scene support
+// Define scene structure for the UI organization
 const sceneHierarchy = {
   'convective-heat-engine': {
     name: 'Convective Heat Engine #1',
@@ -315,7 +289,7 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     return instanceId;
   },
   
-  // Scene-related helpers (for future enhancement)
+  // Scene-related helpers for UI organization
   getSceneHierarchy: () => {
     // This is a simple placeholder. In the future, this would be part of the store state
     return sceneHierarchy;
