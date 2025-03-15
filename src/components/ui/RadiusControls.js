@@ -76,6 +76,11 @@ export class RadiusControls {
             this.panel.style.display = this.options.isVisible ? 'block' : 'none';
             this.panel.style.pointerEvents = 'auto'; // Enable pointer events for sliders
             
+            // Add scrolling capability
+            this.panel.style.maxHeight = '70vh'; // 70% of viewport height
+            this.panel.style.overflowY = 'auto'; // Add vertical scrollbar when needed
+            this.panel.style.scrollBehavior = 'smooth'; // Smooth scrolling
+            
             // Create title
             const title = document.createElement('h3');
             title.textContent = 'Radius Controls';
