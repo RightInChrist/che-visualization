@@ -5,7 +5,8 @@ import '@babylonjs/gui';
 import { initializeEngine } from './core/engine';
 import { createScene } from './core/scene';
 import { GroundModel } from './components/models/GroundModel';
-import { SevenCutsModel } from './components/models/SevenCutsModel';
+import { SingleCutModel } from './components/models/SingleCutModel';
+import { LayerOneModel } from './components/models/LayerOneModel';
 import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
@@ -44,22 +45,35 @@ class CHEVisualization {
             
             // Create ground
             this.ground = new GroundModel(scene, 5000);
-            this.sevenCutRadius = 36.4;
+            this.layerOneRadius = 42;
+            this.singleCutRadius = 21;
             
-            // Create Seven CUTs model
-            this.cheModel = new SevenCutsModel(scene, new Vector3(0, 0, 0), {
-                outerRadius: this.sevenCutRadius,
-                singleCutRadius: 21
+            // Create Central CUT model
+            this.centralCut = new SingleCutModel(scene, new Vector3(0, 0, 0), {
+                radius: this.singleCutRadius
             });
             
-            // Add shadows to all pipes and panels from all SingleCUTs
-            const allPipes = this.cheModel.getAllPipes();
-            allPipes.forEach(pipe => {
+            // Create Layer One Ring model
+            this.layerOneRing = new LayerOneModel(scene, new Vector3(0, 0, 0), {
+                outerRadius: this.layerOneRadius,
+                singleCutRadius: this.singleCutRadius
+            });
+            
+            // Add shadows to all pipes in the scene
+            const allCentralPipes = this.centralCut.pipes;
+            allCentralPipes.forEach(pipe => {
                 shadowGenerator.addShadowCaster(pipe.pipeMesh);
             });
             
-            // Add all SingleCUT pipes to the collision detection
-            const pipeMeshes = allPipes.map(pipe => pipe.pipeMesh);
+            const allLayerOnePipes = this.layerOneRing.getAllPipes();
+            allLayerOnePipes.forEach(pipe => {
+                shadowGenerator.addShadowCaster(pipe.pipeMesh);
+            });
+            
+            // Combine all pipe meshes for collision detection
+            const centralPipeMeshes = allCentralPipes.map(pipe => pipe.pipeMesh);
+            const layerOnePipeMeshes = allLayerOnePipes.map(pipe => pipe.pipeMesh);
+            const pipeMeshes = [...centralPipeMeshes, ...layerOnePipeMeshes];
             
             // Create camera controller
             this.cameraController = new CameraController(
@@ -73,19 +87,20 @@ class CHEVisualization {
             this.uiController = new UIController(this.cameraController);
             
             // Create a nested structure for the scene editor
-            const singleCutsObjects = {};
+            const layerOneSingleCutsObjects = {};
             
-            // Add each SingleCUT model to the scene editor
-            this.cheModel.singleCuts.forEach((singleCut, index) => {
-                singleCutsObjects[`Single CUT #${index + 1}`] = singleCut;
+            // Add each LayerOne SingleCUT model to the scene editor
+            this.layerOneRing.singleCuts.forEach((singleCut, index) => {
+                layerOneSingleCutsObjects[`Single CUT #${index + 1}`] = singleCut;
             });
             
             // Organize scene objects for the scene editor
             const sceneObjects = {
                 'Ground #1': this.ground,
-                'Seven CUTs #1': {
-                    model: this.cheModel,
-                    children: singleCutsObjects
+                'Central CUT': this.centralCut,
+                'Layer One Ring': {
+                    model: this.layerOneRing,
+                    children: layerOneSingleCutsObjects
                 },
                 'Camera Controller': {
                     children: {
@@ -106,19 +121,20 @@ class CHEVisualization {
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, sceneObjects);
             
-            // Create the radius controls
-            const radiusControls = new RadiusControls(scene, this.cheModel, {
+            // Create the radius controls (using layerOneRing for now)
+            const radiusControls = new RadiusControls(scene, this.layerOneRing, {
                 position: { x: 10, y: 10 },
                 outerRadiusMin: 30,
-                outerRadiusMax: 40,
-                outerRadiusDefault: this.sevenCutRadius,
+                outerRadiusMax: 50,
+                outerRadiusDefault: this.layerOneRadius,
                 isVisible: false
             });
             
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
                 const cameraPosition = this.scene.activeCamera.position;
-                this.cheModel.updateLOD(cameraPosition);
+                this.centralCut.updateLOD(cameraPosition);
+                this.layerOneRing.updateLOD(cameraPosition);
                 
                 // Update scene editor if needed
                 if (this.sceneEditor) {
