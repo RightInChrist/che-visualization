@@ -201,13 +201,12 @@ export class SceneEditor {
      * @param {Object} cutModel - The SingleCUT model
      */
     addSingleCutChildren(parentElement, cutModel) {
-        // Add pipes except the first one (center pipe)
-        if (cutModel.pipes && cutModel.pipes.length > 1) {
-            // Start from index 1 to skip the center pipe
-            for (let i = 1; i < cutModel.pipes.length; i++) {
-                const pipeItem = this.createObjectListItem(`Pipe #${i + 1}`, cutModel.pipes[i]);
+        // Add all pipes - now there's no center pipe to skip
+        if (cutModel.pipes && cutModel.pipes.length > 0) {
+            cutModel.pipes.forEach((pipe, index) => {
+                const pipeItem = this.createObjectListItem(`Pipe #${index + 1}`, pipe);
                 parentElement.appendChild(pipeItem);
-            }
+            });
         }
         
         // Add panels
@@ -238,7 +237,7 @@ export class SceneEditor {
      */
     hasChildren(object) {
         return (
-            (object.pipes && object.pipes.length > 1) || // Only consider pipes if there's more than one (skip center pipe)
+            (object.pipes && object.pipes.length > 0) ||
             (object.panels && object.panels.length > 0) || 
             (object.children && Object.keys(object.children).length > 0)
         );
