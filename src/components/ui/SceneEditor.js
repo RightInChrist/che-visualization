@@ -359,11 +359,33 @@ export class SceneEditor {
             }
             this.desiredVisibilityState[path] = isVisible;
             
+            // Special handling for panel paths
+            const isPanelPath = path.includes('/Panel #');
+            if (isPanelPath) {
+                console.log('Panel path detected:', path);
+                console.log('Panel object:', object);
+            }
+            
             // Use recursive function to set visibility on the object and all its children
             this.setObjectVisibility(object, isVisible);
             
             // Force scene to update
             this.scene.render();
+            
+            // For panels, do an extra check to ensure visibility was updated
+            if (isPanelPath && object.panelMesh) {
+                console.log('Additional check for panel visibility:');
+                console.log('Current panel mesh visibility:', object.panelMesh.isVisible);
+                
+                // Force visibility again directly
+                object.panelMesh.isVisible = isVisible;
+                if (object.rootNode) {
+                    object.rootNode.setEnabled(isVisible);
+                }
+                
+                // Force another render
+                this.scene.render();
+            }
             
             // Update nested checkboxes to match the visibility state
             this.updateNestedCheckboxes(path, isVisible);
@@ -388,22 +410,47 @@ export class SceneEditor {
     setObjectVisibility(object, isVisible) {
         if (!object) return;
         
+        // For panel debugging
+        if (object.panelMesh) {
+            console.log('Panel object found:', object);
+            console.log('Before setting visibility:', object.panelMesh.isVisible);
+        }
+        
         // Set visibility on this object
         if (typeof object.setVisible === 'function') {
             // Use the object's setVisible method (BaseModel/CompositeModel)
+            console.log(`Using setVisible method for ${object.constructor.name || 'object'}`, isVisible);
             object.setVisible(isVisible);
         } else if (object.rootNode && object.rootNode.setEnabled) {
             // Set enabled state on the root node
+            console.log('Setting root node enabled state to', isVisible);
             object.rootNode.setEnabled(isVisible);
         } else if (object.mesh && object.mesh.isVisible !== undefined) {
             // Set visibility on the mesh
+            console.log('Setting mesh visibility to', isVisible);
             object.mesh.isVisible = isVisible; 
         } else if (object.pipeMesh && object.pipeMesh.isVisible !== undefined) {
             // Set visibility on pipe mesh
+            console.log('Setting pipe mesh visibility to', isVisible);
             object.pipeMesh.isVisible = isVisible;
         } else if (object.panelMesh && object.panelMesh.isVisible !== undefined) {
             // Set visibility on panel mesh
+            console.log('Setting panel mesh visibility to', isVisible);
             object.panelMesh.isVisible = isVisible;
+            
+            // Ensure the parent node is also visible/invisible
+            if (object.rootNode) {
+                console.log('Setting panel root node enabled state to', isVisible);
+                object.rootNode.setEnabled(isVisible);
+            }
+            
+            // Force the panel mesh to update its visibility
+            object.panelMesh.refreshBoundingInfo();
+        }
+        
+        // For panel debugging
+        if (object.panelMesh) {
+            console.log('After setting visibility:', object.panelMesh.isVisible);
         }
         
         // Process children based on object type

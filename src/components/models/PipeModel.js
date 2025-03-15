@@ -176,4 +176,40 @@ export class PipeModel extends BaseModel {
         if (this.markers) this.markers.forEach(marker => marker.dispose());
         super.dispose();
     }
+
+    /**
+     * Sets visibility of the model
+     * @param {boolean} isVisible - Whether the model should be visible
+     */
+    setVisible(isVisible) {
+        this._isVisible = isVisible;
+        
+        // Log for debugging
+        console.log(`PipeModel setVisible called with ${isVisible}`);
+        
+        if (this.rootNode) {
+            console.log(`Setting PipeModel rootNode enabled to ${isVisible}`);
+            this.rootNode.setEnabled(isVisible);
+        }
+        
+        if (this.pipeMesh) {
+            console.log(`Setting PipeModel pipeMesh visibility to ${isVisible}`);
+            this.pipeMesh.isVisible = isVisible;
+            
+            // Force mesh to update its visibility
+            this.pipeMesh.refreshBoundingInfo();
+        }
+        
+        // Update markers visibility
+        if (this.markers) {
+            this.markers.forEach(marker => {
+                marker.isVisible = isVisible;
+            });
+        }
+        
+        // Log state after change
+        if (this.pipeMesh) {
+            console.log(`PipeModel after change: mesh visible=${this.pipeMesh.isVisible}, rootNode enabled=${this.rootNode ? this.rootNode.isEnabled() : 'N/A'}`);
+        }
+    }
 } 

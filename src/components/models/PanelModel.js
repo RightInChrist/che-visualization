@@ -64,11 +64,32 @@ export class PanelModel extends BaseModel {
     }
     
     /**
-     * Updates the visibility of the panel (for LOD purposes)
-     * @param {boolean} visible - Whether the panel should be visible
+     * Sets visibility of the model
+     * @param {boolean} isVisible - Whether the model should be visible
      */
-    setVisible(visible) {
-        this.panelMesh.isVisible = visible;
+    setVisible(isVisible) {
+        this._isVisible = isVisible;
+        
+        // Log for debugging
+        console.log(`PanelModel setVisible called with ${isVisible}`);
+        
+        if (this.rootNode) {
+            console.log(`Setting PanelModel rootNode enabled to ${isVisible}`);
+            this.rootNode.setEnabled(isVisible);
+        }
+        
+        if (this.panelMesh) {
+            console.log(`Setting PanelModel panelMesh visibility to ${isVisible}`);
+            this.panelMesh.isVisible = isVisible;
+            
+            // Force mesh to update its visibility
+            this.panelMesh.refreshBoundingInfo();
+        }
+        
+        // Log state after change
+        if (this.panelMesh) {
+            console.log(`PanelModel after change: mesh visible=${this.panelMesh.isVisible}, rootNode enabled=${this.rootNode ? this.rootNode.isEnabled() : 'N/A'}`);
+        }
     }
     
     /**
