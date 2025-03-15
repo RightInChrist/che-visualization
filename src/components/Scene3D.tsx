@@ -16,10 +16,17 @@ interface WindowWithController extends Window {
   setController?: (type: ControllerType) => void;
 }
 
-// Interface for key events in the log
-interface KeyEvent {
-  key: string;
-  type: 'keydown' | 'keyup';
+// General input event types
+type InputEventType = 'keydown' | 'keyup' | 'mousedown' | 'mouseup' | 'mousemove' | 'wheel';
+
+// Interface for tracked input events
+interface InputEvent {
+  type: InputEventType;
+  key?: string;        // For keyboard events
+  button?: number;     // For mouse clicks (0 = left, 1 = middle, 2 = right)
+  x?: number;          // Mouse X position
+  y?: number;          // Mouse Y position
+  deltaY?: number;     // For wheel events
   timestamp: number;
 }
 
@@ -34,7 +41,7 @@ function CameraPositionTracker({ onPositionChange }: { onPositionChange: (positi
   return null;
 }
 
-// Component to create a human-readable string of active keys
+// Format a human-readable string of active keys
 function formatActiveKeys(keyStates: Record<KeyName, boolean>): string {
   const activeKeys: string[] = [];
   
@@ -57,12 +64,53 @@ function formatActiveKeys(keyStates: Record<KeyName, boolean>): string {
   return activeKeys.length > 0 ? activeKeys.join(' + ') : 'None';
 }
 
-// Format a single key event for display
-function formatKeyEvent(event: KeyEvent): string {
+// Format a single input event for display
+function formatInputEvent(event: InputEvent): string {
   const timeString = new Date(event.timestamp).toISOString().substr(11, 8);
-  const keyDisplay = event.key === ' ' ? 'Space' : event.key;
-  const eventType = event.type === 'keydown' ? '▼' : '▲';
-  return `${timeString} ${eventType} ${keyDisplay}`;
+  
+  // Format based on event type
+  switch (event.type) {
+    case 'keydown':
+      const keyDisplay = event.key === ' ' ? 'Space' : event.key;
+      return `${timeString} 🔽 Key: ${keyDisplay}`;
+    
+    case 'keyup':
+      const keyUpDisplay = event.key === ' ' ? 'Space' : event.key;
+      return `${timeString} 🔼 Key: ${keyUpDisplay}`;
+    
+    case 'mousedown':
+      const buttonNames = ['Left', 'Middle', 'Right'];
+      const buttonName = buttonNames[event.button || 0] || `Button ${event.button}`;
+      return `${timeString} 🖱️🔽 ${buttonName} at (${event.x?.toFixed(0)}, ${event.y?.toFixed(0)})`;
+    
+    case 'mouseup':
+      const upButtonNames = ['Left', 'Middle', 'Right'];
+      const upButtonName = upButtonNames[event.button || 0] || `Button ${event.button}`;
+      return `${timeString} 🖱️🔼 ${upButtonName} at (${event.x?.toFixed(0)}, ${event.y?.toFixed(0)})`;
+    
+    case 'mousemove':
+      return `${timeString} 🖱️ Move to (${event.x?.toFixed(0)}, ${event.y?.toFixed(0)})`;
+    
+    case 'wheel':
+      const direction = event.deltaY && event.deltaY > 0 ? 'down' : 'up';
+      return `${timeString} 🖱️🔄 Scroll ${direction}`;
+    
+    default:
+      return `${timeString} Unknown event`;
+  }
+}
+
+// Function to get color for different event types
+function getEventColor(eventType: InputEventType): string {
+  switch (eventType) {
+    case 'keydown': return 'text-green-400';
+    case 'keyup': return 'text-red-400';
+    case 'mousedown': return 'text-blue-400';
+    case 'mouseup': return 'text-purple-400';
+    case 'mousemove': return 'text-gray-400';
+    case 'wheel': return 'text-yellow-400';
+    default: return 'text-white';
+  }
 }
 
 interface Scene3DProps {
@@ -90,11 +138,18 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     'S': false,
     'D': false
   });
-  // State to track the last 20 key events
-  const [keyEventLog, setKeyEventLog] = useState<KeyEvent[]>([]);
-  // Ref to track which keys are currently down to prevent duplicate keydown events
+  
+  // State to track the last 20 input events (both keyboard and mouse)
+  const [inputEventLog, setInputEventLog] = useState<InputEvent[]>([]);
+  
+  // Refs to track active inputs to prevent duplicate events
   const keysPressedRef = useRef<Set<string>>(new Set());
+  const mouseButtonsPressedRef = useRef<Set<number>>(new Set());
+  const lastMouseMoveRef = useRef<{ x: number, y: number } | null>(null);
+  const throttleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
 
   // Create a list of instance IDs that are referenced by composite models
   // These should not be rendered directly to avoid duplicates
@@ -116,7 +171,7 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
   }, [models]);
 
   // Handle focus state
-  const handleCanvasClick = useCallback(() => {
+  const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     if (!isFocused) {
       setIsFocused(true);
       canvasRef.current?.focus();
@@ -128,24 +183,46 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     setActiveKeys(newKeyStates);
   }, []);
 
-  // Add a key event to the log
-  const addKeyEventToLog = useCallback((key: string, type: 'keydown' | 'keyup') => {
-    // For keydown events, only add if the key wasn't already pressed
-    if (type === 'keydown') {
-      if (keysPressedRef.current.has(key)) {
-        return; // Skip this event as it's a repeat
+  // Add an input event to the log
+  const addInputEventToLog = useCallback((event: Omit<InputEvent, 'timestamp'>) => {
+    // Special handling for different event types to avoid duplicates
+    if (event.type === 'keydown' && event.key) {
+      if (keysPressedRef.current.has(event.key)) {
+        return; // Skip repeat key events
       }
-      keysPressedRef.current.add(key);
-    } else if (type === 'keyup') {
-      // For keyup events, remove the key from the pressed set
-      keysPressedRef.current.delete(key);
+      keysPressedRef.current.add(event.key);
+    } 
+    else if (event.type === 'keyup' && event.key) {
+      keysPressedRef.current.delete(event.key);
+    }
+    else if (event.type === 'mousedown' && event.button !== undefined) {
+      mouseButtonsPressedRef.current.add(event.button);
+    }
+    else if (event.type === 'mouseup' && event.button !== undefined) {
+      mouseButtonsPressedRef.current.delete(event.button);
+    }
+    else if (event.type === 'mousemove') {
+      // Skip if position hasn't changed significantly (throttle mouse moves)
+      if (lastMouseMoveRef.current && 
+          Math.abs(lastMouseMoveRef.current.x - (event.x || 0)) < 5 &&
+          Math.abs(lastMouseMoveRef.current.y - (event.y || 0)) < 5) {
+        return;
+      }
+      
+      // Throttle mouse move events
+      if (throttleTimerRef.current) return;
+      
+      throttleTimerRef.current = setTimeout(() => {
+        throttleTimerRef.current = null;
+      }, 100);
+      
+      lastMouseMoveRef.current = { x: event.x || 0, y: event.y || 0 };
     }
 
-    setKeyEventLog(prevLog => {
-      // Create new event
-      const newEvent: KeyEvent = {
-        key,
-        type,
+    // Add event to log
+    setInputEventLog(prevLog => {
+      const newEvent: InputEvent = {
+        ...event,
         timestamp: Date.now()
       };
       
@@ -155,10 +232,13 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     });
   }, []);
 
-  // Handle escape key to exit focus
+  // Handle keyboard events
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Add to key event log (only non-repeating events will be added)
-    addKeyEventToLog(e.key, 'keydown');
+    // Add to input event log
+    addInputEventToLog({
+      type: 'keydown',
+      key: e.key
+    });
     
     if (e.key === 'Escape') {
       setIsFocused(false);
@@ -176,23 +256,91 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         customWindow.setController?.('flight');
       }
     }
-  }, [isFocused, addKeyEventToLog]);
+  }, [isFocused, addInputEventToLog]);
 
-  // Handle key up events
   const handleKeyUp = useCallback((e: KeyboardEvent) => {
-    // Add to key event log
-    addKeyEventToLog(e.key, 'keyup');
-  }, [addKeyEventToLog]);
+    // Add to input event log
+    addInputEventToLog({
+      type: 'keyup',
+      key: e.key
+    });
+  }, [addInputEventToLog]);
+
+  // Handle mouse events
+  const handleMouseDown = useCallback((e: MouseEvent) => {
+    // Skip if we already logged this button as pressed
+    if (mouseButtonsPressedRef.current.has(e.button)) return;
+    
+    // Add to input event log
+    addInputEventToLog({
+      type: 'mousedown',
+      button: e.button,
+      x: e.clientX,
+      y: e.clientY
+    });
+  }, [addInputEventToLog]);
+
+  const handleMouseUp = useCallback((e: MouseEvent) => {
+    // Add to input event log
+    addInputEventToLog({
+      type: 'mouseup',
+      button: e.button,
+      x: e.clientX,
+      y: e.clientY
+    });
+  }, [addInputEventToLog]);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    // Add to input event log (will be throttled)
+    addInputEventToLog({
+      type: 'mousemove',
+      x: e.clientX,
+      y: e.clientY
+    });
+  }, [addInputEventToLog]);
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    // Add to input event log
+    addInputEventToLog({
+      type: 'wheel',
+      deltaY: e.deltaY,
+      x: e.clientX,
+      y: e.clientY
+    });
+  }, [addInputEventToLog]);
 
   // Set up and clean up event listeners
   useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
+    // Attach all event listeners to the document
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    
+    // Only attach mouse events if we have a canvas container
+    if (canvasContainerRef.current) {
+      canvasContainerRef.current.addEventListener('mousedown', handleMouseDown);
+      canvasContainerRef.current.addEventListener('mouseup', handleMouseUp);
+      canvasContainerRef.current.addEventListener('mousemove', handleMouseMove);
+      canvasContainerRef.current.addEventListener('wheel', handleWheel);
+    }
+    
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      // Clean up all event listeners
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+      
+      if (canvasContainerRef.current) {
+        canvasContainerRef.current.removeEventListener('mousedown', handleMouseDown);
+        canvasContainerRef.current.removeEventListener('mouseup', handleMouseUp);
+        canvasContainerRef.current.removeEventListener('mousemove', handleMouseMove);
+        canvasContainerRef.current.removeEventListener('wheel', handleWheel);
+      }
+      
+      // Clear throttle timer if it exists
+      if (throttleTimerRef.current) {
+        clearTimeout(throttleTimerRef.current);
+      }
     };
-  }, [handleKeyDown, handleKeyUp]);
+  }, [handleKeyDown, handleKeyUp, handleMouseDown, handleMouseUp, handleMouseMove, handleWheel]);
 
   // Function to update camera position from the Three.js scene
   const handleCameraPositionUpdate = (position: Vector3) => {
@@ -215,6 +363,7 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
 
   return (
     <div 
+      ref={canvasContainerRef}
       className="relative w-full h-full"
       onClick={handleCanvasClick}
       style={{ outline: isFocused ? '3px solid #3b82f6' : 'none' }}
@@ -225,7 +374,7 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         </div>
       )}
       
-      {/* Camera position and key indicator display */}
+      {/* Camera position and input indicator display */}
       <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white py-1 px-3 rounded text-xs z-10" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
         <p>Camera Position:</p>
         <p>X: {cameraPosition.x.toFixed(2)}</p>
@@ -234,14 +383,14 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         <div className="mt-2 pt-1 border-t border-gray-500">
           <p>Active Keys: <span className="font-mono">{activeKeysString}</span></p>
           <div className="mt-1">
-            <p>Key Event Log:</p>
+            <p>Input Event Log:</p>
             <div className="mt-1 font-mono text-2xs bg-black bg-opacity-50 p-1 rounded" style={{ maxHeight: '200px', overflowY: 'auto' }}>
-              {keyEventLog.length === 0 ? (
-                <p className="text-gray-500">No key events yet</p>
+              {inputEventLog.length === 0 ? (
+                <p className="text-gray-500">No input events yet</p>
               ) : (
-                keyEventLog.map((event, index) => (
-                  <div key={index} className={`${event.type === 'keydown' ? 'text-green-400' : 'text-red-400'}`}>
-                    {formatKeyEvent(event)}
+                inputEventLog.map((event, index) => (
+                  <div key={index} className={getEventColor(event.type)}>
+                    {formatInputEvent(event)}
                   </div>
                 ))
               )}
