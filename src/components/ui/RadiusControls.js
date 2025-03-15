@@ -391,56 +391,58 @@ export class RadiusControls {
     }
     
     /**
-     * Show the controls
-     */
-    show() {
-        this.togglePanel(true);
-    }
-    
-    /**
-     * Hide the controls
-     */
-    hide() {
-        this.togglePanel(false);
-    }
-    
-    /**
-     * Toggle visibility of the controls
-     */
-    toggle() {
-        const isCurrentlyVisible = this.panel.style.display !== 'none';
-        this.togglePanel(!isCurrentlyVisible);
-    }
-    
-    /**
-     * Create HTML button for toggling controls
+     * Create the HTML toggle button
      */
     createHTMLToggleButton() {
-        // Find the control buttons container
-        const controlButtonsContainer = document.getElementById('controlButtons');
-        if (!controlButtonsContainer) {
-            console.error("Control buttons container not found");
-            return;
+        try {
+            // Create button container if it doesn't exist
+            let buttonContainer = document.querySelector('.control-buttons-container');
+            if (!buttonContainer) {
+                buttonContainer = document.createElement('div');
+                buttonContainer.className = 'control-buttons-container';
+                buttonContainer.style.position = 'absolute';
+                buttonContainer.style.bottom = '20px';
+                buttonContainer.style.right = '20px';
+                buttonContainer.style.display = 'flex';
+                buttonContainer.style.flexDirection = 'column';
+                buttonContainer.style.gap = '10px';
+                buttonContainer.style.zIndex = '100';
+                document.body.appendChild(buttonContainer);
+            }
+            
+            // Create button
+            const button = document.createElement('button');
+            button.textContent = 'Radius';
+            button.className = 'control-button';
+            button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
+            button.style.color = '#fff';
+            button.style.border = 'none';
+            button.style.padding = '8px 16px';
+            button.style.borderRadius = '4px';
+            button.style.cursor = 'pointer';
+            button.style.fontWeight = 'bold';
+            button.style.width = '120px';
+            button.style.textAlign = 'center';
+            button.style.transition = 'background-color 0.3s';
+            
+            button.addEventListener('mouseover', () => {
+                button.style.backgroundColor = this.options.isVisible ? '#666' : '#444';
+            });
+            
+            button.addEventListener('mouseout', () => {
+                button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
+            });
+            
+            button.addEventListener('click', () => this.toggleVisible());
+            
+            // Add the button to the container
+            buttonContainer.appendChild(button);
+            
+            // Store button reference
+            this.toggleButton = button;
+        } catch (error) {
+            console.error("Error creating toggle button:", error);
         }
-        
-        // Create button element
-        const button = document.createElement('button');
-        button.id = 'radiusToggle';
-        button.className = 'control-button tooltip';
-        button.setAttribute('data-tooltip', 'Toggle Radius Controls');
-        button.textContent = 'R';
-        button.style.backgroundColor = '#4CAF50'; // Green
-        
-        // Add click event
-        button.addEventListener('click', () => {
-            this.toggle();
-        });
-        
-        // Add to container
-        controlButtonsContainer.appendChild(button);
-        
-        // Store reference
-        this.htmlToggleButton = button;
     }
     
     /**
@@ -452,11 +454,11 @@ export class RadiusControls {
         this.options.isVisible = isVisible;
         
         // Update button active state
-        if (this.htmlToggleButton) {
+        if (this.toggleButton) {
             if (isVisible) {
-                this.htmlToggleButton.classList.add('active');
+                this.toggleButton.classList.add('active');
             } else {
-                this.htmlToggleButton.classList.remove('active');
+                this.toggleButton.classList.remove('active');
             }
         }
         
@@ -469,16 +471,47 @@ export class RadiusControls {
     }
     
     /**
-     * Dispose of all resources
+     * Toggle visibility of the radius controls panel
+     */
+    toggleVisible() {
+        const newVisibility = !this.options.isVisible;
+        
+        if (this.panel) {
+            this.panel.style.display = newVisibility ? 'block' : 'none';
+        }
+        
+        if (this.toggleButton) {
+            this.toggleButton.style.backgroundColor = newVisibility ? '#555' : '#333';
+        }
+        
+        this.options.isVisible = newVisibility;
+        
+        // Toggle radius lines visibility in the models
+        this.models.forEach(model => {
+            if (model && typeof model.setRadiusLinesVisible === 'function') {
+                model.setRadiusLinesVisible(newVisibility);
+            }
+        });
+    }
+    
+    /**
+     * Get visibility state of the controls
+     * @returns {boolean} - Whether the controls are visible
+     */
+    isVisible() {
+        return this.panel && this.panel.style.display === 'block';
+    }
+    
+    /**
+     * Destroy and clean up resources
      */
     dispose() {
-        // Remove DOM elements
         if (this.panel && this.panel.parentNode) {
             this.panel.parentNode.removeChild(this.panel);
         }
         
-        if (this.htmlToggleButton && this.htmlToggleButton.parentNode) {
-            this.htmlToggleButton.parentNode.removeChild(this.htmlToggleButton);
+        if (this.toggleButton && this.toggleButton.parentNode) {
+            this.toggleButton.parentNode.removeChild(this.toggleButton);
         }
     }
 } 

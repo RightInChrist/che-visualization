@@ -243,25 +243,55 @@ export class RotationControls {
      * Create the HTML toggle button
      */
     createHTMLToggleButton() {
-        // Find the toggleButtons container
-        const toggleButtons = document.getElementById('toggleButtons');
-        if (!toggleButtons) {
-            console.error("Toggle buttons container not found");
-            return;
+        try {
+            // Create button container if it doesn't exist
+            let buttonContainer = document.querySelector('.control-buttons-container');
+            if (!buttonContainer) {
+                buttonContainer = document.createElement('div');
+                buttonContainer.className = 'control-buttons-container';
+                buttonContainer.style.position = 'absolute';
+                buttonContainer.style.bottom = '20px';
+                buttonContainer.style.right = '20px';
+                buttonContainer.style.display = 'flex';
+                buttonContainer.style.flexDirection = 'column';
+                buttonContainer.style.gap = '10px';
+                buttonContainer.style.zIndex = '100';
+                document.body.appendChild(buttonContainer);
+            }
+            
+            // Create button
+            const button = document.createElement('button');
+            button.textContent = 'Rotation';
+            button.className = 'control-button';
+            button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
+            button.style.color = '#fff';
+            button.style.border = 'none';
+            button.style.padding = '8px 16px';
+            button.style.borderRadius = '4px';
+            button.style.cursor = 'pointer';
+            button.style.fontWeight = 'bold';
+            button.style.width = '120px';
+            button.style.textAlign = 'center';
+            button.style.transition = 'background-color 0.3s';
+            
+            button.addEventListener('mouseover', () => {
+                button.style.backgroundColor = this.options.isVisible ? '#666' : '#444';
+            });
+            
+            button.addEventListener('mouseout', () => {
+                button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
+            });
+            
+            button.addEventListener('click', () => this.toggleVisible());
+            
+            // Add the button to the container
+            buttonContainer.appendChild(button);
+            
+            // Store button reference
+            this.toggleButton = button;
+        } catch (error) {
+            console.error("Error creating toggle button:", error);
         }
-        
-        // Create button
-        const button = document.createElement('button');
-        button.textContent = 'Rotation';
-        button.className = 'control-toggle-button';
-        button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
-        button.addEventListener('click', () => this.toggleVisible());
-        
-        // Add the button to the toggle buttons container
-        toggleButtons.appendChild(button);
-        
-        // Store button reference
-        this.toggleButton = button;
     }
     
     /**
