@@ -37,6 +37,7 @@ export class RotationControl {
             isVisible: false,         // Initially hidden to avoid clutter
             modelNames: null,        // Array of names for models, or null for auto-naming
             includeSingleCuts: true, // Whether to include controls for SingleCUT models within composite models
+            initialRotations: null,  // Array of initial rotation values for each model
         };
         
         this.options = { ...defaultOptions, ...options };
@@ -56,13 +57,27 @@ export class RotationControl {
     setupModelConfigs() {
         // If only one model but modelNames is not provided, use legacy modelName option
         if (this.models.length === 1 && !this.options.modelNames && this.options.modelName) {
+            // Get initial rotation for this model
+            let initialRotation = this.options.rotationDefault;
+            if (this.options.initialRotations && this.options.initialRotations.length > 0) {
+                initialRotation = this.options.initialRotations[0];
+            } else if (this.models[0].options && this.models[0].options.rotationAngle !== undefined) {
+                initialRotation = this.models[0].options.rotationAngle;
+            }
+            
             this.modelConfigs.push({
                 model: this.models[0],
                 name: this.options.modelName,
-                currentRotation: this.options.rotationDefault,
+                currentRotation: initialRotation,
                 hasSingleCuts: this.hasSingleCuts(this.models[0]),
                 singleCutsRotation: this.options.singleCutRotationDefault
             });
+            
+            // Apply initial rotation to model
+            if (this.models[0] && typeof this.models[0].updateRotation === 'function') {
+                this.models[0].updateRotation(initialRotation);
+            }
+            
             return;
         }
         
@@ -78,10 +93,16 @@ export class RotationControl {
                 modelName = `Model ${index + 1}`;
             }
             
-            // Get current rotation for this model if available
-            let currentRotation = this.options.rotationDefault;
-            if (model.options && model.options.rotationAngle !== undefined) {
-                currentRotation = model.options.rotationAngle;
+            // Get initial rotation for this model
+            let initialRotation = this.options.rotationDefault;
+            
+            // Use initialRotations if provided
+            if (this.options.initialRotations && this.options.initialRotations.length > index) {
+                initialRotation = this.options.initialRotations[index];
+            } 
+            // Or fall back to model's own rotation setting
+            else if (model.options && model.options.rotationAngle !== undefined) {
+                initialRotation = model.options.rotationAngle;
             }
             
             // Check if this model has SingleCUT models
@@ -97,10 +118,15 @@ export class RotationControl {
             this.modelConfigs.push({
                 model,
                 name: modelName,
-                currentRotation,
+                currentRotation: initialRotation,
                 hasSingleCuts,
                 singleCutsRotation
             });
+            
+            // Apply initial rotation to model
+            if (model && typeof model.updateRotation === 'function') {
+                model.updateRotation(initialRotation);
+            }
         });
     }
     

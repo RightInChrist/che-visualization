@@ -49,7 +49,10 @@ class CHEVisualization {
             this.ground = new GroundModel(scene, 5000);
             this.layerOneRadius = 42;
             this.singleCutRadius = 21;
-            this.layerRotationAngle = 60; // Layer rotation angle in degrees
+            
+            // Set different rotation angles for LayerOneRing and LayerOneStar
+            this.layerOneRotationAngle = 30; // Layer One Ring rotation angle in degrees
+            this.layerOneStarRotationAngle = 60; // Layer One Star rotation angle in degrees
             
             // Create Central CUT model
             this.centralCut = new SingleCutModel(scene, new Vector3(0, 0, 0), {
@@ -60,14 +63,14 @@ class CHEVisualization {
             this.layerOneRing = new LayerOneModel(scene, new Vector3(0, 0, 0), {
                 outerRadius: this.layerOneRadius,
                 singleCutRadius: this.singleCutRadius,
-                rotationAngle: this.layerRotationAngle
+                rotationAngle: this.layerOneRotationAngle
             });
             
             // Create Layer One Star model (with separate panels)
             this.layerOneStar = new LayerOneStarModel(scene, new Vector3(0, 0, 0), {
                 outerRadius: this.layerOneRadius,
                 singleCutRadius: this.singleCutRadius,
-                rotationAngle: this.layerRotationAngle
+                rotationAngle: this.layerOneStarRotationAngle
             });
             
             // Hide the Layer One Star model initially (will be reflected in the SceneEditor)
@@ -168,18 +171,19 @@ class CHEVisualization {
                 }
             );
             
-            // Create rotation controls for both Layer One Ring and Layer One Star models
+            // Create rotation controls for both Layer One Ring and Layer One Star models with their respective angles
             const rotationControls = new RotationControl(
                 scene, 
                 [this.layerOneRing, this.layerOneStar], 
-                this.layerRotationAngle,
+                null, // Don't use a single default angle
                 {
                     position: { x: 10, y: 170 },
                     rotationMin: 0,
                     rotationMax: 360,
-                    rotationDefault: this.layerRotationAngle,
                     isVisible: false,
-                    modelNames: ["Layer One Ring", "Layer One Star"]
+                    modelNames: ["Layer One Ring", "Layer One Star"],
+                    // Set initial rotation values per model
+                    initialRotations: [this.layerOneRotationAngle, this.layerOneStarRotationAngle]
                 }
             );
             
