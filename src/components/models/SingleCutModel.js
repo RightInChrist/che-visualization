@@ -134,9 +134,6 @@ export class SingleCutModel {
             
             this.panels.push(panel);
         }
-        
-        // Set LOD
-        this.setupLOD();
     }
     
     /**
