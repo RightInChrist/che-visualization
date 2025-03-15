@@ -293,21 +293,36 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
         target.x += moveDirection.x;
         target.z += moveDirection.z;
         
-        // Dynamic target height adjustment:
+        // Dynamic target height adjustment that maintains better connection to ground:
         // - At lower camera heights, keep target near ground
-        // - At higher heights, gradually raise target to look more downward
+        // - At medium heights, gradually raise target to look more downward
+        // - At high elevations, adjust target height to maintain context
         const cameraHeight = camera.position.y;
-        const targetHeight = Math.max(0, cameraHeight * 0.3 - 5);
+        
+        // More aggressive scaling to prevent disconnection effects at higher elevations
+        let targetHeight;
+        if (cameraHeight < 50) {
+          // Near ground: target stays low
+          targetHeight = 0;
+        } else if (cameraHeight < 200) {
+          // Medium height: gradually raise target (10% of camera height)
+          targetHeight = (cameraHeight - 50) * 0.1;
+        } else {
+          // High elevation: target follows camera more closely (30% of height above 200)
+          targetHeight = 15 + (cameraHeight - 200) * 0.3;
+        }
         
         // Smoothly interpolate the target height toward the desired value
-        target.y += (targetHeight - target.y) * 0.1;
+        // Use faster interpolation at higher elevations for more responsive adjustment
+        const interpolationSpeed = cameraHeight > 500 ? 0.2 : 0.1;
+        target.y += (targetHeight - target.y) * interpolationSpeed;
       }
     }
   });
 
   return (
     <>
-      {/* Reference grid to provide visual orientation */}
+      {/* Reference grid system with multiple layers for better spatial awareness */}
       <Grid 
         infiniteGrid 
         cellSize={5} 
@@ -320,6 +335,19 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
         fadeStrength={1}
       />
       
+      {/* Additional larger grid that remains visible at higher elevations */}
+      <Grid 
+        infiniteGrid 
+        cellSize={100} 
+        cellThickness={1}
+        cellColor="#555555" 
+        sectionSize={500}
+        sectionThickness={2}
+        sectionColor="#999999"
+        fadeDistance={5000}
+        fadeStrength={0.5}
+      />
+      
       {/* Orbit controls - standard camera rotation around a target */}
       {activeController === 'orbit' && (
         <OrbitControls
@@ -329,7 +357,7 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
           enableZoom={true}
           enableRotate={true}
           minDistance={1}
-          maxDistance={1000}
+          maxDistance={10000}  /* Increased to allow higher elevations */
           minPolarAngle={0.1} // Prevent going exactly overhead
           maxPolarAngle={Math.PI - 0.1} // Prevent going exactly underneath
         />
