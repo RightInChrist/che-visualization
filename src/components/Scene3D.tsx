@@ -20,7 +20,7 @@ interface Scene3DProps {
 }
 
 export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
-  const { models } = useModelStore();
+  const { models, instances, getModelById } = useModelStore();
   const [isFocused, setIsFocused] = useState(false);
   const [activeController, setActiveController] = useState<ControllerType>(controllerType);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -86,20 +86,59 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         <CameraController defaultController={activeController} />
         <Environment preset="sunset" />
         
-        {/* Render all visible models */}
-        {models.map(model => {
-          if (!model.visible) return null;
+        {/* Render all visible instances */}
+        {instances.map(instance => {
+          if (!instance.visible) return null;
+          
+          const model = getModelById(instance.modelId);
+          if (!model) return null;
           
           if (model.type === 'primitive') {
             if (model.id === 'big-pipe') {
-              return <PipeModel key={model.id} model={model as PrimitiveModel} />;
+              return (
+                <PipeModel
+                  key={instance.instanceId}
+                  model={model as PrimitiveModel}
+                  instanceId={instance.instanceId}
+                  position={instance.position}
+                  rotation={instance.rotation}
+                  scale={instance.scale}
+                />
+              );
             } else if (model.id === 'big-panel') {
-              return <PanelModel key={model.id} model={model as PrimitiveModel} />;
+              return (
+                <PanelModel
+                  key={instance.instanceId}
+                  model={model as PrimitiveModel}
+                  instanceId={instance.instanceId}
+                  position={instance.position}
+                  rotation={instance.rotation}
+                  scale={instance.scale}
+                />
+              );
             } else if (model.id === 'green-ground') {
-              return <GroundModel key={model.id} model={model as PrimitiveModel} />;
+              return (
+                <GroundModel
+                  key={instance.instanceId}
+                  model={model as PrimitiveModel}
+                  instanceId={instance.instanceId}
+                  position={instance.position}
+                  rotation={instance.rotation}
+                  scale={instance.scale}
+                />
+              );
             }
           } else if (model.type === 'composite') {
-            return <CompositeModel key={model.id} model={model as CompositeModelType} />;
+            return (
+              <CompositeModel
+                key={instance.instanceId}
+                model={model as CompositeModelType}
+                instanceId={instance.instanceId}
+                position={instance.position}
+                rotation={instance.rotation}
+                scale={instance.scale}
+              />
+            );
           }
           
           return null;

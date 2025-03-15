@@ -3,9 +3,11 @@ import { CompositeModel as CompositeModelType, PrimitiveModel } from '@/types/mo
 import { useModelStore } from '@/store/modelStore';
 import PipeModel from './PipeModel';
 import PanelModel from './PanelModel';
+import GroundModel from './GroundModel';
 
 interface CompositeModelProps {
   model: CompositeModelType;
+  instanceId: string;
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: [number, number, number];
@@ -13,24 +15,29 @@ interface CompositeModelProps {
 
 export function CompositeModel({ 
   model, 
+  instanceId,
   position = [0, 0, 0], 
   rotation = [0, 0, 0], 
   scale = [1, 1, 1] 
 }: CompositeModelProps) {
-  const { getModelById } = useModelStore();
+  const { getModelById, getInstanceById } = useModelStore();
 
   return (
     <group position={position} rotation={rotation} scale={scale}>
       {model.references.map((reference, index) => {
-        const referencedModel = getModelById(reference.modelId);
-        if (!referencedModel || !referencedModel.visible) return null;
+        const instance = getInstanceById(reference.instanceId);
+        if (!instance || !instance.visible) return null;
+
+        const referencedModel = getModelById(instance.modelId);
+        if (!referencedModel) return null;
 
         if (referencedModel.type === 'primitive') {
           if (referencedModel.id === 'big-pipe') {
             return (
               <PipeModel
-                key={`${model.id}-ref-${index}`}
+                key={`${instanceId}-ref-${index}`}
                 model={referencedModel as PrimitiveModel}
+                instanceId={instance.instanceId}
                 position={reference.position}
                 rotation={reference.rotation}
                 scale={reference.scale}
@@ -39,8 +46,20 @@ export function CompositeModel({
           } else if (referencedModel.id === 'big-panel') {
             return (
               <PanelModel
-                key={`${model.id}-ref-${index}`}
+                key={`${instanceId}-ref-${index}`}
                 model={referencedModel as PrimitiveModel}
+                instanceId={instance.instanceId}
+                position={reference.position}
+                rotation={reference.rotation}
+                scale={reference.scale}
+              />
+            );
+          } else if (referencedModel.id === 'green-ground') {
+            return (
+              <GroundModel
+                key={`${instanceId}-ref-${index}`}
+                model={referencedModel as PrimitiveModel}
+                instanceId={instance.instanceId}
                 position={reference.position}
                 rotation={reference.rotation}
                 scale={reference.scale}
@@ -50,8 +69,9 @@ export function CompositeModel({
         } else if (referencedModel.type === 'composite') {
           return (
             <CompositeModel
-              key={`${model.id}-ref-${index}`}
+              key={`${instanceId}-ref-${index}`}
               model={referencedModel as CompositeModelType}
+              instanceId={instance.instanceId}
               position={reference.position}
               rotation={reference.rotation}
               scale={reference.scale}

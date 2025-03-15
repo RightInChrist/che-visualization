@@ -8,7 +8,7 @@ interface SidebarProps {
 }
 
 export function Sidebar({ setController }: SidebarProps) {
-  const { models, toggleVisibility } = useModelStore();
+  const { models, instances, toggleInstanceVisibility, getInstancesByModelId } = useModelStore();
   const [activeController, setActiveController] = useState<ControllerType>('orbit');
 
   // Listen for controller changes from other components
@@ -33,6 +33,15 @@ export function Sidebar({ setController }: SidebarProps) {
       ? "bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded font-semibold"
       : "bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded";
   };
+
+  // Group instances by model type
+  const modelInstances = models.map(model => {
+    const modelSpecificInstances = getInstancesByModelId(model.id);
+    return {
+      model,
+      instances: modelSpecificInstances
+    };
+  });
 
   return (
     <div className="bg-gray-800 text-white p-4 w-64 h-full overflow-y-auto flex flex-col">
@@ -69,20 +78,34 @@ export function Sidebar({ setController }: SidebarProps) {
       
       <div>
         <h3 className="text-lg font-semibold mb-2">Models</h3>
-        <ul className="space-y-2">
-          {models.map(model => (
-            <li key={model.id} className="flex items-center">
-              <input
-                type="checkbox"
-                id={`model-${model.id}`}
-                checked={model.visible}
-                onChange={() => toggleVisibility(model.id)}
-                className="mr-2"
-              />
-              <label htmlFor={`model-${model.id}`}>{model.name}</label>
-            </li>
-          ))}
-        </ul>
+        
+        {modelInstances.map(({ model, instances }) => (
+          <div key={model.id} className="mb-4">
+            <h4 className="font-medium text-blue-300">{model.name} Model</h4>
+            
+            {/* List instances of this model */}
+            <ul className="space-y-1 mt-1 ml-2">
+              {instances.map(instance => (
+                <li key={instance.instanceId} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`instance-${instance.instanceId}`}
+                    checked={instance.visible}
+                    onChange={() => toggleInstanceVisibility(instance.instanceId)}
+                    className="mr-2"
+                  />
+                  <label htmlFor={`instance-${instance.instanceId}`}>
+                    {instance.name || `${model.name} Instance`}
+                  </label>
+                </li>
+              ))}
+              
+              {instances.length === 0 && (
+                <li className="text-gray-400 text-sm italic">No instances</li>
+              )}
+            </ul>
+          </div>
+        ))}
       </div>
     </div>
   );

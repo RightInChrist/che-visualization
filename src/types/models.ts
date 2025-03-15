@@ -1,13 +1,21 @@
 export interface Model3D {
   id: string;
   name: string;
-  visible: boolean;
   type: 'primitive' | 'composite';
-  references?: ModelReference[];
+}
+
+export interface ModelInstance {
+  instanceId: string;
+  modelId: string;
+  name?: string; // Optional custom name
+  visible: boolean;
+  position: [number, number, number];
+  rotation: [number, number, number];
+  scale: [number, number, number];
 }
 
 export interface ModelReference {
-  modelId: string;
+  instanceId: string;
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -26,8 +34,24 @@ export interface CompositeModel extends Model3D {
 }
 
 export interface ModelStore {
+  // Models (definitions)
   models: Model3D[];
   getModelById: (id: string) => Model3D | undefined;
-  toggleVisibility: (id: string) => void;
   addModel: (model: Model3D) => void;
+  
+  // Instances (occurrences)
+  instances: ModelInstance[];
+  getInstanceById: (instanceId: string) => ModelInstance | undefined;
+  getInstancesByModelId: (modelId: string) => ModelInstance[];
+  addInstance: (instance: ModelInstance) => void;
+  toggleInstanceVisibility: (instanceId: string) => void;
+  
+  // Composite instance creation helper
+  createCompositeInstance: (
+    modelId: string, 
+    name: string,
+    position?: [number, number, number],
+    rotation?: [number, number, number],
+    scale?: [number, number, number]
+  ) => string; // Returns instanceId
 } 

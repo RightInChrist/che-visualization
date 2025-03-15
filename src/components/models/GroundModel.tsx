@@ -3,6 +3,7 @@ import { PrimitiveModel } from '@/types/models';
 
 interface GroundModelProps {
   model: PrimitiveModel;
+  instanceId: string;
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: [number, number, number];
@@ -10,6 +11,7 @@ interface GroundModelProps {
 
 export function GroundModel({ 
   model, 
+  instanceId,
   position = [0, 0, 0], 
   rotation = [0, 0, 0], 
   scale = [1, 1, 1] 
