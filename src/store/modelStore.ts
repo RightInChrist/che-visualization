@@ -1,6 +1,14 @@
 import { create } from 'zustand';
 import { Model3D, ModelStore, PrimitiveModel, CompositeModel, ModelInstance, ModelReference } from '@/types/models';
 import { v4 as uuidv4 } from 'uuid';
+import { 
+  getSingleCutModel,
+  getHexPipeInstances,
+  getHexPanelInstances,
+  getSingleCutInstance,
+  initializeSingleCutModel,
+  getAllSingleCutInstances
+} from '@/components/models/SingleCutModel';
 
 // Define model definitions (blueprints)
 const initialModels: Model3D[] = [
@@ -38,15 +46,8 @@ const initialModels: Model3D[] = [
     }
   } as PrimitiveModel,
   
-  // Single cut composite model (hexagon arrangement)
-  {
-    id: 'single-cut',
-    name: 'Single Cut',
-    type: 'composite',
-    references: [
-      // References will be filled when creating instances
-    ]
-  } as CompositeModel,
+  // Add the Single CUT model
+  getSingleCutModel()
 ];
 
 // Define initial instances
@@ -56,7 +57,7 @@ const initialInstances: ModelInstance[] = [];
 const groundInstance: ModelInstance = {
   instanceId: 'instance-ground',
   modelId: 'green-ground',
-  name: 'Ground Plane',
+  name: 'Ground Plane #1',
   visible: true,
   position: [0, 0, 0],
   rotation: [0, 0, 0],
@@ -66,146 +67,19 @@ const groundInstance: ModelInstance = {
 // Add ground to instances
 initialInstances.push(groundInstance);
 
-// Pre-create pipe and panel instances for the hexagon
-const hexPipeInstances: ModelInstance[] = [
-  {
-    instanceId: 'instance-hex-pipe-1',
-    modelId: 'big-pipe',
-    visible: true,
-    position: [15.5, 0, -26.84],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-pipe-2',
-    modelId: 'big-pipe',
-    visible: true,
-    position: [31, 0, 0],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-pipe-3',
-    modelId: 'big-pipe',
-    visible: true,
-    position: [15.5, 0, 26.84],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-pipe-4',
-    modelId: 'big-pipe',
-    visible: true,
-    position: [-15.5, 0, 26.84],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-pipe-5',
-    modelId: 'big-pipe',
-    visible: true,
-    position: [-31, 0, 0],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-pipe-6',
-    modelId: 'big-pipe',
-    visible: true,
-    position: [-15.5, 0, -26.84],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  }
-];
+// Add all Single CUT related instances
+const singleCutInstances = getAllSingleCutInstances();
+initialInstances.push(...singleCutInstances);
 
-const hexPanelInstances: ModelInstance[] = [
-  {
-    instanceId: 'instance-hex-panel-1',
-    modelId: 'big-panel',
-    visible: true,
-    position: [23.25, 0, -13.42],
-    rotation: [0, -Math.PI/6, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-panel-2',
-    modelId: 'big-panel',
-    visible: true,
-    position: [23.25, 0, 13.42],
-    rotation: [0, Math.PI/6, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-panel-3',
-    modelId: 'big-panel',
-    visible: true,
-    position: [0, 0, 26.84],
-    rotation: [0, Math.PI/2, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-panel-4',
-    modelId: 'big-panel',
-    visible: true,
-    position: [-23.25, 0, 13.42],
-    rotation: [0, 5*Math.PI/6, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-panel-5',
-    modelId: 'big-panel',
-    visible: true,
-    position: [-23.25, 0, -13.42],
-    rotation: [0, 7*Math.PI/6, 0],
-    scale: [1, 1, 1]
-  },
-  {
-    instanceId: 'instance-hex-panel-6',
-    modelId: 'big-panel',
-    visible: true,
-    position: [0, 0, -26.84],
-    rotation: [0, 3*Math.PI/2, 0],
-    scale: [1, 1, 1]
-  }
-];
+// Get references to the individual components for the scene hierarchy
+const singleCutInstance = getSingleCutInstance();
+const hexPipeInstances = getHexPipeInstances();
+const hexPanelInstances = getHexPanelInstances();
 
-// Add hex components to initial instances
-initialInstances.push(...hexPipeInstances, ...hexPanelInstances);
-
-// Single Cut instance with references to the pipe and panel instances
-const singleCutInstance: ModelInstance = {
-  instanceId: 'instance-single-cut',
-  modelId: 'single-cut',
-  name: 'Single CUT',
-  visible: true,
-  position: [0, 0, 0],
-  rotation: [0, 0, 0],
-  scale: [1, 1, 1]
-};
-
-// Add to initial instances
-initialInstances.push(singleCutInstance);
-
-// References for the Single Cut model
-const singleCutReferences: ModelReference[] = [
-  ...hexPipeInstances.map(instance => ({
-    instanceId: instance.instanceId,
-    position: instance.position,
-    rotation: instance.rotation,
-    scale: instance.scale
-  })),
-  ...hexPanelInstances.map(instance => ({
-    instanceId: instance.instanceId,
-    position: instance.position,
-    rotation: instance.rotation,
-    scale: instance.scale
-  }))
-];
-
-// Update the Single Cut model with the references
+// Initialize the Single CUT model with references
 const singleCutModel = initialModels.find(model => model.id === 'single-cut') as CompositeModel;
 if (singleCutModel) {
-  singleCutModel.references = singleCutReferences;
+  initializeSingleCutModel(singleCutModel, hexPipeInstances, hexPanelInstances);
 }
 
 // Define scene structure for the UI organization
