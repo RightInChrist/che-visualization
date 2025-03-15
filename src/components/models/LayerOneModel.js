@@ -10,7 +10,7 @@ export class LayerOneModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 42,
+            outerRadius: 36.4,
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
