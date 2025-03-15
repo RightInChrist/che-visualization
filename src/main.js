@@ -138,6 +138,34 @@ class CHEVisualization {
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, sceneObjects);
             
+            // Create control panels container if it doesn't exist
+            if (!document.getElementById('controlPanels')) {
+                const controlPanels = document.createElement('div');
+                controlPanels.id = 'controlPanels';
+                controlPanels.style.position = 'absolute';
+                controlPanels.style.top = '50px';
+                controlPanels.style.left = '10px';
+                controlPanels.style.display = 'flex';
+                controlPanels.style.flexDirection = 'column';
+                controlPanels.style.gap = '10px';
+                controlPanels.style.zIndex = '100';
+                document.body.appendChild(controlPanels);
+            }
+            
+            // Create toggle buttons container if it doesn't exist
+            if (!document.getElementById('toggleButtons')) {
+                const toggleButtons = document.createElement('div');
+                toggleButtons.id = 'toggleButtons';
+                toggleButtons.style.position = 'absolute';
+                toggleButtons.style.top = '10px';
+                toggleButtons.style.left = '10px';
+                toggleButtons.style.display = 'flex';
+                toggleButtons.style.flexDirection = 'row';
+                toggleButtons.style.gap = '10px';
+                toggleButtons.style.zIndex = '100';
+                document.body.appendChild(toggleButtons);
+            }
+            
             // Create radius controls for both Layer One Ring and Layer One Star models
             const radiusControls = new RadiusControls(
                 scene, 
@@ -157,20 +185,6 @@ class CHEVisualization {
                     modelNames: ["Layer One Ring", "Layer One Star"]
                 }
             );
-            
-            // Create control panels container if it doesn't exist
-            if (!document.getElementById('controlPanels')) {
-                const controlPanels = document.createElement('div');
-                controlPanels.id = 'controlPanels';
-                controlPanels.style.position = 'absolute';
-                controlPanels.style.top = '50px';
-                controlPanels.style.left = '10px';
-                controlPanels.style.display = 'flex';
-                controlPanels.style.flexDirection = 'column';
-                controlPanels.style.gap = '10px';
-                controlPanels.style.zIndex = '100';
-                document.body.appendChild(controlPanels);
-            }
             
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
