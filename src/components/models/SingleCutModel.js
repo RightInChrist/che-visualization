@@ -22,7 +22,7 @@ export class SingleCutModel {
             panelDepth: 2, // meters
             panelColor: new Color3(0.2, 0.6, 0.8),
             radius: 150, // Distance from center to each pipe in hexagonal pattern
-            debug: true, // Enable/disable debug logging
+            debug: false, // Enable/disable debug logging
             ...options
         };
         
