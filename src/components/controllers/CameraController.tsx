@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, MutableRefObject } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, FlyControls, FirstPersonControls, PointerLockControls, Grid } from '@react-three/drei';
 import { Vector3 } from 'three';
@@ -7,6 +7,7 @@ type ControllerType = 'orbit' | 'firstPerson' | 'flight';
 
 interface CameraControllerProps {
   defaultController?: ControllerType;
+  onKeyStateChange?: (keyStates: Record<KeyName, boolean>) => void;
 }
 
 interface WindowWithController extends Window {
@@ -14,10 +15,30 @@ interface WindowWithController extends Window {
 }
 
 // Define valid keys for type safety
-type KeyName = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight' | ' ' | 'Shift' | 
+export type KeyName = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight' | ' ' | 'Shift' | 
                'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D';
 
-export function CameraController({ defaultController = 'orbit' }: CameraControllerProps) {
+// Export keyStates object for external use
+export const globalKeyStates: MutableRefObject<Record<KeyName, boolean>> = {
+  current: {
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+    ' ': false,     // Space key
+    'Shift': false, // Shift key
+    'w': false,     // WASD keys
+    'a': false,
+    's': false,
+    'd': false,
+    'W': false,     // Capital WASD keys
+    'A': false,
+    'S': false,
+    'D': false
+  }
+};
+
+export function CameraController({ defaultController = 'orbit', onKeyStateChange }: CameraControllerProps) {
   const [activeController, setActiveController] = useState<ControllerType>(defaultController);
   const orbitRef = useRef(null);
   const flyRef = useRef(null);
@@ -90,12 +111,19 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
         // Safely set the key state
         if (key in keyStates.current) {
           keyStates.current[key as KeyName] = true;
+          globalKeyStates.current[key as KeyName] = true;
         }
         
         // Also set uppercase version for case-insensitive handling
         const upperKey = key.toUpperCase() as KeyName;
         if (upperKey in keyStates.current) {
           keyStates.current[upperKey] = true;
+          globalKeyStates.current[upperKey] = true;
+        }
+        
+        // Notify parent component about key state change
+        if (onKeyStateChange) {
+          onKeyStateChange({...keyStates.current});
         }
         return;
       }
@@ -108,12 +136,24 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
         const storeKey = key === ' ' ? ' ' as KeyName : e.key as KeyName;
         if (storeKey in keyStates.current) {
           keyStates.current[storeKey] = true;
+          globalKeyStates.current[storeKey] = true;
+        }
+        
+        // Notify parent component about key state change
+        if (onKeyStateChange) {
+          onKeyStateChange({...keyStates.current});
         }
       }
       
       // Check for shift key
       if (key === 'shift') {
         keyStates.current['Shift'] = true;
+        globalKeyStates.current['Shift'] = true;
+        
+        // Notify parent component about key state change
+        if (onKeyStateChange) {
+          onKeyStateChange({...keyStates.current});
+        }
       }
       
       // Debug - log key states on keydown
@@ -128,12 +168,19 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
         // Safely set the key state
         if (key in keyStates.current) {
           keyStates.current[key as KeyName] = false;
+          globalKeyStates.current[key as KeyName] = false;
         }
         
         // Also set uppercase version for case-insensitive handling
         const upperKey = key.toUpperCase() as KeyName;
         if (upperKey in keyStates.current) {
           keyStates.current[upperKey] = false;
+          globalKeyStates.current[upperKey] = false;
+        }
+        
+        // Notify parent component about key state change
+        if (onKeyStateChange) {
+          onKeyStateChange({...keyStates.current});
         }
         return;
       }
@@ -144,12 +191,24 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
         const storeKey = key === ' ' ? ' ' as KeyName : e.key as KeyName;
         if (storeKey in keyStates.current) {
           keyStates.current[storeKey] = false;
+          globalKeyStates.current[storeKey] = false;
+        }
+        
+        // Notify parent component about key state change
+        if (onKeyStateChange) {
+          onKeyStateChange({...keyStates.current});
         }
       }
       
       // Check for shift key
       if (key === 'shift') {
         keyStates.current['Shift'] = false;
+        globalKeyStates.current['Shift'] = false;
+        
+        // Notify parent component about key state change
+        if (onKeyStateChange) {
+          onKeyStateChange({...keyStates.current});
+        }
       }
       
       // Debug - log key states on keyup
@@ -163,7 +222,13 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, []);
+  }, [onKeyStateChange]);
+  
+  // Update global key states ref in useFrame to ensure it stays synced
+  useFrame(() => {
+    // Sync global key states with local key states
+    Object.assign(globalKeyStates.current, keyStates.current);
+  });
   
   // Camera movement with keyboard
   useFrame(() => {

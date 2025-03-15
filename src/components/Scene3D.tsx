@@ -5,7 +5,7 @@ import PipeModel from './models/PipeModel';
 import PanelModel from './models/PanelModel';
 import GroundModel from './models/GroundModel';
 import CompositeModel from './models/CompositeModel';
-import CameraController from './controllers/CameraController';
+import CameraController, { KeyName, globalKeyStates } from './controllers/CameraController';
 import { Stats, Environment } from '@react-three/drei';
 import { PrimitiveModel, CompositeModel as CompositeModelType } from '@/types/models';
 import { Vector3 } from 'three';
@@ -27,6 +27,29 @@ function CameraPositionTracker({ onPositionChange }: { onPositionChange: (positi
   return null;
 }
 
+// Component to create a human-readable string of active keys
+function formatActiveKeys(keyStates: Record<KeyName, boolean>): string {
+  const activeKeys: string[] = [];
+  
+  // Check for WASD keys
+  if (keyStates.w || keyStates.W) activeKeys.push('W');
+  if (keyStates.a || keyStates.A) activeKeys.push('A');
+  if (keyStates.s || keyStates.S) activeKeys.push('S');
+  if (keyStates.d || keyStates.D) activeKeys.push('D');
+  
+  // Check for arrow keys
+  if (keyStates.ArrowUp) activeKeys.push('↑');
+  if (keyStates.ArrowDown) activeKeys.push('↓');
+  if (keyStates.ArrowLeft) activeKeys.push('←');
+  if (keyStates.ArrowRight) activeKeys.push('→');
+  
+  // Check for space and shift
+  if (keyStates[' ']) activeKeys.push('Space');
+  if (keyStates.Shift) activeKeys.push('Shift');
+  
+  return activeKeys.length > 0 ? activeKeys.join(' + ') : 'None';
+}
+
 interface Scene3DProps {
   controllerType?: ControllerType;
 }
@@ -36,6 +59,22 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [activeController, setActiveController] = useState<ControllerType>(controllerType);
   const [cameraPosition, setCameraPosition] = useState<Vector3>(new Vector3(0, 50, 100));
+  const [activeKeys, setActiveKeys] = useState<Record<KeyName, boolean>>({
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+    ' ': false,
+    'Shift': false,
+    'w': false,
+    'a': false,
+    's': false,
+    'd': false,
+    'W': false,
+    'A': false,
+    'S': false,
+    'D': false
+  });
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Create a list of instance IDs that are referenced by composite models
@@ -64,6 +103,11 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
       canvasRef.current?.focus();
     }
   }, [isFocused]);
+
+  // Handle key states change from CameraController
+  const handleKeyStateChange = useCallback((newKeyStates: Record<KeyName, boolean>) => {
+    setActiveKeys(newKeyStates);
+  }, []);
 
   // Handle escape key to exit focus
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -98,6 +142,20 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     setCameraPosition(position);
   };
 
+  // Keep track of active keys in each frame
+  useEffect(() => {
+    const updateKeyStatesInterval = setInterval(() => {
+      setActiveKeys({...globalKeyStates.current});
+    }, 16); // Update roughly 60 times per second
+    
+    return () => {
+      clearInterval(updateKeyStatesInterval);
+    };
+  }, []);
+
+  // Format the active keys as a readable string
+  const activeKeysString = formatActiveKeys(activeKeys);
+
   return (
     <div 
       className="relative w-full h-full"
@@ -110,12 +168,15 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         </div>
       )}
       
-      {/* Camera position display */}
+      {/* Camera position and key indicator display */}
       <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white py-1 px-3 rounded text-xs z-10">
         <p>Camera Position:</p>
         <p>X: {cameraPosition.x.toFixed(2)}</p>
         <p>Y: {cameraPosition.y.toFixed(2)}</p>
         <p>Z: {cameraPosition.z.toFixed(2)}</p>
+        <div className="mt-2 pt-1 border-t border-gray-500">
+          <p>Key Presses: <span className="font-mono">{activeKeysString}</span></p>
+        </div>
       </div>
       
       <Canvas 
@@ -128,7 +189,10 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         <ambientLight intensity={0.5} />
         <pointLight position={[10, 100, 10]} intensity={1} castShadow />
         
-        <CameraController defaultController={activeController} />
+        <CameraController 
+          defaultController={activeController} 
+          onKeyStateChange={handleKeyStateChange}
+        />
         <Environment preset="sunset" />
         
         {/* Tracking camera position */}
