@@ -12,7 +12,7 @@ import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
 import { RadiusControls } from './components/ui/RadiusControls';
-import { RotationControl } from './components/ui/RotationControl';
+import { RotationControls } from './components/ui/RotationControls';
 
 /**
  * Main application entry point
@@ -47,32 +47,15 @@ class CHEVisualization {
             
             // Create ground
             this.ground = new GroundModel(scene, 5000);
-            this.layerOneRadius = 36.4;
-            this.layerOneStarRadius = 42;
-            this.singleCutRadius = 21;
-            
-            // Set different rotation angles for LayerOneRing and LayerOneStar
-            this.layerOneRotationAngle = 30; // Layer One Ring rotation angle in degrees
-            this.layerOneStarRotationAngle = 60; // Layer One Star rotation angle in degrees
             
             // Create Central CUT model
-            this.centralCut = new SingleCutModel(scene, new Vector3(0, 0, 0), {
-                radius: this.singleCutRadius
-            });
+            this.centralCut = new SingleCutModel(scene, new Vector3(0, 0, 0));
             
-            // Create Layer One Ring model (with shared panels)
-            this.layerOneRing = new LayerOneModel(scene, new Vector3(0, 0, 0), {
-                outerRadius: this.layerOneRadius,
-                singleCutRadius: this.singleCutRadius,
-                rotationAngle: this.layerOneRotationAngle
-            });
+            // Create Layer One Ring model
+            this.layerOneRing = new LayerOneModel(scene, new Vector3(0, 0, 0));
             
-            // Create Layer One Star model (with separate panels)
-            this.layerOneStar = new LayerOneStarModel(scene, new Vector3(0, 0, 0), {
-                outerRadius: this.layerOneStarRadius,
-                singleCutRadius: this.singleCutRadius,
-                rotationAngle: this.layerOneStarRotationAngle
-            });
+            // Create Layer One Star model
+            this.layerOneStar = new LayerOneStarModel(scene, new Vector3(0, 0, 0));
             
             // Hide the Layer One Star model initially (will be reflected in the SceneEditor)
             this.layerOneStar.setVisible(false);
@@ -160,31 +143,18 @@ class CHEVisualization {
                 scene, 
                 [this.layerOneRing, this.layerOneStar],
                 {
-                    position: { x: 10, y: 10 },
-                    outerRadiusMin: 30,
-                    outerRadiusMax: 60,
-                    initialRadius: [this.layerOneRadius, this.layerOneStarRadius],
-                    singleCutRadiusMin: 10,
-                    singleCutRadiusMax: 30,
-                    initialSingleCutRadius: [this.singleCutRadius, this.singleCutRadius],
                     isVisible: false,
                     modelNames: ["Layer One Ring", "Layer One Star"]
                 }
             );
             
-            // Create rotation controls for both Layer One Ring and Layer One Star models with their respective angles
-            const rotationControls = new RotationControl(
+            // Create rotation controls for both Layer One Ring and Layer One Star models
+            const rotationControls = new RotationControls(
                 scene, 
                 [this.layerOneRing, this.layerOneStar], 
-                null, // Don't use a single default angle
                 {
-                    position: { x: 10, y: 170 },
-                    rotationMin: 0,
-                    rotationMax: 360,
                     isVisible: false,
-                    modelNames: ["Layer One Ring", "Layer One Star"],
-                    // Set initial rotation values per model
-                    initialRotations: [this.layerOneRotationAngle, this.layerOneStarRotationAngle]
+                    modelNames: ["Layer One Ring", "Layer One Star"]
                 }
             );
             
