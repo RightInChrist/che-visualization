@@ -133,36 +133,11 @@
     </style>
 </head>
 <body>
+    <!-- Render canvas -->
     <canvas id="renderCanvas"></canvas>
     
-    <!-- All control panels container -->
-    <div id="controlPanels">
-        <div id="cameraInfo">
-            <div>Position: <span id="positionText">0, 0, 0</span></div>
-            <div>Height: <span id="heightText">0m</span> (<span id="heightPercentText">0%</span>)</div>
-            <div>Camera Mode: <span id="cameraModeText">Orbit</span></div>
-        </div>
-        <div id="controlsInfo">
-            <h3>Controls</h3>
-            <p>Orbit Mode: Left-click drag to rotate, right-click drag to pan, scroll to zoom</p>
-            <p>First-Person Mode: WASD to move, mouse to look</p>
-            <p>Flight Mode: WASD to move, space/shift for up/down, mouse to look</p>
-            <p>Press H to toggle this help</p>
-            <p>Press M to toggle camera mode</p>
-            <p>Press E to toggle Scene Editor</p>
-            <h3>Scene Editor</h3>
-            <p>Use the Scene Editor to toggle visibility of scene objects</p>
-            <p>Objects are organized hierarchically, with pipes and panels nested under the SingleCUT model</p>
-        </div>
-        <!-- Radius control panel will be added here by RadiusControls.js -->
-    </div>
-    
-    <!-- Control buttons container -->
-    <div id="controlButtons">
-        <button id="modeToggle" class="control-button tooltip" data-tooltip="Toggle Camera Mode">C</button>
-        <button id="debugToggle" class="control-button tooltip" data-tooltip="Toggle Debug Info">D</button>
-        <!-- The radius control button will be added in RadiusControls.js -->
-    </div>
+    <!-- Control panels container (will be populated by the UI scripts) -->
+    <div id="controlPanels"></div>
     
     <script type="module" src="/src/main.js"></script>
 </body>
