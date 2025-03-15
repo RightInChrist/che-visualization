@@ -84,9 +84,17 @@ export class SingleCutModel {
         // Apply base rotation from the angle between pipes
         panel.rootNode.rotation = rotation;
         
-        // Simple approach: alternate between two rotations
-        // Even panels get 90-degree rotation, odd panels get no additional rotation
-        const additionalRotation = index % 2 === 0 ? Math.PI/2 : 0;
+        // Specific rotation for each panel based on its position
+        // Only panels 2 and 5 need different rotation
+        let additionalRotation;
+        
+        if (index === 1 || index === 4) {
+            // Panels 2 and 5 need no additional rotation
+            additionalRotation = 0;
+        } else {
+            // Panels 1, 3, 4, and 6 need 90-degree rotation
+            additionalRotation = Math.PI/2;
+        }
         
         // Log for debugging
         console.log(`Panel ${index+1}: Using additional rotation of ${additionalRotation}`);
