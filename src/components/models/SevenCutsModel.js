@@ -50,18 +50,10 @@ export class SevenCutsModel extends CompositeModel {
         
         // Create 6 surrounding SingleCUTs in a hexagonal pattern
         for (let i = 0; i < 6; i++) {
-            // Original angle: multiples of 60 degrees (2π/6)
-            // Apply 45 degree counterclockwise shift (subtract π/4)
-            let angle = (i * 2 * Math.PI) / 6 - (Math.PI / 4);
-            
+            const angle = (i * 2 * Math.PI) / 6 - (Math.PI / 6);
+
             // Calculate the radius for this SingleCUT
-            // Make SingleCUT #2 (i=0) closer to the center to connect properly
             let radius = this.options.outerRadius;
-            if (i === 0) {
-                // Position SingleCUT #2 closer to center
-                radius = 32; // Adjusted radius for better connection with the center
-                this.debugLog(`Using reduced radius (${radius}) for SingleCUT #2 to connect with center`);
-            }
             
             const x = radius * Math.cos(angle);
             const z = radius * Math.sin(angle);
@@ -326,7 +318,7 @@ export class SevenCutsModel extends CompositeModel {
         // Convert angle to pipe index (finding closest pipe to this angle)
         // Each pipe is at 60° (π/3 radians) intervals
         const normalizedAngle = inverseAngle < 0 ? inverseAngle + 2 * Math.PI : inverseAngle;
-        const pipeIndex = (Math.round(normalizedAngle / (Math.PI / 3))) % 6;
+        const pipeIndex = Math.round(normalizedAngle / (Math.PI / 3)) % 6;
         
         return pipeIndex;
     }
