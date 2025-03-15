@@ -46,11 +46,13 @@ export class SingleCutModel {
         // Calculate direction vector from current pipe to next pipe
         const direction = nextPipePos.subtract(pipePos).normalize();
         
-        // Calculate rotation to face perpendicular to the direction between pipes
+        // Calculate rotation to face correctly between pipes
+        // For a hexagon, we need panels to be perpendicular to the line between pipes
         const angle = Math.atan2(direction.z, direction.x);
         
-        // Add 90 degrees (PI/2) to make panels connect properly to the pipes
-        const rotation = new BABYLON.Vector3(0, angle + Math.PI/2, 0);
+        // Rotate 90 degrees to make panels connect properly to the pipes
+        // This makes panels perpendicular to the line between adjacent pipes
+        const rotation = new BABYLON.Vector3(0, angle, 0);
         
         // Calculate distance between pipes for panel width
         const distance = BABYLON.Vector3.Distance(pipePos, nextPipePos);
@@ -78,8 +80,12 @@ export class SingleCutModel {
             color: this.options.panelColor
         });
         
-        // Apply rotation
+        // Apply rotation to align with hexagon perimeter
+        // The panel's local Z-axis should be along the line between pipes
         panel.rootNode.rotation = rotation;
+        
+        // Rotate panel 90 degrees around Y-axis to align depth with radius
+        panel.rootNode.rotate(BABYLON.Axis.Y, Math.PI/2, BABYLON.Space.LOCAL);
         
         // Set parent to the root node
         panel.rootNode.parent = this.rootNode;
