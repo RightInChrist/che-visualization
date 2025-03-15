@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useModelStore } from '@/store/modelStore';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { ModelInstance } from '@/types/models';
 
 type ControllerType = 'orbit' | 'firstPerson' | 'flight';
 
@@ -75,14 +76,23 @@ export function Sidebar({ setController }: SidebarProps) {
   }, [models, instances]);
 
   // Get display name for an instance
-  const getInstanceDisplayName = (instance: any, model: any) => {
-    if (instance.name) return instance.name;
+  const getInstanceDisplayName = (instance: ModelInstance, model: any) => {
+    // Override with specific naming for certain instances
+    if (instance.instanceId === 'instance-ground') {
+      return 'Ground Plane #1';
+    }
     
+    if (instance.instanceId === 'instance-single-cut') {
+      return 'Single CUT #1';
+    }
+    
+    // For others, use the counter-based naming
     const counter = instanceCounters[model.id]?.[instance.instanceId];
     if (counter) {
       return `${model.name} #${counter}`;
     }
     
+    // Fallback
     return `${model.name} Instance`;
   };
 
@@ -127,7 +137,7 @@ export function Sidebar({ setController }: SidebarProps) {
   };
 
   // Get composite references
-  const getCompositeReferences = (compositeModel: any, instanceId: string) => {
+  const getCompositeReferences = (compositeModel: any, instanceId: string): ModelInstance[] => {
     if (!compositeModel.references) return [];
     
     return compositeModel.references.map((ref: any) => {
@@ -193,7 +203,7 @@ export function Sidebar({ setController }: SidebarProps) {
       </CollapsibleSection>
       
       {/* Models section - organized by model type */}
-      <CollapsibleSection title="Models by Type" defaultOpen={true}>
+      <CollapsibleSection title="Models" defaultOpen={true}>
         {models.map(model => {
           const { allVisible, allHidden, mixed } = getModelVisibilityState(model.id);
           const isExpanded = expandedModels[model.id] || false;
@@ -255,89 +265,132 @@ export function Sidebar({ setController }: SidebarProps) {
         })}
       </CollapsibleSection>
 
-      {/* Hierarchical instances section */}
-      <CollapsibleSection title="Instance Hierarchy" defaultOpen={true}>
-        {/* Display top-level instances first */}
-        {instances
-          .filter(instance => {
-            // Show only composite instances or standalone instances
-            const model = models.find(m => m.id === instance.modelId);
-            return model?.type === 'composite' || 
-                   !instances.some(i => {
-                     const compositeModel = models.find(m => m.id === i.modelId && m.type === 'composite');
-                     if (!compositeModel || !Array.isArray((compositeModel as any).references)) return false;
-                     return (compositeModel as any).references.some((ref: any) => ref.instanceId === instance.instanceId);
-                   });
-          })
-          .map(instance => {
-            const model = models.find(m => m.id === instance.modelId);
-            if (!model) return null;
-
-            const isComposite = model.type === 'composite';
-            const isExpanded = expandedInstances[instance.instanceId] || false;
-            let childInstances: any[] = [];
-            
-            if (isComposite) {
-              childInstances = getCompositeReferences(model, instance.instanceId);
-            }
-            
-            return (
-              <div key={instance.instanceId} className="mb-2">
-                <div className="flex items-center">
-                  {isComposite ? (
-                    <div 
-                      className="flex items-center cursor-pointer hover:text-blue-300"
-                      onClick={() => toggleInstanceExpansion(instance.instanceId)}
-                    >
-                      {isExpanded ? (
-                        <ChevronDownIcon className="h-3 w-3 mr-1" />
-                      ) : (
-                        <ChevronRightIcon className="h-3 w-3 mr-1" />
-                      )}
-                      <span>{getInstanceDisplayName(instance, model)}</span>
-                    </div>
-                  ) : (
-                    <span className="ml-4">{getInstanceDisplayName(instance, model)}</span>
-                  )}
+      {/* Scenes section - for hierarchical scene organization */}
+      <CollapsibleSection title="Scenes" defaultOpen={true}>
+        {/* Create a "Convective Heat Engine #1" scene that contains everything */}
+        <div className="mb-2">
+          <div className="flex items-center">
+            <div 
+              className="flex items-center cursor-pointer hover:text-blue-300"
+              onClick={() => setExpandedInstances(prev => ({...prev, "scene-che": !prev["scene-che"]}))}
+            >
+              {expandedInstances["scene-che"] ? (
+                <ChevronDownIcon className="h-3 w-3 mr-1" />
+              ) : (
+                <ChevronRightIcon className="h-3 w-3 mr-1" />
+              )}
+              <span className="font-medium text-blue-300">Convective Heat Engine #1</span>
+            </div>
+            <input
+              type="checkbox"
+              id="scene-che-visibility"
+              checked={instances.some(i => i.visible)}
+              onChange={() => {
+                // Toggle all instances based on whether any are currently visible
+                const anyVisible = instances.some(i => i.visible);
+                instances.forEach(instance => {
+                  if (instance.visible === anyVisible) {
+                    toggleInstanceVisibility(instance.instanceId);
+                  }
+                });
+              }}
+              className="ml-2"
+            />
+          </div>
+          
+          {expandedInstances["scene-che"] && (
+            <ul className="ml-6 mt-1 space-y-1">
+              {/* Ground Plane entry */}
+              {instances
+                .filter(instance => instance.modelId === 'green-ground')
+                .map(instance => {
+                  const model = models.find(m => m.id === instance.modelId);
+                  if (!model) return null;
                   
-                  <input
-                    type="checkbox"
-                    id={`hierarchy-instance-${instance.instanceId}`}
-                    checked={instance.visible}
-                    onChange={() => toggleInstanceVisibility(instance.instanceId)}
-                    className="ml-2"
-                  />
-                </div>
+                  return (
+                    <li key={instance.instanceId} className="flex items-center text-sm">
+                      <input
+                        type="checkbox"
+                        id={`scene-item-${instance.instanceId}`}
+                        checked={instance.visible}
+                        onChange={() => toggleInstanceVisibility(instance.instanceId)}
+                        className="mr-2"
+                      />
+                      <label 
+                        htmlFor={`scene-item-${instance.instanceId}`}
+                        className="text-gray-300"
+                      >
+                        Ground Plane #1
+                      </label>
+                    </li>
+                  );
+                })}
                 
-                {isComposite && isExpanded && childInstances.length > 0 && (
-                  <ul className="ml-6 mt-1 space-y-1">
-                    {childInstances.map(childInstance => {
-                      const childModel = models.find(m => m.id === childInstance.modelId);
-                      if (!childModel) return null;
+              {/* Single Cut composite with nested pipes and panels */}
+              {instances
+                .filter(instance => instance.modelId === 'single-cut')
+                .map(instance => {
+                  const model = models.find(m => m.id === instance.modelId);
+                  if (!model) return null;
+                  
+                  const isExpanded = expandedInstances[instance.instanceId] || false;
+                  const childInstances = getCompositeReferences(model, instance.instanceId);
+                  
+                  return (
+                    <li key={instance.instanceId} className="mb-1">
+                      <div className="flex items-center">
+                        <div 
+                          className="flex items-center cursor-pointer hover:text-blue-300"
+                          onClick={() => toggleInstanceExpansion(instance.instanceId)}
+                        >
+                          {isExpanded ? (
+                            <ChevronDownIcon className="h-3 w-3 mr-1" />
+                          ) : (
+                            <ChevronRightIcon className="h-3 w-3 mr-1" />
+                          )}
+                          <span>Single CUT #1</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          id={`scene-item-${instance.instanceId}`}
+                          checked={instance.visible}
+                          onChange={() => toggleInstanceVisibility(instance.instanceId)}
+                          className="ml-2"
+                        />
+                      </div>
                       
-                      return (
-                        <li key={childInstance.instanceId} className="flex items-center text-sm">
-                          <input
-                            type="checkbox"
-                            id={`hierarchy-child-${childInstance.instanceId}`}
-                            checked={childInstance.visible}
-                            onChange={() => toggleInstanceVisibility(childInstance.instanceId)}
-                            className="mr-2"
-                          />
-                          <label 
-                            htmlFor={`hierarchy-child-${childInstance.instanceId}`}
-                            className="text-gray-300"
-                          >
-                            {getInstanceDisplayName(childInstance, childModel)}
-                          </label>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
+                      {isExpanded && childInstances.length > 0 && (
+                        <ul className="ml-6 mt-1 space-y-1">
+                          {childInstances.map((childInstance: ModelInstance) => {
+                            const childModel = models.find(m => m.id === childInstance.modelId);
+                            if (!childModel) return null;
+                            
+                            return (
+                              <li key={childInstance.instanceId} className="flex items-center text-sm">
+                                <input
+                                  type="checkbox"
+                                  id={`scene-child-${childInstance.instanceId}`}
+                                  checked={childInstance.visible}
+                                  onChange={() => toggleInstanceVisibility(childInstance.instanceId)}
+                                  className="mr-2"
+                                />
+                                <label 
+                                  htmlFor={`scene-child-${childInstance.instanceId}`}
+                                  className="text-gray-300"
+                                >
+                                  {getInstanceDisplayName(childInstance, childModel)}
+                                </label>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </li>
+                  );
+                })}
+            </ul>
+          )}
+        </div>
       </CollapsibleSection>
     </div>
   );
