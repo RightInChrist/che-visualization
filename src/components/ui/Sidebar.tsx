@@ -116,7 +116,35 @@ export function Sidebar({ setController }: SidebarProps) {
 
   // Modified toggle function that ensures UI updates
   const handleToggleInstanceVisibility = (instanceId: string) => {
-    toggleInstanceVisibility(instanceId);
+    // Get the instance
+    const instance = getInstanceById(instanceId);
+    if (!instance) return;
+    
+    // Get the model
+    const model = models.find(m => m.id === instance.modelId);
+    if (!model) return;
+    
+    // If toggling a composite model, also toggle all its child instances
+    if (model.type === 'composite') {
+      // First toggle the parent
+      toggleInstanceVisibility(instanceId);
+      
+      // Then toggle all children to match the new parent state
+      // (children should follow parent's visibility)
+      const childInstances = getCompositeReferences(model, instanceId);
+      const newVisibility = !instance.visible; // The new state after toggle
+      
+      childInstances.forEach(child => {
+        // Only toggle if the child doesn't match the new visibility state
+        if (child.visible !== newVisibility) {
+          toggleInstanceVisibility(child.instanceId);
+        }
+      });
+    } else {
+      // For non-composite instances, just toggle normally
+      toggleInstanceVisibility(instanceId);
+    }
+    
     // Force a re-render to update all checkbox states
     setVisibilityVersion(prev => prev + 1);
   };
