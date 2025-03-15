@@ -1,0 +1,28 @@
+{
+  "name": "che-visualization",
+  "version": "1.0.0",
+  "description": "3D visualization of a Convective Heat Engine (CHE) with 1000-meter-tall pipes and panels arranged in hexagonal patterns.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "3D",
+    "visualization",
+    "babylon.js",
+    "convective-heat-engine",
+    "vite"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@babylonjs/core": "^6.11.2",
+    "@babylonjs/gui": "^6.11.2",
+    "@babylonjs/loaders": "^6.11.2"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

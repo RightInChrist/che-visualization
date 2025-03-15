@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convective Heat Engine Visualization</title>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        #uiOverlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+        }
+        #cameraInfo {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        #controlsInfo {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .show-controls #controlsInfo {
+            display: block;
+        }
+        #modeToggle {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            pointer-events: auto;
+        }
+        #debugToggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            pointer-events: auto;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="renderCanvas"></canvas>
+    <div id="uiOverlay">
+        <div id="cameraInfo">
+            <div>Position: <span id="positionText">0, 0, 0</span></div>
+            <div>Height: <span id="heightText">0m</span> (<span id="heightPercentText">0%</span>)</div>
+            <div>Camera Mode: <span id="cameraModeText">Orbit</span></div>
+        </div>
+        <div id="controlsInfo">
+            <h3>Controls</h3>
+            <p>Orbit Mode: Left-click drag to rotate, right-click drag to pan, scroll to zoom</p>
+            <p>First-Person Mode: WASD to move, mouse to look</p>
+            <p>Flight Mode: WASD to move, space/shift for up/down, mouse to look</p>
+            <p>Press H to toggle this help</p>
+            <p>Press M to toggle camera mode</p>
+        </div>
+    </div>
+    <button id="modeToggle">Toggle Camera Mode</button>
+    <button id="debugToggle">Toggle Debug Info</button>
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html> 
