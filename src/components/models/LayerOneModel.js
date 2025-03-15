@@ -1,6 +1,5 @@
 import { Vector3, Color3, MeshBuilder, StandardMaterial, Axis, Space, Mesh } from '@babylonjs/core';
 import { SingleCutModel } from './SingleCutModel';
-import { PanelModel } from './PanelModel';
 import { CompositeModel } from './CompositeModel';
 
 /**
@@ -16,9 +15,6 @@ export class LayerOneModel extends CompositeModel {
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
             rotationAngle: 60, // Default rotation angle in degrees
-            panelHeight: 1000, // Height of panels
-            panelDepth: 0.1,  // Depth of panels
-            panelColor: new Color3(0.2, 0.6, 0.8), // Color of panels
         };
 
         // Call parent constructor
@@ -41,7 +37,7 @@ export class LayerOneModel extends CompositeModel {
     }
     
     /**
-     * Create all the SingleCUT models and shared panels
+     * Create all the SingleCUT models
      */
     createModels() {
         this.debugLog('Creating Layer One Ring model');
@@ -49,127 +45,39 @@ export class LayerOneModel extends CompositeModel {
         // Track permanently hidden elements for scene editor
         this.permanentlyHiddenElements = [];
         
-        // Store SingleCUTs and shared panels
-        this.panels = [];
-        const singleCuts = [];
-        const singleCutPositions = [];
+        // Calculate the distance for properly positioning SingleCuts so they share panels
+        // For sharing panels, the distance between adjacent SingleCUTs should be exactly double the internal radius 
+        // of each SingleCUT
+        const distanceBetweenSingleCuts = this.options.singleCutRadius * 2;
         
-        // Create 6 SingleCUTs in a hexagonal pattern without panels
+        // Calculate the radius of the hexagon that will fit 6 SingleCUTs at this distance
+        // In a regular hexagon, the distance between opposite vertices is 2r
+        // The distance between adjacent vertices is s = r
+        // For our case, we want the distance between adjacent vertices to be distanceBetweenSingleCuts
+        const hexagonRadius = distanceBetweenSingleCuts / (2 * Math.sin(Math.PI / 6));
+        
+        // Store the outer radius for reference
+        this.options.outerRadius = hexagonRadius;
+        
+        // Create 6 SingleCUTs in a hexagonal pattern
         for (let i = 0; i < 6; i++) {
             const angle = (i * 2 * Math.PI) / 6;
 
-            // Calculate the radius for this SingleCUT
-            let radius = this.options.outerRadius;
-            
-            const x = radius * Math.cos(angle);
-            const z = radius * Math.sin(angle);
+            // Calculate the position for this SingleCUT
+            const x = hexagonRadius * Math.cos(angle);
+            const z = hexagonRadius * Math.sin(angle);
             
             const position = new Vector3(x, 0, z);
-            singleCutPositions.push(position);
             
             this.debugLog(`Creating SingleCUT #${i+1} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
             
-            // Create a SingleCUT without internal panels
+            // Create a SingleCUT with its own panels
             const singleCut = new SingleCutModel(this.scene, position, {
-                radius: this.options.singleCutRadius,
-                skipPanels: true // A flag to signal the SingleCUT not to create its own panels
+                radius: this.options.singleCutRadius
             });
             
+            // Add to the model children
             this.addChild(singleCut);
-            singleCuts.push(singleCut);
-            
-            // Arrays of pipes that would normally be hidden (for reference only)
-            const pipesToHide = {
-                1: [5, 4, 3], // Cut 1: pipes 5, 4, 3
-                2: [6, 5, 4], // Cut 2: pipes 6, 5, 4
-                3: [1, 6, 5], // Cut 3: pipes 1, 6, 5
-                4: [2, 1, 6], // Cut 4: pipes 2, 1, 6
-                5: [3, 2, 1], // Cut 5: pipes 3, 2, 1
-                6: [4, 3, 2]  // Cut 6: pipes 4, 3, 2
-            };
-            
-            // Log pipes for this cut (but don't hide them)
-            const cutNumber = i + 1;
-            if (pipesToHide[cutNumber]) {
-                pipesToHide[cutNumber].forEach(pipeNumber => {
-                    // Convert from 1-indexed to 0-indexed
-                    const pipeIndex = pipeNumber - 1;
-                    
-                    // No longer hiding pipes
-                    // singleCut.pipes[pipeIndex].setVisible(false);
-                    // singleCut.pipes[pipeIndex].isPermanentlyHidden = true;
-                    
-                    this.debugLog(`NOT hiding pipe ${pipeNumber} for SingleCUT #${cutNumber} (all pipes shown)`);
-                });
-            }
-        }
-        
-        // Now create shared panels between adjacent SingleCUTs
-        for (let i = 0; i < 6; i++) {
-            const nextIndex = (i + 1) % 6;
-            
-            // Get the positions of adjacent SingleCUTs
-            const currentPos = singleCutPositions[i];
-            const nextPos = singleCutPositions[nextIndex];
-            
-            // Get the pipe positions for panel connections
-            const currentSingleCut = singleCuts[i];
-            const nextSingleCut = singleCuts[nextIndex];
-            
-            // For each SingleCUT, find the pipe that faces the next SingleCUT
-            // Let's assume pipe index k faces next SingleCUT when using a specific arrangement
-            // For a hexagonal arrangement, the pipes should be consistently oriented
-            // We need the position of the pipe that faces the next SingleCUT
-            
-            // In a hexagonal arrangement, if SingleCUTs are numbered 0-5 clockwise,
-            // pipe 0 of SingleCUT i should face towards pipe 3 of SingleCUT (i+1)%6
-            // pipe index to use from currentSingleCut
-            const currentPipeIndex = (i + 2) % 6;  // Pipe facing next SingleCUT
-            const nextPipeIndex = (currentPipeIndex + 3) % 6;  // Pipe on next SingleCUT facing back
-            
-            this.debugLog(`Creating shared panel between SingleCUT #${i+1} and SingleCUT #${nextIndex+1}`);
-            this.debugLog(`Using pipe ${currentPipeIndex+1} from SingleCUT #${i+1} and pipe ${nextPipeIndex+1} from SingleCUT #${nextIndex+1}`);
-            
-            // Get the pipe positions
-            const currentPipe = currentSingleCut.pipes[currentPipeIndex];
-            const nextPipe = nextSingleCut.pipes[nextPipeIndex];
-            
-            if (!currentPipe || !nextPipe) {
-                this.debugLog(`Warning: Could not find pipes to connect between SingleCUT #${i+1} and #${nextIndex+1}`);
-                continue;
-            }
-            
-            // Calculate panel position (midpoint between pipes)
-            const panelPosition = currentPipe.rootNode.position.add(nextPipe.rootNode.position).scale(0.5);
-            
-            // Calculate panel width (distance between pipes minus pipe diameter)
-            const pipeRadius = this.options.singleCutRadius / 10; // Assuming pipe radius is 1/10 of SingleCUT radius
-            const distanceBetweenPipes = Vector3.Distance(
-                currentPipe.rootNode.getAbsolutePosition(),
-                nextPipe.rootNode.getAbsolutePosition()
-            );
-            const panelWidth = distanceBetweenPipes - (2 * pipeRadius);
-            
-            // Calculate panel rotation to face between pipes
-            const direction = nextPipe.rootNode.position.subtract(currentPipe.rootNode.position).normalize();
-            const angle = Math.atan2(direction.z, direction.x);
-            
-            // Create panel
-            const panel = new PanelModel(this.scene, panelPosition, {
-                height: this.options.panelHeight,
-                width: panelWidth,
-                depth: this.options.panelDepth,
-                color: this.options.panelColor
-            });
-            
-            // Rotate panel to face between pipes
-            panel.rootNode.rotation = new Vector3(0, angle + Math.PI/2, 0);
-            
-            // Set parent to root node
-            panel.rootNode.parent = this.rootNode;
-            
-            // Add to panels array
-            this.panels.push(panel);
         }
         
         this.debugLog('Layer One Ring model creation complete with shared panels');
@@ -250,12 +158,12 @@ export class LayerOneModel extends CompositeModel {
     }
     
     /**
-     * Clear all radius visualization elements
+     * Clear all radius visualization lines
      */
     clearRadiusLines() {
         if (this.radiusLines && this.radiusLines.length > 0) {
             this.radiusLines.forEach(line => {
-                if (line) {
+                if (line && typeof line.dispose === 'function') {
                     line.dispose();
                 }
             });
@@ -291,51 +199,43 @@ export class LayerOneModel extends CompositeModel {
     }
     
     /**
-     * Dispose all child models
+     * Dispose child models
      */
     disposeChildren() {
-        if (this.childModels && this.childModels.length > 0) {
-            this.childModels.forEach(child => {
-                if (child && typeof child.dispose === 'function') {
-                    child.dispose();
-                }
-            });
-            this.childModels = [];
-        }
+        // Call parent implementation to dispose all child models
+        super.disposeChildren();
         
-        // Dispose shared panels
-        if (this.panels && this.panels.length > 0) {
-            this.panels.forEach(panel => {
-                if (panel && typeof panel.dispose === 'function') {
-                    panel.dispose();
-                }
-            });
-            this.panels = [];
-        }
+        // Reset child models array
+        this.childModels = [];
     }
     
     /**
-     * Check if a pipe or panel is permanently hidden
-     * @param {number} modelIndex - The index of the SingleCUT (0-5)
-     * @param {string} type - 'pipe' or 'panel'
-     * @param {number} index - The index of the pipe or panel
+     * Check if a specific element is permanently hidden
+     * @param {number} modelIndex - Index of the SingleCUT model
+     * @param {string} type - Type of element ('pipe' or 'panel')
+     * @param {number} index - Index of the element within the model
      * @returns {boolean} - Whether the element is permanently hidden
      */
     isElementPermanentlyHidden(modelIndex, type, index) {
-        if (!this.permanentlyHiddenElements) return false;
-        
-        return this.permanentlyHiddenElements.some(element => 
-            element.modelIndex === modelIndex && 
-            element.type === type && 
-            element.index === index);
+        // In the new implementation, we don't hide any elements permanently
+        return false;
     }
     
     /**
-     * Collects all pipes from all SingleCUT models
-     * @returns {Array} - Array of all pipe meshes
+     * Gets all pipes from all SingleCUTs
+     * @returns {Array} - Array of all pipes from all SingleCUTs
      */
     getAllPipes() {
-        return this.getAllMeshes('pipes');
+        const allPipes = [];
+        const singleCuts = this.getChildren();
+        
+        singleCuts.forEach(singleCut => {
+            if (singleCut.pipes) {
+                allPipes.push(...singleCut.pipes);
+            }
+        });
+        
+        return allPipes;
     }
     
     /**
@@ -347,49 +247,52 @@ export class LayerOneModel extends CompositeModel {
     }
     
     /**
-     * Set the visibility of radius lines
-     * @param {boolean} visible - Whether the radius lines should be visible
+     * Set visibility of radius lines
+     * @param {boolean} visible - Whether to show the radius lines
      */
     setRadiusLinesVisible(visible) {
         this.debugLog(`Setting radius lines visibility to ${visible}`);
         
-        if (visible && this.options.showRadiusLines && this.radiusLines.length === 0) {
-            // If lines should be visible but don't exist yet, create them
+        // Update options
+        this.options.showRadiusLines = visible;
+        
+        // If visible, make sure lines exist
+        if (visible && (!this.radiusLines || this.radiusLines.length === 0)) {
             this.drawRadiusLines();
-        } else if (!visible && this.radiusLines.length > 0) {
-            // If lines should be hidden but exist, hide them
+        }
+        
+        // Set visibility
+        if (this.radiusLines && this.radiusLines.length > 0) {
             this.radiusLines.forEach(line => {
                 if (line) {
-                    line.isVisible = false;
+                    line.setEnabled(visible);
+                    if (typeof line.setVisible === 'function') {
+                        line.setVisible(visible);
+                    } else if (line.isVisible !== undefined) {
+                        line.isVisible = visible;
+                    }
                 }
             });
-        } else if (visible && this.radiusLines.length > 0) {
-            // If lines should be visible and already exist, show them
-            this.radiusLines.forEach(line => {
-                if (line) {
-                    line.isVisible = true;
-                }
-            });
+        }
+        
+        // If not visible, clean up lines to save memory
+        if (!visible) {
+            this.clearRadiusLines();
         }
     }
     
     /**
-     * Update the rotation of the model
-     * @param {number} rotationAngleDegrees - New rotation angle in degrees
+     * Update rotation of the entire model
+     * @param {number} rotationAngleDegrees - Rotation angle in degrees
      */
     updateRotation(rotationAngleDegrees) {
-        // First, reset rotation to zero
-        this.rootNode.rotation = new Vector3(0, 0, 0);
+        // Convert to radians
+        const rotationAngle = (rotationAngleDegrees * Math.PI) / 180;
         
-        // Store the new rotation angle
+        // Update root node rotation
+        this.rootNode.rotation = new Vector3(0, rotationAngle, 0);
+        
+        // Store the current angle
         this.options.rotationAngle = rotationAngleDegrees;
-        
-        // Convert degrees to radians
-        const rotationAngle = rotationAngleDegrees * (Math.PI / 180);
-        
-        // Apply the rotation around the Y axis
-        this.rootNode.rotate(Axis.Y, rotationAngle, Space.WORLD);
-        
-        this.debugLog(`Updated Layer One Ring rotation to ${rotationAngleDegrees} degrees (${rotationAngle.toFixed(2)} radians)`);
     }
 } 
