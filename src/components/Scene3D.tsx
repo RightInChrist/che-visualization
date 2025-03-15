@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useModelStore } from '@/store/modelStore';
 import PipeModel from './models/PipeModel';
@@ -24,6 +24,25 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [activeController, setActiveController] = useState<ControllerType>(controllerType);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Create a list of instance IDs that are referenced by composite models
+  // These should not be rendered directly to avoid duplicates
+  const compositeMemberIds = useMemo(() => {
+    const memberIds = new Set<string>();
+    
+    models.forEach(model => {
+      if (model.type === 'composite') {
+        const compositeModel = model as CompositeModelType;
+        if (compositeModel.references) {
+          compositeModel.references.forEach(ref => {
+            memberIds.add(ref.instanceId);
+          });
+        }
+      }
+    });
+    
+    return memberIds;
+  }, [models]);
 
   // Handle focus state
   const handleCanvasClick = useCallback(() => {
@@ -86,9 +105,13 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         <CameraController defaultController={activeController} />
         <Environment preset="sunset" />
         
-        {/* Render all visible instances */}
+        {/* Render all visible instances that are not part of a composite */}
         {instances.map(instance => {
+          // Skip if not visible
           if (!instance.visible) return null;
+          
+          // Skip if this instance is part of a composite model
+          if (compositeMemberIds.has(instance.instanceId)) return null;
           
           const model = getModelById(instance.modelId);
           if (!model) return null;
