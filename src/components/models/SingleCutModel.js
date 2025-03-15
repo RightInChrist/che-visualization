@@ -81,18 +81,18 @@ export class SingleCutModel {
             color: this.options.panelColor
         });
         
-        // Apply rotation to align with hexagon perimeter
-        // The panel's local Z-axis should be along the line between pipes
+        // Apply base rotation from the angle between pipes
         panel.rootNode.rotation = rotation;
         
-        // Panels 2 and 5 need special rotation (90 degrees different)
-        if (index === 1 || index === 4) { // Index 1 = Panel #2, Index 4 = Panel #5
-            // Rotate these panels differently
-            panel.rootNode.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
-        } else {
-            // Rotate other panels 90 degrees around Y-axis to align depth with radius
-            panel.rootNode.rotate(BABYLON.Axis.Y, Math.PI/2, BABYLON.Space.LOCAL);
-        }
+        // Simple approach: alternate between two rotations
+        // Even panels get 90-degree rotation, odd panels get no additional rotation
+        const additionalRotation = index % 2 === 0 ? Math.PI/2 : 0;
+        
+        // Log for debugging
+        console.log(`Panel ${index+1}: Using additional rotation of ${additionalRotation}`);
+        
+        // Apply the additional rotation
+        panel.rootNode.rotate(BABYLON.Axis.Y, additionalRotation, BABYLON.Space.LOCAL);
         
         // Set parent to the root node
         panel.rootNode.parent = this.rootNode;
