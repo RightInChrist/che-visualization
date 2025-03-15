@@ -319,27 +319,38 @@ export class RadiusControls {
         indicatorContainer.style.borderTop = '1px solid rgba(255,255,255,0.2)';
         indicatorContainer.style.fontSize = '12px'; // Smaller font size
         
+        // Create a single row containing both label and value
+        const row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.alignItems = 'center';
+        row.style.whiteSpace = 'nowrap'; // Prevent wrapping
+        
         // Create label
-        const label = document.createElement('div');
-        label.textContent = 'Distance between opposite panels:';
-        label.style.marginBottom = '3px';
-        indicatorContainer.appendChild(label);
+        const label = document.createElement('span');
+        label.textContent = 'Distance between panels:';
+        label.style.marginRight = '8px';
         
         // Create value display
-        const panelDistanceDisplay = document.createElement('div');
-        panelDistanceDisplay.style.fontSize = '14px';
+        const panelDistanceDisplay = document.createElement('span');
         panelDistanceDisplay.style.fontWeight = 'bold';
-        panelDistanceDisplay.style.whiteSpace = 'nowrap'; // Prevent wrapping
+        panelDistanceDisplay.style.minWidth = '65px';
+        panelDistanceDisplay.style.textAlign = 'right';
         
         // Set a unique id so we can update it later
         const modelId = model.rootNode ? model.rootNode.id : Math.random().toString(36).substring(2, 9);
         panelDistanceDisplay.id = `panel-distance-${modelId}`;
         
+        // Add label and value to the row
+        row.appendChild(label);
+        row.appendChild(panelDistanceDisplay);
+        
+        // Add the row to the container
+        indicatorContainer.appendChild(row);
+        container.appendChild(indicatorContainer);
+        
         // Calculate and display initial value
         this.updatePanelDistanceDisplay(model);
-        
-        indicatorContainer.appendChild(panelDistanceDisplay);
-        container.appendChild(indicatorContainer);
     }
     
     /**
@@ -354,25 +365,26 @@ export class RadiusControls {
         
         // Method 1: Check if model has a calculatePanelDistance method
         if (model && typeof model.calculatePanelDistance === 'function') {
-            panelDistance = Math.round(model.calculatePanelDistance());
+            panelDistance = model.calculatePanelDistance();
         }
-        // Method 2: Check if it's a model with a star pattern (LayerOneStarModel)
-        else if (model && model.constructor && model.constructor.name === 'LayerOneStarModel' && model.options) {
-            // For star model, the panel distance is different due to the star pattern
-            // Using 1.73 (approximately sqrt(3)) for better hexagonal accuracy 
-            panelDistance = Math.round(model.options.outerRadius * 1.73);
+        // Method 2: Use child models' calculatePanelDistance if they exist
+        else if (model && typeof model.getChildren === 'function' && model.getChildren().length > 0) {
+            const childModel = model.getChildren()[0]; // Get first child
+            if (childModel && typeof childModel.calculatePanelDistance === 'function') {
+                panelDistance = childModel.calculatePanelDistance();
+            }
         }
-        // Method 3: Default calculation for standard hexagonal models (LayerOneModel)
+        // Method 3: Fallback calculation for any model with outerRadius
         else if (model && model.options && model.options.outerRadius !== undefined) {
-            // For hexagonal model, distance between opposite panels is roughly 2 * outerRadius
-            panelDistance = Math.round(model.options.outerRadius * 2);
+            // Use the standard formula for hexagons: distance = radius * √3
+            panelDistance = model.options.outerRadius * Math.sqrt(3);
         }
         
         // Find and update the display element
         const modelId = model.rootNode ? model.rootNode.id : Math.random().toString(36).substring(2, 9);
         const displayElement = document.getElementById(`panel-distance-${modelId}`);
         if (displayElement) {
-            displayElement.textContent = `${panelDistance} meters`;
+            displayElement.textContent = `${Math.round(panelDistance)} meters`;
         }
     }
     

@@ -311,6 +311,18 @@ export class SingleCutModel extends BaseModel {
     }
     
     /**
+     * Calculate the distance between opposite panels
+     * This is useful for displaying in UI controls
+     * @returns {number} - Distance in meters
+     */
+    calculatePanelDistance() {
+        // For a regular hexagon, the distance between opposite panels (sides)
+        // is radius * √3, not radius * 2 (which would be the distance between opposite corners)
+        const distanceBetweenPanels = this.options.radius * Math.sqrt(3);
+        return distanceBetweenPanels;
+    }
+    
+    /**
      * Get child models (none for SingleCUTModel since it's a leaf node)
      * @returns {Array} - Empty array since SingleCUTModel has no child models
      */

@@ -412,4 +412,15 @@ export class LayerOneStarModel extends CompositeModel {
     getMaxSingleCutRotation() {
         return 360;
     }
+    
+    /**
+     * Calculate the distance between opposite panels for the star model
+     * @returns {number} - Distance in meters
+     */
+    calculatePanelDistance() {
+        // For a star-shaped hexagonal pattern, the distance between opposite panels
+        // is outerRadius * √3, not outerRadius * 2 (which would be the distance between opposite corners)
+        const distanceBetweenPanels = this.options.outerRadius * Math.sqrt(3);
+        return distanceBetweenPanels;
+    }
 } 
