@@ -19,6 +19,9 @@ export class ModelConfigHelper {
             typeof model.getMaxRotation === 'function'
         );
         
+        // Check if this is a SingleCutModel
+        const isSingleCutModel = model.constructor && model.constructor.name === 'SingleCutModel';
+        
         // Base configuration for the model
         const config = {
             name: model.constructor ? model.constructor.name : 'Unknown Model',
@@ -35,7 +38,7 @@ export class ModelConfigHelper {
             },
             rotation: {
                 // For models with simple rotation (like LayerOneModel), only populate Y rotation
-                y: isSimpleRotationModel ? {
+                y: isSimpleRotationModel || isSingleCutModel ? {
                     default: this.getDefaultValue(model, 'getDefaultRotation', 0),
                     min: this.getDefaultValue(model, 'getMinRotation', 0),
                     max: this.getDefaultValue(model, 'getMaxRotation', 360)
@@ -54,15 +57,22 @@ export class ModelConfigHelper {
             const children = model.getChildren();
             
             if (children && Array.isArray(children) && children.length > 0) {
-                // Get first child's configuration as representative for all children
-                // assuming all children at same level have same configuration
-                const firstChild = children[0];
-                const childConfig = this.getModelConfig(firstChild);
-                
+                // For each child, add its configuration
+                children.forEach(childModel => {
+                    const childConfig = this.getModelConfig(childModel);
+                    if (childConfig) {
+                        config.children.push(childConfig);
+                    }
+                });
+            }
+        } else if (model.childModels && Array.isArray(model.childModels) && model.childModels.length > 0) {
+            // Alternative way to access children
+            model.childModels.forEach(childModel => {
+                const childConfig = this.getModelConfig(childModel);
                 if (childConfig) {
                     config.children.push(childConfig);
                 }
-            }
+            });
         }
         
         return config;

@@ -412,14 +412,33 @@ export class RotationControls {
     onRotationChange(model, axis, value) {
         if (!model) return;
         
+        console.log(`Rotation change: model=${model.constructor.name}, axis=${axis}, value=${value}`);
+        
         // First, check if this is a model that only supports Y-axis rotation with a single parameter
+        // like LayerOneModel or LayerOneStarModel
         if (axis === 'y' && typeof model.updateRotation === 'function' && 
             typeof model.getDefaultRotation === 'function' && 
             typeof model.getMinRotation === 'function' && 
             typeof model.getMaxRotation === 'function') {
+            
+            console.log(`Using single-parameter updateRotation for ${model.constructor.name}`);
+            
             // This appears to be a model that uses the single parameter rotation pattern
             // Call it with degrees directly
             model.updateRotation(value);
+            
+            // The parent model's updateRotation method should handle updating child SingleCutModels properly
+            return;
+        }
+        
+        // Handle rotation specifically for SingleCutModel
+        if (model.constructor.name === 'SingleCutModel') {
+            console.log(`Updating SingleCutModel rotation to ${value} degrees`);
+            
+            // Call the updateRotation method directly with the degree value
+            if (typeof model.updateRotation === 'function') {
+                model.updateRotation(value);
+            }
             return;
         }
         

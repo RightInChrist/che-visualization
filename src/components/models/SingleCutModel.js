@@ -23,6 +23,7 @@ export class SingleCutModel extends BaseModel {
             debug: false, // Enable/disable debug logging
             skipPanels: false, // New option to skip creating panels, for models that share panels across SingleCUTs
             rotationAngle: 0, // Default rotation angle in degrees
+            parent: null, // Reference to parent model (if any)
         };
 
         // Call parent constructor with merged options
@@ -252,6 +253,13 @@ export class SingleCutModel extends BaseModel {
         this.options.rotationAngle = rotationAngleDegrees;
         
         this.debugLog(`Updated SingleCUT rotation to ${rotationAngleDegrees} degrees`);
+        
+        // If this model is part of a collection in a parent model, 
+        // update the parent's reference to this model's rotation
+        if (this.options.parent) {
+            // The parent handles updating its own rotation independently
+            // This just ensures we update our local rotation value
+        }
     }
     
     /**

@@ -42,76 +42,32 @@ export class LayerOneStarModel extends CompositeModel {
     createModels() {
         this.debugLog('Creating Layer One Star model');
         
-        // Track permanently hidden elements for scene editor
-        this.permanentlyHiddenElements = [];
+        const starRadius = this.options.outerRadius;
         
-        // Create 6 SingleCUTs in a hexagonal pattern
+        // Create 6 SingleCUTs in a star pattern
         for (let i = 0; i < 6; i++) {
             const angle = (i * 2 * Math.PI) / 6;
-
-            // Calculate the radius for this SingleCUT
-            let radius = this.options.outerRadius;
             
-            const x = radius * Math.cos(angle);
-            const z = radius * Math.sin(angle);
+            // Calculate the position for this SingleCUT
+            const x = starRadius * Math.cos(angle);
+            const z = starRadius * Math.sin(angle);
             
             const position = new Vector3(x, 0, z);
             
             this.debugLog(`Creating SingleCUT #${i+1} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
             
+            // Default rotation angle for SingleCUTs - using a fixed value for all SingleCUTs
+            const singleCutRotationAngle = 0; // No rotation for Star model's SingleCUTs
+            
+            // Create a SingleCUT with individual panels
             const singleCut = new SingleCutModel(this.scene, position, {
-                radius: this.options.singleCutRadius
+                radius: this.options.singleCutRadius,
+                rotationAngle: singleCutRotationAngle,
+                parent: this // Reference to parent for reverse lookup
             });
             
+            // Add to the model children
             this.addChild(singleCut);
-            
-            // Arrays of panels and pipes that would normally be hidden (for reference only)
-            const panelsToHide = {
-                1: [3, 4], // Cut 1: panels 3 and 4
-                2: [4, 5], // Cut 2: panels 4 and 5
-                3: [5, 6], // Cut 3: panels 5 and 6
-                4: [6, 1], // Cut 4: panels 6 and 1
-                5: [1, 2], // Cut 5: panels 1 and 2
-                6: [2, 3]  // Cut 6: panels 2 and 3
-            };
-            
-            const pipesToHide = {
-                1: [5, 4, 3], // Cut 1: pipes 5, 4, 3
-                2: [6, 5, 4], // Cut 2: pipes 6, 5, 4
-                3: [1, 6, 5], // Cut 3: pipes 1, 6, 5
-                4: [2, 1, 6], // Cut 4: pipes 2, 1, 6
-                5: [3, 2, 1], // Cut 5: pipes 3, 2, 1
-                6: [4, 3, 2]  // Cut 6: pipes 4, 3, 2
-            };
-            
-            // Log panels for this cut (but don't hide them)
-            const cutNumber = i + 1;
-            if (panelsToHide[cutNumber]) {
-                panelsToHide[cutNumber].forEach(panelNumber => {
-                    // Convert from 1-indexed to 0-indexed
-                    const panelIndex = panelNumber - 1;
-                    
-                    // No longer hiding panels
-                    // singleCut.panels[panelIndex].setVisible(false);
-                    // singleCut.panels[panelIndex].isPermanentlyHidden = true;
-                    
-                    this.debugLog(`NOT hiding panel ${panelNumber} for SingleCUT #${cutNumber} (all panels shown)`);
-                });
-            }
-            
-            // Log pipes for this cut (but don't hide them)
-            if (pipesToHide[cutNumber]) {
-                pipesToHide[cutNumber].forEach(pipeNumber => {
-                    // Convert from 1-indexed to 0-indexed
-                    const pipeIndex = pipeNumber - 1;
-                    
-                    // No longer hiding pipes
-                    // singleCut.pipes[pipeIndex].setVisible(false);
-                    // singleCut.pipes[pipeIndex].isPermanentlyHidden = true;
-                    
-                    this.debugLog(`NOT hiding pipe ${pipeNumber} for SingleCUT #${cutNumber} (all pipes shown)`);
-                });
-            }
         }
         
         this.debugLog('Layer One Star model creation complete');
@@ -319,6 +275,18 @@ export class LayerOneStarModel extends CompositeModel {
         
         // Store the current angle
         this.options.rotationAngle = rotationAngleDegrees;
+        
+        // Update all SingleCUT rotations to match their own internal rotation
+        // This is necessary for when SingleCUT controls are used separately
+        if (this.childModels && this.childModels.length > 0) {
+            this.childModels.forEach(singleCut => {
+                if (singleCut && typeof singleCut.updateRotation === 'function') {
+                    // Each SingleCut model maintains its own rotation, 
+                    // independent of the parent model rotation
+                    singleCut.updateRotation(singleCut.options.rotationAngle);
+                }
+            });
+        }
     }
     
     /**

@@ -73,10 +73,14 @@ export class LayerOneModel extends CompositeModel {
             
             this.debugLog(`Creating SingleCUT #${i+1} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
             
-            // Create a SingleCUT with its own panels and set rotation angle to 30 degrees
+            // Default rotation angle for SingleCUTs - using a fixed value for all SingleCUTs
+            const singleCutRotationAngle = 30;
+            
+            // Create a SingleCUT with its own panels and rotation angle
             const singleCut = new SingleCutModel(this.scene, position, {
                 radius: this.options.singleCutRadius,
-                rotationAngle: 30 // Set default rotation angle to 30 degrees for all SingleCutModels
+                rotationAngle: singleCutRotationAngle, // Use the default rotation value for all SingleCutModels
+                parent: this // Reference to parent for reverse lookup
             });
             
             // Add to the model children
@@ -304,6 +308,18 @@ export class LayerOneModel extends CompositeModel {
         
         // Store the current angle
         this.options.rotationAngle = rotationAngleDegrees;
+        
+        // Update all SingleCUT rotations to match their own internal rotation
+        // This is necessary for when SingleCUT controls are used separately
+        if (this.childModels && this.childModels.length > 0) {
+            this.childModels.forEach(singleCut => {
+                if (singleCut && typeof singleCut.updateRotation === 'function') {
+                    // Each SingleCut model maintains its own rotation, 
+                    // independent of the parent model rotation
+                    singleCut.updateRotation(singleCut.options.rotationAngle);
+                }
+            });
+        }
     }
     
     /**
