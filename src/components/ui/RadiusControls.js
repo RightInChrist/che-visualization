@@ -3,18 +3,21 @@ import '@babylonjs/gui';
 import { AdvancedDynamicTexture, Rectangle, Grid, TextBlock, Slider, Button, Control } from '@babylonjs/gui';
 
 /**
- * Creates slider controls for adjusting the radius parameters of the Layer One Ring model
+ * Creates slider controls for adjusting the radius parameters of multiple models
  */
 export class RadiusControls {
     /**
      * Create a new RadiusControls instance
      * @param {BABYLON.Scene} scene - The scene
-     * @param {Object} layerOneRingModel - The Layer One Ring model to control
+     * @param {Object} models - Single model or array of models to control
      * @param {Object} options - Additional options
      */
-    constructor(scene, layerOneRingModel, options = {}) {
+    constructor(scene, models, options = {}) {
         this.scene = scene;
-        this.layerOneRingModel = layerOneRingModel;
+        
+        // Handle both single model and array of models
+        this.models = Array.isArray(models) ? models : [models];
+        this.modelConfigs = [];
         
         // Default options
         const defaultOptions = {
@@ -31,24 +34,75 @@ export class RadiusControls {
             textColor: "#ffffff",    // Text color
             sliderBarColor: "#444444", // Slider bar color
             sliderThumbColor: "#00aaff", // Slider thumb color
-            isVisible: false          // Initially hidden to avoid clutter
+            isVisible: false,        // Initially hidden to avoid clutter
+            modelNames: null         // Array of names for models, or null for auto-naming
         };
         
         this.options = { ...defaultOptions, ...options };
         
-        // Current values
-        this.currentOuterRadius = this.options.outerRadiusDefault;
-        this.currentSingleCutRadius = this.options.singleCutRadiusDefault;
+        // Set up model configurations
+        this.setupModelConfigs();
         
         // Create the UI for the radius controls
         this.createUI();
         
         // Set initial radius lines visibility to match panel visibility
-        if (this.layerOneRingModel && typeof this.layerOneRingModel.setRadiusLinesVisible === 'function') {
-            this.layerOneRingModel.setRadiusLinesVisible(this.options.isVisible);
+        this.models.forEach(model => {
+            if (model && typeof model.setRadiusLinesVisible === 'function') {
+                model.setRadiusLinesVisible(this.options.isVisible);
+            }
+        });
+        
+        console.log("RadiusControls initialized with", this.models.length, "models");
+    }
+    
+    /**
+     * Set up model configurations with names and radius values
+     */
+    setupModelConfigs() {
+        // If only one model but modelNames is not provided, use legacy modelName option
+        if (this.models.length === 1 && !this.options.modelNames && this.options.modelName) {
+            this.modelConfigs.push({
+                model: this.models[0],
+                name: this.options.modelName,
+                currentOuterRadius: this.options.outerRadiusDefault,
+                currentSingleCutRadius: this.options.singleCutRadiusDefault
+            });
+            return;
         }
         
-        console.log("RadiusControls initialized");
+        // Process each model with its name
+        this.models.forEach((model, index) => {
+            // Determine model name
+            let modelName;
+            if (this.options.modelNames && this.options.modelNames[index]) {
+                modelName = this.options.modelNames[index];
+            } else if (model.constructor && model.constructor.name) {
+                modelName = model.constructor.name;
+            } else {
+                modelName = `Model ${index + 1}`;
+            }
+            
+            // Get current radius values for this model if available
+            let currentOuterRadius = this.options.outerRadiusDefault;
+            let currentSingleCutRadius = this.options.singleCutRadiusDefault;
+            
+            if (model.options) {
+                if (model.options.outerRadius !== undefined) {
+                    currentOuterRadius = model.options.outerRadius;
+                }
+                if (model.options.singleCutRadius !== undefined) {
+                    currentSingleCutRadius = model.options.singleCutRadius;
+                }
+            }
+            
+            this.modelConfigs.push({
+                model,
+                name: modelName,
+                currentOuterRadius,
+                currentSingleCutRadius
+            });
+        });
     }
     
     /**
@@ -81,28 +135,50 @@ export class RadiusControls {
             title.style.margin = '0 0 10px 0';
             this.panel.appendChild(title);
             
-            // Create outer radius control
-            const outerRadiusContainer = this.createSliderRow(
-                "Layer One Ring Radius",
-                this.options.outerRadiusMin,
-                this.options.outerRadiusMax,
-                this.currentOuterRadius,
-                (value) => this.onOuterRadiusChange(value)
-            );
-            this.panel.appendChild(outerRadiusContainer);
-            
-            // Create SingleCUT radius control
-            const singleCutRadiusContainer = this.createSliderRow(
-                "SingleCUT Radius",
-                this.options.singleCutRadiusMin,
-                this.options.singleCutRadiusMax,
-                this.currentSingleCutRadius,
-                (value) => this.onSingleCutRadiusChange(value)
-            );
-            this.panel.appendChild(singleCutRadiusContainer);
-            
-            // Create panel distance indicator
-            this.createPanelDistanceIndicator();
+            // Create radius controls for each model
+            this.modelConfigs.forEach((config, modelIndex) => {
+                // Create model section container
+                const modelSection = document.createElement('div');
+                modelSection.className = 'model-radius-section';
+                
+                if (modelIndex > 0) {
+                    modelSection.style.marginTop = '20px';
+                    modelSection.style.borderTop = '1px solid #444';
+                    modelSection.style.paddingTop = '15px';
+                }
+                
+                // Create model name header
+                const modelNameHeader = document.createElement('h4');
+                modelNameHeader.textContent = config.name;
+                modelNameHeader.style.margin = '0 0 10px 0';
+                modelSection.appendChild(modelNameHeader);
+                
+                // Create outer radius control
+                const outerRadiusContainer = this.createSliderRow(
+                    "Outer Radius",
+                    this.options.outerRadiusMin,
+                    this.options.outerRadiusMax,
+                    config.currentOuterRadius,
+                    (value) => this.onOuterRadiusChange(modelIndex, value)
+                );
+                modelSection.appendChild(outerRadiusContainer);
+                
+                // Create SingleCUT radius control
+                const singleCutRadiusContainer = this.createSliderRow(
+                    "SingleCUT Radius",
+                    this.options.singleCutRadiusMin,
+                    this.options.singleCutRadiusMax,
+                    config.currentSingleCutRadius,
+                    (value) => this.onSingleCutRadiusChange(modelIndex, value)
+                );
+                modelSection.appendChild(singleCutRadiusContainer);
+                
+                // Create panel distance indicator for this model
+                this.createPanelDistanceIndicator(modelSection, modelIndex);
+                
+                // Add model section to the panel
+                this.panel.appendChild(modelSection);
+            });
             
             // Add the panel to the control panels container
             this.controlPanels.appendChild(this.panel);
@@ -225,130 +301,127 @@ export class RadiusControls {
     
     /**
      * Create an indicator showing the distance between opposite panels
+     * @param {HTMLElement} container - The container to add the indicator to
+     * @param {number} modelIndex - The index of the model in the modelConfigs array
      */
-    createPanelDistanceIndicator() {
+    createPanelDistanceIndicator(container, modelIndex) {
         // Create container
-        const container = document.createElement('div');
-        container.style.marginTop = '15px';
-        container.style.padding = '8px';
-        container.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+        const indicatorContainer = document.createElement('div');
+        indicatorContainer.style.marginTop = '15px';
+        indicatorContainer.style.padding = '8px';
+        indicatorContainer.style.borderTop = '1px solid rgba(255,255,255,0.2)';
         
         // Create label
         const label = document.createElement('div');
         label.textContent = 'Distance between opposite panels:';
         label.style.marginBottom = '5px';
-        container.appendChild(label);
+        indicatorContainer.appendChild(label);
         
         // Create value display
-        this.panelDistanceDisplay = document.createElement('div');
-        this.panelDistanceDisplay.style.fontSize = '16px';
-        this.panelDistanceDisplay.style.fontWeight = 'bold';
+        const panelDistanceDisplay = document.createElement('div');
+        panelDistanceDisplay.style.fontSize = '16px';
+        panelDistanceDisplay.style.fontWeight = 'bold';
+        
+        // Set a unique id so we can update it later
+        panelDistanceDisplay.id = `panel-distance-${modelIndex}`;
         
         // Calculate and display initial value
-        this.updatePanelDistanceDisplay();
+        this.updatePanelDistanceDisplay(modelIndex);
         
-        container.appendChild(this.panelDistanceDisplay);
-        this.panel.appendChild(container);
+        indicatorContainer.appendChild(panelDistanceDisplay);
+        container.appendChild(indicatorContainer);
     }
     
     /**
-     * Update the panel distance display with current value
+     * Update the panel distance display for a specific model
+     * @param {number} modelIndex - The index of the model in the modelConfigs array
      */
-    updatePanelDistanceDisplay() {
-        // Get pipe radius from the model (default is 1 if not accessible)
-        const pipeRadius = (this.layerOneRingModel && 
-                          this.layerOneRingModel.singleCuts && 
-                          this.layerOneRingModel.singleCuts[0] && 
-                          this.layerOneRingModel.singleCuts[0].options) 
-                          ? this.layerOneRingModel.singleCuts[0].options.pipeRadius || 1 
-                          : 1;
+    updatePanelDistanceDisplay(modelIndex) {
+        if (modelIndex < 0 || modelIndex >= this.modelConfigs.length) return;
         
-        // Calculate distance between pipe centers
-        const pipeCentersDistance = 2 * this.currentSingleCutRadius;
+        const config = this.modelConfigs[modelIndex];
+        const model = config.model;
         
-        // Calculate actual panel distance (subtract diameter of pipes)
-        const panelDistance = pipeCentersDistance - (2 * pipeRadius);
+        // Calculate the panel distance for this model
+        let panelDistance = 0;
         
-        // Display both values with 2 decimal places
-        this.panelDistanceDisplay.innerHTML = 
-            `<div>Between pipe centers: ${pipeCentersDistance.toFixed(2)} units</div>
-             <div>Between panel edges: ${panelDistance.toFixed(2)} units</div>`;
-    }
-    
-    /**
-     * Handle changes to outer radius
-     */
-    onOuterRadiusChange(value) {
-        this.currentOuterRadius = value;
-        
-        // Update the model
-        if (this.layerOneRingModel && typeof this.layerOneRingModel.updateRadiusSettings === 'function') {
-            this.layerOneRingModel.updateRadiusSettings(value, this.currentSingleCutRadius);
+        if (model && model.options) {
+            const outerRadius = config.currentOuterRadius;
+            
+            // Calculate panel distance (roughly 2 * outerRadius for hexagonal pattern)
+            panelDistance = Math.round(outerRadius * 2);
         }
         
-        // Update the panel distance display
-        this.updatePanelDistanceDisplay();
-    }
-    
-    /**
-     * Handle changes to SingleCUT radius
-     */
-    onSingleCutRadiusChange(value) {
-        this.currentSingleCutRadius = value;
-        
-        // Update the model
-        if (this.layerOneRingModel && typeof this.layerOneRingModel.updateRadiusSettings === 'function') {
-            this.layerOneRingModel.updateRadiusSettings(this.currentOuterRadius, value);
+        // Find and update the display element
+        const displayElement = document.getElementById(`panel-distance-${modelIndex}`);
+        if (displayElement) {
+            displayElement.textContent = `${panelDistance} meters`;
         }
-        
-        // Update the panel distance display
-        this.updatePanelDistanceDisplay();
     }
     
     /**
-     * Show the controls panel
+     * Handle changes to outer radius for a specific model
+     * @param {number} modelIndex - The index of the model to update
+     * @param {number} value - New outer radius value
+     */
+    onOuterRadiusChange(modelIndex, value) {
+        if (modelIndex < 0 || modelIndex >= this.modelConfigs.length) return;
+        
+        const config = this.modelConfigs[modelIndex];
+        config.currentOuterRadius = value;
+        
+        // Update the model's radius
+        const model = config.model;
+        if (model && typeof model.updateRadiusSettings === 'function') {
+            model.updateRadiusSettings(value, config.currentSingleCutRadius);
+            
+            // Update the panel distance display
+            this.updatePanelDistanceDisplay(modelIndex);
+        }
+    }
+    
+    /**
+     * Handle changes to SingleCUT radius for a specific model
+     * @param {number} modelIndex - The index of the model to update
+     * @param {number} value - New SingleCUT radius value
+     */
+    onSingleCutRadiusChange(modelIndex, value) {
+        if (modelIndex < 0 || modelIndex >= this.modelConfigs.length) return;
+        
+        const config = this.modelConfigs[modelIndex];
+        config.currentSingleCutRadius = value;
+        
+        // Update the model's radius
+        const model = config.model;
+        if (model && typeof model.updateRadiusSettings === 'function') {
+            model.updateRadiusSettings(config.currentOuterRadius, value);
+        }
+    }
+    
+    /**
+     * Show the controls
      */
     show() {
-        if (this.panel) {
-            this.panel.style.display = 'block';
-        }
+        this.togglePanel(true);
     }
     
     /**
-     * Hide the controls panel
+     * Hide the controls
      */
     hide() {
-        if (this.panel) {
-            this.panel.style.display = 'none';
-        }
+        this.togglePanel(false);
     }
     
     /**
-     * Toggle the visibility of the controls panel
+     * Toggle visibility of the controls
      */
     toggle() {
-        if (this.panel) {
-            const isVisible = this.panel.style.display !== 'none';
-            this.panel.style.display = isVisible ? 'none' : 'block';
-            
-            // Toggle radius lines visibility in the model
-            if (this.layerOneRingModel && typeof this.layerOneRingModel.setRadiusLinesVisible === 'function') {
-                this.layerOneRingModel.setRadiusLinesVisible(!isVisible);
-            }
-            
-            // Update button active state if available
-            if (this.htmlToggleButton) {
-                if (!isVisible) {
-                    this.htmlToggleButton.classList.add('active');
-                } else {
-                    this.htmlToggleButton.classList.remove('active');
-                }
-            }
-        }
+        const isCurrentlyVisible = this.panel.style.display !== 'none';
+        this.togglePanel(!isCurrentlyVisible);
     }
     
     /**
-     * Create an HTML toggle button that matches the style of other UI controls
+     * Create HTML button for toggling controls
      */
     createHTMLToggleButton() {
         // Find the control buttons container
@@ -364,12 +437,11 @@ export class RadiusControls {
         button.className = 'control-button tooltip';
         button.setAttribute('data-tooltip', 'Toggle Radius Controls');
         button.textContent = 'R';
-        button.style.backgroundColor = '#9C27B0'; // Purple
+        button.style.backgroundColor = '#4CAF50'; // Green
         
         // Add click event
         button.addEventListener('click', () => {
-            const isVisible = this.panel.style.display !== 'none';
-            this.togglePanel(!isVisible);
+            this.toggle();
         });
         
         // Add to container
@@ -387,11 +459,6 @@ export class RadiusControls {
         this.panel.style.display = isVisible ? 'block' : 'none';
         this.options.isVisible = isVisible;
         
-        // Toggle radius lines visibility in the model
-        if (this.layerOneRingModel && typeof this.layerOneRingModel.setRadiusLinesVisible === 'function') {
-            this.layerOneRingModel.setRadiusLinesVisible(isVisible);
-        }
-        
         // Update button active state
         if (this.htmlToggleButton) {
             if (isVisible) {
@@ -400,17 +467,24 @@ export class RadiusControls {
                 this.htmlToggleButton.classList.remove('active');
             }
         }
+        
+        // Toggle radius lines visibility in the models
+        this.models.forEach(model => {
+            if (model && typeof model.setRadiusLinesVisible === 'function') {
+                model.setRadiusLinesVisible(isVisible);
+            }
+        });
     }
     
     /**
      * Dispose of all resources
      */
     dispose() {
-        if (this.advancedTexture) {
-            this.advancedTexture.dispose();
+        // Remove DOM elements
+        if (this.panel && this.panel.parentNode) {
+            this.panel.parentNode.removeChild(this.panel);
         }
         
-        // Remove HTML button if it exists
         if (this.htmlToggleButton && this.htmlToggleButton.parentNode) {
             this.htmlToggleButton.parentNode.removeChild(this.htmlToggleButton);
         }

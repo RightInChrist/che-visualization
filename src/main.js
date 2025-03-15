@@ -151,14 +151,22 @@ class CHEVisualization {
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, sceneObjects);
             
-            // Create the radius controls for Layer One Ring
-            const radiusControls = new RadiusControls(scene, this.layerOneRing, {
-                position: { x: 10, y: 10 },
-                outerRadiusMin: 30,
-                outerRadiusMax: 50,
-                outerRadiusDefault: this.layerOneRadius,
-                isVisible: false
-            });
+            // Create radius controls for both Layer One Ring and Layer One Star models
+            const radiusControls = new RadiusControls(
+                scene, 
+                [this.layerOneRing, this.layerOneStar],
+                {
+                    position: { x: 10, y: 10 },
+                    outerRadiusMin: 30,
+                    outerRadiusMax: 60,
+                    outerRadiusDefault: this.layerOneRadius,
+                    singleCutRadiusMin: 10,
+                    singleCutRadiusMax: 30,
+                    singleCutRadiusDefault: this.singleCutRadius,
+                    isVisible: false,
+                    modelNames: ["Layer One Ring", "Layer One Star"]
+                }
+            );
             
             // Create rotation controls for both Layer One Ring and Layer One Star models
             const rotationControls = new RotationControl(
@@ -174,6 +182,21 @@ class CHEVisualization {
                     modelNames: ["Layer One Ring", "Layer One Star"]
                 }
             );
+            
+            // Add visibility toggle button for debugging LayerOneStar visibility
+            const toggleStarVisibilityBtn = document.createElement('button');
+            toggleStarVisibilityBtn.textContent = 'Toggle Layer One Star';
+            toggleStarVisibilityBtn.style.position = 'absolute';
+            toggleStarVisibilityBtn.style.top = '10px';
+            toggleStarVisibilityBtn.style.left = '10px';
+            toggleStarVisibilityBtn.style.padding = '5px';
+            toggleStarVisibilityBtn.style.zIndex = '100';
+            toggleStarVisibilityBtn.addEventListener('click', () => {
+                const isVisible = this.layerOneStar.isVisible();
+                console.log(`LayerOneStar was ${isVisible ? 'visible' : 'hidden'}, toggling to ${!isVisible ? 'visible' : 'hidden'}`);
+                this.layerOneStar.setVisible(!isVisible);
+            });
+            document.body.appendChild(toggleStarVisibilityBtn);
             
             // Create control panels container if it doesn't exist
             if (!document.getElementById('controlPanels')) {
