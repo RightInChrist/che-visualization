@@ -137,28 +137,34 @@ export class SevenCutsModel extends CompositeModel {
         this.clearRadiusLines();
         
         // Height offset to place slightly above ground
-        const heightOffset = 0.1;
+        const heightOffset = 0.05;
         
         // Create material for standard radius
         const standardRadiusMaterial = new StandardMaterial("standardRadiusMaterial", this.scene);
         standardRadiusMaterial.diffuseColor = new Color3(0.7, 0.7, 0);
         standardRadiusMaterial.alpha = 0.8;
+        standardRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
+        standardRadiusMaterial.emissiveColor = new Color3(0.4, 0.4, 0);
         
         // Create material for SingleCUT #2 radius
         const specialRadiusMaterial = new StandardMaterial("specialRadiusMaterial", this.scene);
         specialRadiusMaterial.diffuseColor = new Color3(0, 0.7, 0.7);
         specialRadiusMaterial.alpha = 0.8;
+        specialRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
+        specialRadiusMaterial.emissiveColor = new Color3(0, 0.4, 0.4);
         
         // Create material for SingleCUT internal radius
         const internalRadiusMaterial = new StandardMaterial("internalRadiusMaterial", this.scene);
         internalRadiusMaterial.diffuseColor = new Color3(0.7, 0, 0.7);
         internalRadiusMaterial.alpha = 0.8;
+        internalRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
+        internalRadiusMaterial.emissiveColor = new Color3(0.4, 0, 0.4);
         
         // Create circle for the standard radius (250 units)
-        const standardCircle = MeshBuilder.CreateTorus("standardRadiusLine", {
-            diameter: this.options.outerRadius * 2,
-            thickness: 2,
-            tessellation: 64
+        const standardCircle = MeshBuilder.CreateDisc("standardRadiusLine", {
+            radius: this.options.outerRadius,
+            tessellation: 64,
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE
         }, this.scene);
         standardCircle.material = standardRadiusMaterial;
         standardCircle.position.y = heightOffset;
@@ -167,25 +173,25 @@ export class SevenCutsModel extends CompositeModel {
         this.radiusLines.push(standardCircle);
         
         // Create circle for SingleCUT #2 special radius (200 units)
-        const specialCircle = MeshBuilder.CreateTorus("specialRadiusLine", {
-            diameter: 400, // 200 * 2
-            thickness: 2,
-            tessellation: 64
+        const specialCircle = MeshBuilder.CreateDisc("specialRadiusLine", {
+            radius: 200, // Special radius for SingleCUT #2
+            tessellation: 64,
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE
         }, this.scene);
         specialCircle.material = specialRadiusMaterial;
-        specialCircle.position.y = heightOffset;
+        specialCircle.position.y = heightOffset * 2; // Slightly above the standard circle
         specialCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
         specialCircle.parent = this.rootNode;
         this.radiusLines.push(specialCircle);
         
         // Create circle for SingleCUT internal radius
-        const internalCircle = MeshBuilder.CreateTorus("internalRadiusLine", {
-            diameter: this.options.singleCutRadius * 2,
-            thickness: 2,
-            tessellation: 64
+        const internalCircle = MeshBuilder.CreateDisc("internalRadiusLine", {
+            radius: this.options.singleCutRadius,
+            tessellation: 64,
+            sideOrientation: BABYLON.Mesh.DOUBLESIDE
         }, this.scene);
         internalCircle.material = internalRadiusMaterial;
-        internalCircle.position.y = heightOffset;
+        internalCircle.position.y = heightOffset * 3; // Slightly above the other circles
         internalCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
         internalCircle.parent = this.rootNode;
         this.radiusLines.push(internalCircle);
@@ -206,8 +212,8 @@ export class SevenCutsModel extends CompositeModel {
             // Create a line from center to the SingleCUT position
             const line = MeshBuilder.CreateLines("radiusLine_" + i, {
                 points: [
-                    new Vector3(0, heightOffset, 0),
-                    new Vector3(x, heightOffset, z)
+                    new Vector3(0, heightOffset * 4, 0),
+                    new Vector3(x, heightOffset * 4, z)
                 ]
             }, this.scene);
             
