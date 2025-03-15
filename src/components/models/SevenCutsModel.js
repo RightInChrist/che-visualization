@@ -10,7 +10,7 @@ export class SevenCutsModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 42, // Distance from center to outer SingleCUTs (2x SingleCutModel radius for proper spacing)
+            outerRadius: 42,
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging,
             showRadiusLines: false, // Whether to show radius lines on the ground (changed to false by default)
@@ -50,18 +50,10 @@ export class SevenCutsModel extends CompositeModel {
         
         // Create 6 surrounding SingleCUTs in a hexagonal pattern
         for (let i = 0; i < 6; i++) {
-            // Original angle: multiples of 60 degrees (2π/6)
-            // Apply 45 degree counterclockwise shift (subtract π/4)
-            const angle = (i * 2 * Math.PI) / 6 - (Math.PI / 4);
-            
+            const angle = (i * 2 * Math.PI) / 6 - (Math.PI / 6);
+
             // Calculate the radius for this SingleCUT
-            // Make SingleCUT #2 (i=0) closer to the center to connect properly
             let radius = this.options.outerRadius;
-            if (i === 0) {
-                // Position SingleCUT #2 closer to center
-                radius = 32; // Adjusted radius for better connection with the center
-                this.debugLog(`Using reduced radius (${radius}) for SingleCUT #2 to connect with center`);
-            }
             
             const x = radius * Math.cos(angle);
             const z = radius * Math.sin(angle);
@@ -69,6 +61,7 @@ export class SevenCutsModel extends CompositeModel {
             const position = new Vector3(x, 0, z);
             
             this.debugLog(`Creating SingleCUT #${i+2} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
+            console.log(`Creating SingleCUT #${i+2} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
             
             const singleCut = new SingleCutModel(this.scene, position, {
                 radius: this.options.singleCutRadius

@@ -44,10 +44,11 @@ class CHEVisualization {
             
             // Create ground
             this.ground = new GroundModel(scene, 5000);
+            this.sevenCutRadius = 36.1;
             
             // Create Seven CUTs model
             this.cheModel = new SevenCutsModel(scene, new Vector3(0, 0, 0), {
-                outerRadius: 42,
+                outerRadius: this.sevenCutRadius,
                 singleCutRadius: 21
             });
             
@@ -108,6 +109,9 @@ class CHEVisualization {
             // Create the radius controls
             const radiusControls = new RadiusControls(scene, this.cheModel, {
                 position: { x: 10, y: 10 },
+                outerRadiusMin: 30,
+                outerRadiusMax: 40,
+                outerRadiusDefault: this.sevenCutRadius,
                 isVisible: false
             });
             
