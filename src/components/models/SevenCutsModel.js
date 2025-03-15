@@ -343,4 +343,31 @@ export class SevenCutsModel extends CompositeModel {
     get singleCuts() {
         return this.getChildren();
     }
+    
+    /**
+     * Set the visibility of radius lines
+     * @param {boolean} visible - Whether the radius lines should be visible
+     */
+    setRadiusLinesVisible(visible) {
+        this.debugLog(`Setting radius lines visibility to ${visible}`);
+        
+        if (visible && this.options.showRadiusLines && this.radiusLines.length === 0) {
+            // If lines should be visible but don't exist yet, create them
+            this.drawRadiusLines();
+        } else if (!visible && this.radiusLines.length > 0) {
+            // If lines should be hidden but exist, hide them
+            this.radiusLines.forEach(line => {
+                if (line) {
+                    line.isVisible = false;
+                }
+            });
+        } else if (visible && this.radiusLines.length > 0) {
+            // If lines should be visible and already exist, show them
+            this.radiusLines.forEach(line => {
+                if (line) {
+                    line.isVisible = true;
+                }
+            });
+        }
+    }
 } 

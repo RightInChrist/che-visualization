@@ -45,6 +45,11 @@ export class RadiusControls {
         // Create the UI for the radius controls
         this.createUI();
         
+        // Set initial radius lines visibility to match panel visibility
+        if (this.sevenCutsModel && typeof this.sevenCutsModel.setRadiusLinesVisible === 'function') {
+            this.sevenCutsModel.setRadiusLinesVisible(this.options.isVisible);
+        }
+        
         console.log("RadiusControls initialized");
     }
     
@@ -277,6 +282,11 @@ export class RadiusControls {
             const isVisible = this.panel.style.display !== 'none';
             this.panel.style.display = isVisible ? 'none' : 'block';
             
+            // Toggle radius lines visibility in the model
+            if (this.sevenCutsModel && typeof this.sevenCutsModel.setRadiusLinesVisible === 'function') {
+                this.sevenCutsModel.setRadiusLinesVisible(!isVisible);
+            }
+            
             // Update button active state if available
             if (this.htmlToggleButton) {
                 if (!isVisible) {
@@ -309,16 +319,22 @@ export class RadiusControls {
         
         // Add click event
         button.addEventListener('click', () => {
-            this.panel.style.display = this.panel.style.display === 'none' ? 'block' : 'none';
+            const newVisible = this.panel.style.display === 'none';
+            this.panel.style.display = newVisible ? 'block' : 'none';
+            
+            // Toggle radius lines visibility in the model
+            if (this.sevenCutsModel && typeof this.sevenCutsModel.setRadiusLinesVisible === 'function') {
+                this.sevenCutsModel.setRadiusLinesVisible(newVisible);
+            }
             
             // Update button active state
-            if (this.panel.style.display === 'block') {
+            if (newVisible) {
                 button.classList.add('active');
             } else {
                 button.classList.remove('active');
             }
             
-            console.log("Panel visibility toggled:", this.panel.style.display === 'block');
+            console.log("Panel visibility toggled:", newVisible);
         });
         
         // Add to container
