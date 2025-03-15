@@ -13,6 +13,7 @@ export class LayerOneModel extends CompositeModel {
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
+            rotationAngle: 60, // Default rotation angle in degrees
         };
 
         // Call parent constructor
@@ -29,10 +30,9 @@ export class LayerOneModel extends CompositeModel {
             this.drawRadiusLines();
         }
         
-        // Rotate the entire model by 60 degrees around the Y axis
-        const rotationAngle = 60 * (Math.PI / 180); // Convert 60 degrees to radians
-        this.rootNode.rotate(Axis.Y, rotationAngle, Space.WORLD);
-        this.debugLog(`Rotated Layer One Ring by 60 degrees (${rotationAngle.toFixed(2)} radians)`);
+        // Rotate the entire model by the specified angle around the Y axis
+        this.updateRotation(this.options.rotationAngle);
+        this.debugLog(`Rotated Layer One Ring by ${this.options.rotationAngle} degrees`);
     }
     
     /**
@@ -314,5 +314,25 @@ export class LayerOneModel extends CompositeModel {
                 }
             });
         }
+    }
+    
+    /**
+     * Update the rotation of the model
+     * @param {number} rotationAngleDegrees - New rotation angle in degrees
+     */
+    updateRotation(rotationAngleDegrees) {
+        // First, reset rotation to zero
+        this.rootNode.rotation = new Vector3(0, 0, 0);
+        
+        // Store the new rotation angle
+        this.options.rotationAngle = rotationAngleDegrees;
+        
+        // Convert degrees to radians
+        const rotationAngle = rotationAngleDegrees * (Math.PI / 180);
+        
+        // Apply the rotation around the Y axis
+        this.rootNode.rotate(Axis.Y, rotationAngle, Space.WORLD);
+        
+        this.debugLog(`Updated Layer One Ring rotation to ${rotationAngleDegrees} degrees (${rotationAngle.toFixed(2)} radians)`);
     }
 } 

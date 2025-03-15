@@ -11,6 +11,7 @@ import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
 import { RadiusControls } from './components/ui/RadiusControls';
+import { LayerRotationControl } from './components/ui/LayerRotationControl';
 
 /**
  * Main application entry point
@@ -47,6 +48,7 @@ class CHEVisualization {
             this.ground = new GroundModel(scene, 5000);
             this.layerOneRadius = 42;
             this.singleCutRadius = 21;
+            this.layerRotationAngle = 60; // Layer One Ring rotation angle in degrees
             
             // Create Central CUT model
             this.centralCut = new SingleCutModel(scene, new Vector3(0, 0, 0), {
@@ -56,7 +58,8 @@ class CHEVisualization {
             // Create Layer One Ring model
             this.layerOneRing = new LayerOneModel(scene, new Vector3(0, 0, 0), {
                 outerRadius: this.layerOneRadius,
-                singleCutRadius: this.singleCutRadius
+                singleCutRadius: this.singleCutRadius,
+                rotationAngle: this.layerRotationAngle
             });
             
             // Add shadows to all pipes in the scene
@@ -121,7 +124,7 @@ class CHEVisualization {
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, sceneObjects);
             
-            // Create the radius controls (using layerOneRing for now)
+            // Create the radius controls
             const radiusControls = new RadiusControls(scene, this.layerOneRing, {
                 position: { x: 10, y: 10 },
                 outerRadiusMin: 30,
@@ -129,6 +132,34 @@ class CHEVisualization {
                 outerRadiusDefault: this.layerOneRadius,
                 isVisible: false
             });
+            
+            // Create the rotation controls
+            const rotationControls = new LayerRotationControl(
+                scene, 
+                this.layerOneRing, 
+                this.layerRotationAngle,
+                {
+                    position: { x: 10, y: 170 },
+                    rotationMin: 0,
+                    rotationMax: 360,
+                    rotationDefault: this.layerRotationAngle,
+                    isVisible: false
+                }
+            );
+            
+            // Create control panels container if it doesn't exist
+            if (!document.getElementById('controlPanels')) {
+                const controlPanels = document.createElement('div');
+                controlPanels.id = 'controlPanels';
+                controlPanels.style.position = 'absolute';
+                controlPanels.style.top = '50px';
+                controlPanels.style.left = '10px';
+                controlPanels.style.display = 'flex';
+                controlPanels.style.flexDirection = 'column';
+                controlPanels.style.gap = '10px';
+                controlPanels.style.zIndex = '100';
+                document.body.appendChild(controlPanels);
+            }
             
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
