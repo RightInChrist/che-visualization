@@ -20,7 +20,7 @@ function CollapsibleSection({ title, children, defaultOpen = false }: Collapsibl
   const [isOpen, setIsOpen] = useState(defaultOpen);
   
   return (
-    <div className="mb-4">
+    <div className="mb-2">
       <div 
         className="flex items-center cursor-pointer hover:bg-gray-700 px-2 py-1 rounded"
         onClick={() => setIsOpen(!isOpen)}
@@ -34,7 +34,7 @@ function CollapsibleSection({ title, children, defaultOpen = false }: Collapsibl
       </div>
       
       {isOpen && (
-        <div className="mt-2 ml-2">
+        <div className="mt-2 ml-2 max-h-[30vh] overflow-y-auto">
           {children}
         </div>
       )}
@@ -230,97 +230,6 @@ export function Sidebar({ setController }: SidebarProps) {
     <div className="bg-gray-800 text-white p-4 w-64 h-full overflow-y-auto flex flex-col">
       <h2 className="text-xl font-bold mb-4">3D Visualizer</h2>
       
-      <CollapsibleSection title="Camera Controls" defaultOpen={true}>
-        <div className="flex flex-col gap-2">
-          <button 
-            onClick={() => handleControllerChange('orbit')}
-            className={getButtonClass('orbit')}
-          >
-            Orbit Mode
-          </button>
-          <button 
-            onClick={() => handleControllerChange('firstPerson')}
-            className={getButtonClass('firstPerson')}
-          >
-            First Person Walking
-          </button>
-          <button 
-            onClick={() => handleControllerChange('flight')}
-            className={getButtonClass('flight')}
-          >
-            Flight Mode
-          </button>
-        </div>
-        <div className="mt-2 text-sm text-gray-300">
-          <p>Click the scene to interact</p>
-          <p>Press ESC to exit interaction mode</p>
-          <p>Keyboard shortcuts: 1, 2, 3 to change modes</p>
-        </div>
-      </CollapsibleSection>
-      
-      {/* Models section - organized by model type */}
-      <CollapsibleSection title="Models" defaultOpen={true}>
-        {models.map(model => {
-          const { allVisible, allHidden, mixed } = getModelVisibilityState(model.id);
-          const isExpanded = expandedModels[model.id] || false;
-          const modelInstances = getInstancesByModelId(model.id);
-          
-          return (
-            <div key={model.id} className="mb-3">
-              <div className="flex items-center">
-                <div 
-                  className="flex items-center cursor-pointer hover:text-blue-300"
-                  onClick={() => toggleModelExpansion(model.id)}
-                >
-                  {isExpanded ? (
-                    <ChevronDownIcon className="h-3 w-3 mr-1" />
-                  ) : (
-                    <ChevronRightIcon className="h-3 w-3 mr-1" />
-                  )}
-                  <span className="font-medium text-blue-300">{model.name}</span>
-                </div>
-                
-                <input
-                  type="checkbox"
-                  id={`model-visibility-${model.id}`}
-                  checked={allVisible}
-                  ref={el => {
-                    if (el) {
-                      el.indeterminate = mixed;
-                    }
-                  }}
-                  onChange={() => toggleModelTypeVisibility(model.id, allVisible)}
-                  className="ml-2"
-                />
-              </div>
-              
-              {isExpanded && (
-                <ul className="ml-5 mt-1 space-y-1">
-                  {modelInstances.map(instance => (
-                    <li key={instance.instanceId} className="flex items-center text-sm">
-                      <input
-                        type="checkbox"
-                        id={`instance-${instance.instanceId}`}
-                        checked={instance.visible}
-                        onChange={() => handleToggleInstanceVisibility(instance.instanceId)}
-                        className="mr-2"
-                      />
-                      <label htmlFor={`instance-${instance.instanceId}`} className="text-gray-300">
-                        {getInstanceDisplayName(instance, model)}
-                      </label>
-                    </li>
-                  ))}
-                  
-                  {modelInstances.length === 0 && (
-                    <li className="text-gray-400 text-sm italic">No instances</li>
-                  )}
-                </ul>
-              )}
-            </div>
-          );
-        })}
-      </CollapsibleSection>
-
       {/* Scenes section - for hierarchical scene organization */}
       <CollapsibleSection title="Scenes" defaultOpen={true}>
         {/* Create a "Convective Heat Engine #1" scene that contains everything */}
@@ -448,6 +357,97 @@ export function Sidebar({ setController }: SidebarProps) {
                 })}
             </ul>
           )}
+        </div>
+      </CollapsibleSection>
+      
+      {/* Models section - organized by model type */}
+      <CollapsibleSection title="Models" defaultOpen={true}>
+        {models.map(model => {
+          const { allVisible, allHidden, mixed } = getModelVisibilityState(model.id);
+          const isExpanded = expandedModels[model.id] || false;
+          const modelInstances = getInstancesByModelId(model.id);
+          
+          return (
+            <div key={model.id} className="mb-3">
+              <div className="flex items-center">
+                <div 
+                  className="flex items-center cursor-pointer hover:text-blue-300"
+                  onClick={() => toggleModelExpansion(model.id)}
+                >
+                  {isExpanded ? (
+                    <ChevronDownIcon className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ChevronRightIcon className="h-3 w-3 mr-1" />
+                  )}
+                  <span className="font-medium text-blue-300">{model.name}</span>
+                </div>
+                
+                <input
+                  type="checkbox"
+                  id={`model-visibility-${model.id}`}
+                  checked={allVisible}
+                  ref={el => {
+                    if (el) {
+                      el.indeterminate = mixed;
+                    }
+                  }}
+                  onChange={() => toggleModelTypeVisibility(model.id, allVisible)}
+                  className="ml-2"
+                />
+              </div>
+              
+              {isExpanded && (
+                <ul className="ml-5 mt-1 space-y-1">
+                  {modelInstances.map(instance => (
+                    <li key={instance.instanceId} className="flex items-center text-sm">
+                      <input
+                        type="checkbox"
+                        id={`instance-${instance.instanceId}`}
+                        checked={instance.visible}
+                        onChange={() => handleToggleInstanceVisibility(instance.instanceId)}
+                        className="mr-2"
+                      />
+                      <label htmlFor={`instance-${instance.instanceId}`} className="text-gray-300">
+                        {getInstanceDisplayName(instance, model)}
+                      </label>
+                    </li>
+                  ))}
+                  
+                  {modelInstances.length === 0 && (
+                    <li className="text-gray-400 text-sm italic">No instances</li>
+                  )}
+                </ul>
+              )}
+            </div>
+          );
+        })}
+      </CollapsibleSection>
+
+      <CollapsibleSection title="Camera Controls" defaultOpen={true}>
+        <div className="flex flex-col gap-2">
+          <button 
+            onClick={() => handleControllerChange('orbit')}
+            className={getButtonClass('orbit')}
+          >
+            Orbit Mode
+          </button>
+          <button 
+            onClick={() => handleControllerChange('firstPerson')}
+            className={getButtonClass('firstPerson')}
+          >
+            First Person Walking
+          </button>
+          <button 
+            onClick={() => handleControllerChange('flight')}
+            className={getButtonClass('flight')}
+          >
+            Flight Mode
+          </button>
+        </div>
+        <div className="mt-2 text-sm text-gray-300">
+          <p>Click the scene to interact</p>
+          <p>Press ESC to exit interaction mode</p>
+          <p>Keyboard shortcuts: 1, 2, 3 to change modes</p>
         </div>
       </CollapsibleSection>
     </div>
