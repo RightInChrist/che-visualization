@@ -35,7 +35,9 @@ export class RadiusControls {
             sliderBarColor: "#444444", // Slider bar color
             sliderThumbColor: "#00aaff", // Slider thumb color
             isVisible: false,        // Initially hidden to avoid clutter
-            modelNames: null         // Array of names for models, or null for auto-naming
+            modelNames: null,        // Array of names for models, or null for auto-naming
+            initialRadius: null,     // Array of initial outer radius values for each model
+            initialSingleCutRadius: null // Array of initial SingleCutRadius values for each model
         };
         
         this.options = { ...defaultOptions, ...options };
@@ -62,12 +64,40 @@ export class RadiusControls {
     setupModelConfigs() {
         // If only one model but modelNames is not provided, use legacy modelName option
         if (this.models.length === 1 && !this.options.modelNames && this.options.modelName) {
+            // Get initial radius values for this model
+            let initialOuterRadius = this.options.outerRadiusDefault;
+            let initialSingleCutRadius = this.options.singleCutRadiusDefault;
+            
+            // Use initialRadius if provided
+            if (this.options.initialRadius && this.options.initialRadius.length > 0) {
+                initialOuterRadius = this.options.initialRadius[0];
+            }
+            // Otherwise use model's own setting if available
+            else if (this.models[0].options && this.models[0].options.outerRadius !== undefined) {
+                initialOuterRadius = this.models[0].options.outerRadius;
+            }
+            
+            // Use initialSingleCutRadius if provided
+            if (this.options.initialSingleCutRadius && this.options.initialSingleCutRadius.length > 0) {
+                initialSingleCutRadius = this.options.initialSingleCutRadius[0];
+            }
+            // Otherwise use model's own setting if available
+            else if (this.models[0].options && this.models[0].options.singleCutRadius !== undefined) {
+                initialSingleCutRadius = this.models[0].options.singleCutRadius;
+            }
+            
             this.modelConfigs.push({
                 model: this.models[0],
                 name: this.options.modelName,
-                currentOuterRadius: this.options.outerRadiusDefault,
-                currentSingleCutRadius: this.options.singleCutRadiusDefault
+                currentOuterRadius: initialOuterRadius,
+                currentSingleCutRadius: initialSingleCutRadius
             });
+            
+            // Apply initial radius values to the model
+            if (this.models[0] && typeof this.models[0].updateRadiusSettings === 'function') {
+                this.models[0].updateRadiusSettings(initialOuterRadius, initialSingleCutRadius);
+            }
+            
             return;
         }
         
@@ -83,25 +113,39 @@ export class RadiusControls {
                 modelName = `Model ${index + 1}`;
             }
             
-            // Get current radius values for this model if available
-            let currentOuterRadius = this.options.outerRadiusDefault;
-            let currentSingleCutRadius = this.options.singleCutRadiusDefault;
+            // Get initial radius values for this model
+            let initialOuterRadius = this.options.outerRadiusDefault;
+            let initialSingleCutRadius = this.options.singleCutRadiusDefault;
             
-            if (model.options) {
-                if (model.options.outerRadius !== undefined) {
-                    currentOuterRadius = model.options.outerRadius;
-                }
-                if (model.options.singleCutRadius !== undefined) {
-                    currentSingleCutRadius = model.options.singleCutRadius;
-                }
+            // Use initialRadius if provided for this model
+            if (this.options.initialRadius && this.options.initialRadius.length > index) {
+                initialOuterRadius = this.options.initialRadius[index];
+            }
+            // Otherwise use model's own setting if available
+            else if (model.options && model.options.outerRadius !== undefined) {
+                initialOuterRadius = model.options.outerRadius;
+            }
+            
+            // Use initialSingleCutRadius if provided for this model
+            if (this.options.initialSingleCutRadius && this.options.initialSingleCutRadius.length > index) {
+                initialSingleCutRadius = this.options.initialSingleCutRadius[index];
+            }
+            // Otherwise use model's own setting if available
+            else if (model.options && model.options.singleCutRadius !== undefined) {
+                initialSingleCutRadius = model.options.singleCutRadius;
             }
             
             this.modelConfigs.push({
                 model,
                 name: modelName,
-                currentOuterRadius,
-                currentSingleCutRadius
+                currentOuterRadius: initialOuterRadius,
+                currentSingleCutRadius: initialSingleCutRadius
             });
+            
+            // Apply initial radius values to the model
+            if (model && typeof model.updateRadiusSettings === 'function') {
+                model.updateRadiusSettings(initialOuterRadius, initialSingleCutRadius);
+            }
         });
     }
     

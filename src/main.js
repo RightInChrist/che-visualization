@@ -47,7 +47,8 @@ class CHEVisualization {
             
             // Create ground
             this.ground = new GroundModel(scene, 5000);
-            this.layerOneRadius = 42;
+            this.layerOneRadius = 36.4;
+            this.layerOneStarRadius = 42;
             this.singleCutRadius = 21;
             
             // Set different rotation angles for LayerOneRing and LayerOneStar
@@ -68,7 +69,7 @@ class CHEVisualization {
             
             // Create Layer One Star model (with separate panels)
             this.layerOneStar = new LayerOneStarModel(scene, new Vector3(0, 0, 0), {
-                outerRadius: this.layerOneRadius,
+                outerRadius: this.layerOneStarRadius,
                 singleCutRadius: this.singleCutRadius,
                 rotationAngle: this.layerOneStarRotationAngle
             });
@@ -162,10 +163,10 @@ class CHEVisualization {
                     position: { x: 10, y: 10 },
                     outerRadiusMin: 30,
                     outerRadiusMax: 60,
-                    outerRadiusDefault: this.layerOneRadius,
+                    initialRadius: [this.layerOneRadius, this.layerOneStarRadius],
                     singleCutRadiusMin: 10,
                     singleCutRadiusMax: 30,
-                    singleCutRadiusDefault: this.singleCutRadius,
+                    initialSingleCutRadius: [this.singleCutRadius, this.singleCutRadius],
                     isVisible: false,
                     modelNames: ["Layer One Ring", "Layer One Star"]
                 }
