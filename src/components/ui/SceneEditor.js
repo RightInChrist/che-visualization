@@ -339,28 +339,117 @@ export class SceneEditor {
     }
     
     /**
+     * Toggle the visibility of an object
+     * @param {string} path - Path of the object
+     * @param {Object} object - The object to toggle
+     * @param {boolean} isVisible - Whether the object should be visible
+     */
+    toggleObjectVisibility(path, object, isVisible) {
+        // Log for debugging
+        console.log(`Toggling ${path} visibility to ${isVisible}`);
+        
+        // Use recursive function to set visibility on the object and all its children
+        this.setObjectVisibility(object, isVisible);
+        
+        // Force scene to update
+        this.scene.render();
+        
+        // Update nested checkboxes to match the visibility state
+        this.updateNestedCheckboxes(path, isVisible);
+    }
+    
+    /**
+     * Recursively set visibility on an object and all its children
+     * @param {Object} object - The object to set visibility on
+     * @param {boolean} isVisible - Whether the object should be visible
+     */
+    setObjectVisibility(object, isVisible) {
+        if (!object) return;
+        
+        // Set visibility on this object
+        if (typeof object.setVisible === 'function') {
+            // Use the object's setVisible method (BaseModel/CompositeModel)
+            object.setVisible(isVisible);
+        } else if (object.rootNode && object.rootNode.setEnabled) {
+            // Set enabled state on the root node
+            object.rootNode.setEnabled(isVisible);
+        } else if (object.mesh && object.mesh.isVisible !== undefined) {
+            // Set visibility on the mesh
+            object.mesh.isVisible = isVisible; 
+        } else if (object.pipeMesh && object.pipeMesh.isVisible !== undefined) {
+            // Set visibility on pipe mesh
+            object.pipeMesh.isVisible = isVisible;
+        } else if (object.panelMesh && object.panelMesh.isVisible !== undefined) {
+            // Set visibility on panel mesh
+            object.panelMesh.isVisible = isVisible;
+        }
+        
+        // Process children based on object type
+        
+        // 1. Handle SevenCutsModel case
+        if (object.model && object.model.singleCuts) {
+            // Process all SingleCut models
+            object.model.singleCuts.forEach(singleCut => {
+                this.setObjectVisibility(singleCut, isVisible);
+            });
+        }
+        
+        // 2. Handle CompositeModel child models
+        if (object.childModels && Array.isArray(object.childModels)) {
+            object.childModels.forEach(childModel => {
+                this.setObjectVisibility(childModel, isVisible);
+            });
+        }
+        
+        // 3. Handle SingleCutModel pipes and panels
+        if (object.pipes && Array.isArray(object.pipes)) {
+            object.pipes.forEach(pipe => {
+                this.setObjectVisibility(pipe, isVisible);
+            });
+        }
+        
+        if (object.panels && Array.isArray(object.panels)) {
+            object.panels.forEach(panel => {
+                this.setObjectVisibility(panel, isVisible);
+            });
+        }
+        
+        // 4. Handle generic children object
+        if (object.children && typeof object.children === 'object') {
+            Object.values(object.children).forEach(child => {
+                this.setObjectVisibility(child, isVisible);
+            });
+        }
+    }
+    
+    /**
      * Update all nested checkboxes under a parent
      * @param {string} parentPath - Path of the parent object
      * @param {boolean} isChecked - Whether the checkboxes should be checked
      */
     updateNestedCheckboxes(parentPath, isChecked) {
+        // Log for debugging
+        console.log(`Updating nested checkboxes under ${parentPath} to ${isChecked}`);
+        
         // Update parent checkbox first
         if (this.checkboxElements[parentPath] && this.checkboxElements[parentPath].element) {
             this.checkboxElements[parentPath].element.checked = isChecked;
         }
         
-        // Update all child checkboxes
+        // Update all child checkboxes (any checkbox with a path that starts with parentPath)
         for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
             // Check if this path is a child of the parent path
-            if (path !== parentPath && path.startsWith(parentPath + '/')) {
+            // We need to check both exact match (parent/child) and hierarchical match (parent/)
+            if (path !== parentPath && (
+                path.startsWith(parentPath + '/') || // Direct child (e.g., "Single CUT #1/Pipe #1")
+                (parentPath === 'Seven CUTs #1' && path.startsWith('Single CUT #')) // Special case for Seven CUTs
+            )) {
+                console.log(`Setting checkbox for ${path} to ${isChecked}`);
                 if (checkboxInfo.element) {
                     checkboxInfo.element.checked = isChecked;
                 }
             }
         }
-        
-        // Force UI update
-        this.scene.render();
     }
     
     /**
@@ -380,60 +469,6 @@ export class SceneEditor {
         } finally {
             this.isUpdating = false;
         }
-    }
-    
-    /**
-     * Toggle the visibility of an object
-     * @param {string} path - Path of the object
-     * @param {Object} object - The object to toggle
-     * @param {boolean} isVisible - Whether the object should be visible
-     */
-    toggleObjectVisibility(path, object, isVisible) {
-        // Log for debugging
-        console.log(`Toggling ${path} visibility to ${isVisible}`);
-        
-        // Toggle visibility based on the object type
-        if (path === 'Ground #1') {
-            // For ground model
-            if (typeof object.setVisible === 'function') {
-                object.setVisible(isVisible);
-            } else if (object.mesh) {
-                object.mesh.isVisible = isVisible;
-            }
-        } else if (path === 'Seven CUTs #1') {
-            // For composite SevenCUTs model
-            if (object.model && typeof object.model.setVisible === 'function') {
-                // Use the CompositeModel's setVisible method which propagates to children
-                object.model.setVisible(isVisible);
-            }
-        } else if (path.startsWith('Single CUT #') && !path.includes('/')) {
-            // For SingleCUT model (but not its children)
-            if (typeof object.setVisible === 'function') {
-                object.setVisible(isVisible);
-            } else if (object.rootNode) {
-                object.rootNode.setEnabled(isVisible);
-            }
-        } else if (path.includes('/Pipe #')) {
-            // For individual pipe
-            if (typeof object.setVisible === 'function') {
-                object.setVisible(isVisible);
-            } else if (object.pipeMesh) {
-                object.pipeMesh.isVisible = isVisible;
-            }
-        } else if (path.includes('/Panel #')) {
-            // For individual panel
-            if (typeof object.setVisible === 'function') {
-                object.setVisible(isVisible);
-            } else if (object.panelMesh) {
-                object.panelMesh.isVisible = isVisible;
-            }
-        }
-        
-        // Force scene to update
-        this.scene.render();
-        
-        // Update nested checkboxes to match the visibility state
-        this.updateNestedCheckboxes(path, isVisible);
     }
     
     /**
