@@ -1,6 +1,5 @@
 import { Vector3 } from '@babylonjs/core';
 import '@babylonjs/core/Debug/debugLayer';
-import '@babylonjs/inspector';
 import '@babylonjs/loaders/glTF';
 import '@babylonjs/gui';
 import { initializeEngine } from './core/engine';
