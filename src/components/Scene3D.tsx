@@ -92,6 +92,8 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
   });
   // State to track the last 20 key events
   const [keyEventLog, setKeyEventLog] = useState<KeyEvent[]>([]);
+  // Ref to track which keys are currently down to prevent duplicate keydown events
+  const keysPressedRef = useRef<Set<string>>(new Set());
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Create a list of instance IDs that are referenced by composite models
@@ -128,6 +130,17 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
 
   // Add a key event to the log
   const addKeyEventToLog = useCallback((key: string, type: 'keydown' | 'keyup') => {
+    // For keydown events, only add if the key wasn't already pressed
+    if (type === 'keydown') {
+      if (keysPressedRef.current.has(key)) {
+        return; // Skip this event as it's a repeat
+      }
+      keysPressedRef.current.add(key);
+    } else if (type === 'keyup') {
+      // For keyup events, remove the key from the pressed set
+      keysPressedRef.current.delete(key);
+    }
+
     setKeyEventLog(prevLog => {
       // Create new event
       const newEvent: KeyEvent = {
@@ -144,7 +157,7 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
 
   // Handle escape key to exit focus
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Add to key event log
+    // Add to key event log (only non-repeating events will be added)
     addKeyEventToLog(e.key, 'keydown');
     
     if (e.key === 'Escape') {
