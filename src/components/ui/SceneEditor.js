@@ -153,6 +153,9 @@ export class SceneEditor {
         objectContainer.style.display = 'flex';
         objectContainer.style.alignItems = 'center';
         
+        // Check if this is a permanently hidden pipe or panel
+        const isPermanentlyHidden = this.isElementPermanentlyHidden(name, object);
+        
         // Create visibility toggle checkbox
         const toggleCheckbox = document.createElement('input');
         toggleCheckbox.type = 'checkbox';
@@ -162,7 +165,8 @@ export class SceneEditor {
         this.checkboxElements[objectPath] = {
             element: toggleCheckbox,
             parent: parent,
-            object: object
+            object: object,
+            isPermanentlyHidden: isPermanentlyHidden
         };
         
         // Check if this is a toggleable object
@@ -172,22 +176,31 @@ export class SceneEditor {
             name.includes('Pipe #') || 
             name.includes('Panel #')) {
             
-            // Initialize checkbox state based on object visibility
-            toggleCheckbox.checked = this.getObjectVisibility(object);
-            
-            // Add event listener
-            toggleCheckbox.addEventListener('change', (e) => {
-                // Get the checked state directly from the event target
-                const isChecked = e.target.checked;
+            // For permanently hidden elements, disable checkbox and mark it
+            if (isPermanentlyHidden) {
+                toggleCheckbox.disabled = true;
+                toggleCheckbox.checked = false;
                 
-                // Toggle the object visibility
-                this.toggleObjectVisibility(objectPath, object, isChecked);
+                // Add 'disabled' class to the object container for styling
+                objectContainer.classList.add('disabled');
+            } else {
+                // Initialize checkbox state based on object visibility
+                toggleCheckbox.checked = this.getObjectVisibility(object);
                 
-                // If this is a parent object, update all child checkboxes
-                if (name === 'Seven CUTs #1' || name.startsWith('Single CUT #')) {
-                    this.updateNestedCheckboxes(objectPath, isChecked);
-                }
-            });
+                // Add event listener
+                toggleCheckbox.addEventListener('change', (e) => {
+                    // Get the checked state directly from the event target
+                    const isChecked = e.target.checked;
+                    
+                    // Toggle the object visibility
+                    this.toggleObjectVisibility(objectPath, object, isChecked);
+                    
+                    // If this is a parent object, update all child checkboxes
+                    if (name === 'Seven CUTs #1' || name.startsWith('Single CUT #')) {
+                        this.updateNestedCheckboxes(objectPath, isChecked);
+                    }
+                });
+            }
         } else {
             // Non-toggleable objects
             toggleCheckbox.disabled = true;
@@ -200,6 +213,15 @@ export class SceneEditor {
         const objectLabel = document.createElement('span');
         objectLabel.textContent = displayName; // Use the short display name
         objectLabel.style.marginLeft = '5px';
+        
+        // Add 'hidden' class to the label for permanently hidden elements
+        if (isPermanentlyHidden) {
+            objectLabel.classList.add('hidden');
+            objectLabel.style.color = '#888';
+            objectLabel.style.textDecoration = 'line-through';
+            objectLabel.title = 'This element is permanently hidden due to overlap';
+        }
+        
         objectContainer.appendChild(objectLabel);
         
         objectItem.appendChild(objectContainer);
@@ -223,6 +245,43 @@ export class SceneEditor {
         }
         
         return objectItem;
+    }
+    
+    /**
+     * Check if an element is permanently hidden in the model
+     * @param {string} path - Path of the element
+     * @param {Object} object - The object to check
+     * @returns {boolean} - Whether the element is permanently hidden
+     */
+    isElementPermanentlyHidden(path, object) {
+        // Check if the object itself has an isPermanentlyHidden flag
+        if (object && object.isPermanentlyHidden === true) {
+            return true;
+        }
+        
+        // Check if this is a pipe or panel in a Seven CUTs model
+        if (path.includes('/Pipe #') || path.includes('/Panel #')) {
+            // Parse the path to extract model index, type and element index
+            const parts = path.split('/');
+            if (parts.length >= 2) {
+                const singleCutName = parts[0]; // e.g., "Single CUT #2"
+                const elementName = parts[1];   // e.g., "Pipe #3" or "Panel #4"
+                
+                // Extract indices
+                const modelIndex = parseInt(singleCutName.replace('Single CUT #', ''));
+                const elementIndex = parseInt(elementName.replace(/^(Pipe|Panel) #/, '')) - 1;
+                const elementType = elementName.startsWith('Pipe') ? 'pipe' : 'panel';
+                
+                // Get the Seven CUTs model
+                const sevenCutsModel = this.sceneObjects['Seven CUTs #1'];
+                if (sevenCutsModel && sevenCutsModel.model && 
+                    typeof sevenCutsModel.model.isElementPermanentlyHidden === 'function') {
+                    return sevenCutsModel.model.isElementPermanentlyHidden(modelIndex, elementType, elementIndex);
+                }
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -507,7 +566,8 @@ export class SceneEditor {
         this.desiredVisibilityState[parentPath] = isChecked;
         
         // Update parent checkbox first
-        if (this.checkboxElements[parentPath] && this.checkboxElements[parentPath].element) {
+        if (this.checkboxElements[parentPath] && this.checkboxElements[parentPath].element &&
+            !this.checkboxElements[parentPath].isPermanentlyHidden) {
             this.checkboxElements[parentPath].element.checked = isChecked;
         }
         
@@ -517,8 +577,9 @@ export class SceneEditor {
         
         // For Seven CUTs parent, collect all children paths
         if (parentPath === 'Seven CUTs #1') {
-            for (const path of Object.keys(this.checkboxElements)) {
-                if (path.startsWith('Single CUT #') || path.includes('/Pipe #') || path.includes('/Panel #')) {
+            for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
+                if ((path.startsWith('Single CUT #') || path.includes('/Pipe #') || path.includes('/Panel #')) &&
+                    !checkboxInfo.isPermanentlyHidden) {
                     if (isChecked) {
                         pathsToCheck.add(path);
                     } else {
@@ -530,8 +591,8 @@ export class SceneEditor {
             }
         } else {
             // For regular parent-child relationships
-            for (const path of Object.keys(this.checkboxElements)) {
-                if (path !== parentPath && path.startsWith(parentPath + '/')) {
+            for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
+                if (path !== parentPath && path.startsWith(parentPath + '/') && !checkboxInfo.isPermanentlyHidden) {
                     if (isChecked) {
                         pathsToCheck.add(path);
                     } else {

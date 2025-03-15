@@ -28,6 +28,9 @@ export class SevenCutsModel extends CompositeModel {
     createModels() {
         this.debugLog('Creating Seven CUTs model');
         
+        // Track permanently hidden elements for scene editor
+        this.permanentlyHiddenElements = [];
+        
         // Create center SingleCUT
         const centerCut = new SingleCutModel(this.scene, new Vector3(0, 0, 0), {
             radius: this.options.singleCutRadius
@@ -54,33 +57,76 @@ export class SevenCutsModel extends CompositeModel {
             
             // Hide overlapping pipes and panels for outer SingleCUTs
             // Each outer SingleCUT needs to hide:
-            // 1. The pipes and panels facing the center
-            // 2. The pipes and panels counter-clockwise to the ones facing the center
+            // 1. The pipe facing the center
+            // 2. The pipe clockwise to the center-facing pipe
+            // 3. The panel connecting these two pipes
+            // 4. The panel before the center-facing pipe
             
             // Calculate which pipe is pointing toward the center (opposite of the angle)
             const centerFacingIndex = this.getIndexFacingCenter(i, angle);
             
             // Pipe facing the center
             singleCut.pipes[centerFacingIndex].setVisible(false);
+            singleCut.pipes[centerFacingIndex].isPermanentlyHidden = true;
+            this.permanentlyHiddenElements.push({
+                modelIndex: i + 1,
+                type: 'pipe',
+                index: centerFacingIndex
+            });
             this.debugLog(`Hiding pipe ${centerFacingIndex + 1} for SingleCUT #${i+2} (facing center)`);
             
-            // Pipe counter-clockwise to the center-facing one
-            const ccwIndex = (centerFacingIndex - 1 + 6) % 6;
-            singleCut.pipes[ccwIndex].setVisible(false);
-            this.debugLog(`Hiding pipe ${ccwIndex + 1} for SingleCUT #${i+2} (counter-clockwise to center)`);
+            // Pipe clockwise to the center-facing one (instead of counter-clockwise)
+            const cwIndex = (centerFacingIndex + 1) % 6;
+            singleCut.pipes[cwIndex].setVisible(false);
+            singleCut.pipes[cwIndex].isPermanentlyHidden = true;
+            this.permanentlyHiddenElements.push({
+                modelIndex: i + 1,
+                type: 'pipe',
+                index: cwIndex
+            });
+            this.debugLog(`Hiding pipe ${cwIndex + 1} for SingleCUT #${i+2} (clockwise to center)`);
             
             // Panel between the hidden pipes (connecting them)
-            const panelBetweenIndex = Math.min(centerFacingIndex, ccwIndex);
+            // The panel index might be either centerFacingIndex or one less, depending on how indices wrap
+            const panelBetweenIndex = centerFacingIndex;
             singleCut.panels[panelBetweenIndex].setVisible(false);
+            singleCut.panels[panelBetweenIndex].isPermanentlyHidden = true;
+            this.permanentlyHiddenElements.push({
+                modelIndex: i + 1,
+                type: 'panel',
+                index: panelBetweenIndex
+            });
             this.debugLog(`Hiding panel ${panelBetweenIndex + 1} for SingleCUT #${i+2} (between hidden pipes)`);
             
-            // Panel before the center-facing pipe
-            const panelBeforeIndex = (centerFacingIndex + 5) % 6;
-            singleCut.panels[panelBeforeIndex].setVisible(false);
-            this.debugLog(`Hiding panel ${panelBeforeIndex + 1} for SingleCUT #${i+2} (before center-facing pipe)`);
+            // Panel clockwise to the center-facing pipe
+            const panelClockwiseIndex = (centerFacingIndex + 1) % 6;
+            singleCut.panels[panelClockwiseIndex].setVisible(false);
+            singleCut.panels[panelClockwiseIndex].isPermanentlyHidden = true;
+            this.permanentlyHiddenElements.push({
+                modelIndex: i + 1,
+                type: 'panel',
+                index: panelClockwiseIndex
+            });
+            this.debugLog(`Hiding panel ${panelClockwiseIndex + 1} for SingleCUT #${i+2} (clockwise to center-facing pipe)`);
         }
         
         this.debugLog('Seven CUTs model creation complete');
+    }
+    
+    /**
+     * Check if a pipe or panel is permanently hidden
+     * @param {number} modelIndex - The index of the SingleCUT (1-7, where 1 is center)
+     * @param {string} type - 'pipe' or 'panel'
+     * @param {number} index - The index of the pipe or panel
+     * @returns {boolean} - Whether the element is permanently hidden
+     */
+    isElementPermanentlyHidden(modelIndex, type, index) {
+        if (!this.permanentlyHiddenElements) return false;
+        
+        return this.permanentlyHiddenElements.some(element => 
+            element.modelIndex === modelIndex && 
+            element.type === type && 
+            element.index === index);
     }
     
     /**
