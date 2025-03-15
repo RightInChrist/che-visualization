@@ -16,6 +16,13 @@ interface WindowWithController extends Window {
   setController?: (type: ControllerType) => void;
 }
 
+// Interface for key events in the log
+interface KeyEvent {
+  key: string;
+  type: 'keydown' | 'keyup';
+  timestamp: number;
+}
+
 // Component to track camera position and report changes
 function CameraPositionTracker({ onPositionChange }: { onPositionChange: (position: Vector3) => void }) {
   const { camera } = useThree();
@@ -50,6 +57,14 @@ function formatActiveKeys(keyStates: Record<KeyName, boolean>): string {
   return activeKeys.length > 0 ? activeKeys.join(' + ') : 'None';
 }
 
+// Format a single key event for display
+function formatKeyEvent(event: KeyEvent): string {
+  const timeString = new Date(event.timestamp).toISOString().substr(11, 8);
+  const keyDisplay = event.key === ' ' ? 'Space' : event.key;
+  const eventType = event.type === 'keydown' ? '▼' : '▲';
+  return `${timeString} ${eventType} ${keyDisplay}`;
+}
+
 interface Scene3DProps {
   controllerType?: ControllerType;
 }
@@ -75,6 +90,8 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     'S': false,
     'D': false
   });
+  // State to track the last 20 key events
+  const [keyEventLog, setKeyEventLog] = useState<KeyEvent[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Create a list of instance IDs that are referenced by composite models
@@ -109,8 +126,27 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     setActiveKeys(newKeyStates);
   }, []);
 
+  // Add a key event to the log
+  const addKeyEventToLog = useCallback((key: string, type: 'keydown' | 'keyup') => {
+    setKeyEventLog(prevLog => {
+      // Create new event
+      const newEvent: KeyEvent = {
+        key,
+        type,
+        timestamp: Date.now()
+      };
+      
+      // Add to beginning of log and limit to 20 entries
+      const updatedLog = [newEvent, ...prevLog].slice(0, 20);
+      return updatedLog;
+    });
+  }, []);
+
   // Handle escape key to exit focus
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Add to key event log
+    addKeyEventToLog(e.key, 'keydown');
+    
     if (e.key === 'Escape') {
       setIsFocused(false);
     } else if (isFocused) {
@@ -127,15 +163,23 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         customWindow.setController?.('flight');
       }
     }
-  }, [isFocused]);
+  }, [isFocused, addKeyEventToLog]);
+
+  // Handle key up events
+  const handleKeyUp = useCallback((e: KeyboardEvent) => {
+    // Add to key event log
+    addKeyEventToLog(e.key, 'keyup');
+  }, [addKeyEventToLog]);
 
   // Set up and clean up event listeners
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleKeyDown]);
+  }, [handleKeyDown, handleKeyUp]);
 
   // Function to update camera position from the Three.js scene
   const handleCameraPositionUpdate = (position: Vector3) => {
@@ -169,13 +213,27 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
       )}
       
       {/* Camera position and key indicator display */}
-      <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white py-1 px-3 rounded text-xs z-10">
+      <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white py-1 px-3 rounded text-xs z-10" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
         <p>Camera Position:</p>
         <p>X: {cameraPosition.x.toFixed(2)}</p>
         <p>Y: {cameraPosition.y.toFixed(2)}</p>
         <p>Z: {cameraPosition.z.toFixed(2)}</p>
         <div className="mt-2 pt-1 border-t border-gray-500">
-          <p>Key Presses: <span className="font-mono">{activeKeysString}</span></p>
+          <p>Active Keys: <span className="font-mono">{activeKeysString}</span></p>
+          <div className="mt-1">
+            <p>Key Event Log:</p>
+            <div className="mt-1 font-mono text-2xs bg-black bg-opacity-50 p-1 rounded" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+              {keyEventLog.length === 0 ? (
+                <p className="text-gray-500">No key events yet</p>
+              ) : (
+                keyEventLog.map((event, index) => (
+                  <div key={index} className={`${event.type === 'keydown' ? 'text-green-400' : 'text-red-400'}`}>
+                    {formatKeyEvent(event)}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
       
