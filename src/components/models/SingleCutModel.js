@@ -162,7 +162,9 @@ export class SingleCutModel {
         
         // Apply LOD to panels
         this.panels.forEach(panel => {
-            panel.setVisible(distanceToCenter < farDistance);
+            if (panel.panelMesh) {
+                panel.panelMesh.isVisible = distanceToCenter < farDistance;
+            }
         });
     }
     
