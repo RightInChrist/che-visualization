@@ -345,17 +345,39 @@ export class SceneEditor {
      * @param {boolean} isVisible - Whether the object should be visible
      */
     toggleObjectVisibility(path, object, isVisible) {
-        // Log for debugging
-        console.log(`Toggling ${path} visibility to ${isVisible}`);
+        // Prevent multiple rapid toggles
+        if (this.isTogglingVisibility) return;
+        this.isTogglingVisibility = true;
         
-        // Use recursive function to set visibility on the object and all its children
-        this.setObjectVisibility(object, isVisible);
-        
-        // Force scene to update
-        this.scene.render();
-        
-        // Update nested checkboxes to match the visibility state
-        this.updateNestedCheckboxes(path, isVisible);
+        try {
+            // Log for debugging
+            console.log(`Toggling ${path} visibility to ${isVisible}`);
+            
+            // Store the desired state for this object
+            if (!this.desiredVisibilityState) {
+                this.desiredVisibilityState = {};
+            }
+            this.desiredVisibilityState[path] = isVisible;
+            
+            // Use recursive function to set visibility on the object and all its children
+            this.setObjectVisibility(object, isVisible);
+            
+            // Force scene to update
+            this.scene.render();
+            
+            // Update nested checkboxes to match the visibility state
+            this.updateNestedCheckboxes(path, isVisible);
+            
+            // Ensure the checkbox stays in the correct state 
+            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
+                this.checkboxElements[path].element.checked = isVisible;
+            }
+        } finally {
+            // Clear the flag after a short delay to prevent rapid toggling
+            setTimeout(() => {
+                this.isTogglingVisibility = false;
+            }, 50);
+        }
     }
     
     /**
@@ -431,47 +453,83 @@ export class SceneEditor {
         // Log for debugging
         console.log(`Updating nested checkboxes under ${parentPath} to ${isChecked}`);
         
+        // Store the desired state for the parent to ensure it stays correct
+        if (!this.desiredVisibilityState) {
+            this.desiredVisibilityState = {};
+        }
+        this.desiredVisibilityState[parentPath] = isChecked;
+        
         // Update parent checkbox first
         if (this.checkboxElements[parentPath] && this.checkboxElements[parentPath].element) {
             this.checkboxElements[parentPath].element.checked = isChecked;
         }
         
-        // Debug all available checkbox paths
-        console.log("All checkbox paths:", Object.keys(this.checkboxElements));
+        // Create sets to track which paths need to be checked/unchecked
+        const pathsToCheck = new Set();
+        const pathsToUncheck = new Set();
         
-        // Update all child checkboxes (any checkbox with a path that starts with parentPath)
-        for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
-            // Debug each path being checked
-            console.log(`Checking path: ${path}, against parent: ${parentPath}`);
-            
-            // For Seven CUTs parent, we need to update all SingleCUTs and their children
-            if (parentPath === 'Seven CUTs #1') {
-                // Update all SingleCUT checkboxes and their children (pipes and panels)
-                if (path.startsWith('Single CUT #') || 
-                    path.includes('/Pipe #') || 
-                    path.includes('/Panel #')) {
-                    
-                    console.log(`Setting checkbox for ${path} to ${isChecked} (Seven CUTs child)`);
-                    if (checkboxInfo.element) {
-                        checkboxInfo.element.checked = isChecked;
+        // For Seven CUTs parent, collect all children paths
+        if (parentPath === 'Seven CUTs #1') {
+            for (const path of Object.keys(this.checkboxElements)) {
+                if (path.startsWith('Single CUT #') || path.includes('/Pipe #') || path.includes('/Panel #')) {
+                    if (isChecked) {
+                        pathsToCheck.add(path);
+                    } else {
+                        pathsToUncheck.add(path);
                     }
-                    continue; // Skip the next checks since we've handled this path
+                    // Store the desired state for each child
+                    this.desiredVisibilityState[path] = isChecked;
                 }
-            } 
-            
-            // For regular parent-child relationships, use path prefix matching
-            if (path !== parentPath && path.startsWith(parentPath + '/')) {
-                console.log(`Setting checkbox for ${path} to ${isChecked} (direct child)`);
-                if (checkboxInfo.element) {
-                    checkboxInfo.element.checked = isChecked;
+            }
+        } else {
+            // For regular parent-child relationships
+            for (const path of Object.keys(this.checkboxElements)) {
+                if (path !== parentPath && path.startsWith(parentPath + '/')) {
+                    if (isChecked) {
+                        pathsToCheck.add(path);
+                    } else {
+                        pathsToUncheck.add(path);
+                    }
+                    // Store the desired state for each child
+                    this.desiredVisibilityState[path] = isChecked;
                 }
             }
         }
         
-        // Force a render to ensure checkboxes display correctly
+        // Now update all the checkboxes at once
+        for (const path of pathsToCheck) {
+            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
+                this.checkboxElements[path].element.checked = true;
+            }
+        }
+        
+        for (const path of pathsToUncheck) {
+            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
+                this.checkboxElements[path].element.checked = false;
+            }
+        }
+        
+        // Schedule another check to ensure the state is correct after a short delay
         setTimeout(() => {
-            this.scene.render();
-        }, 0);
+            this.enforceDesiredVisibilityState();
+        }, 100);
+    }
+    
+    /**
+     * Enforce the desired visibility state for all checkboxes
+     * This ensures that even if other code changes checkbox states, they return to our desired state
+     */
+    enforceDesiredVisibilityState() {
+        if (!this.desiredVisibilityState) return;
+        
+        for (const [path, isVisible] of Object.entries(this.desiredVisibilityState)) {
+            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
+                if (this.checkboxElements[path].element.checked !== isVisible) {
+                    console.log(`Enforcing state for ${path} to ${isVisible}`);
+                    this.checkboxElements[path].element.checked = isVisible;
+                }
+            }
+        }
     }
     
     /**
@@ -485,7 +543,15 @@ export class SceneEditor {
             // Update the state of all checkboxes based on the actual visibility of objects
             for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
                 if (checkboxInfo.element && checkboxInfo.object) {
-                    checkboxInfo.element.checked = this.getObjectVisibility(checkboxInfo.object);
+                    const isVisible = this.getObjectVisibility(checkboxInfo.object);
+                    
+                    // Only update if we don't have a desired state or if it matches
+                    if (!this.desiredVisibilityState || this.desiredVisibilityState[path] === undefined) {
+                        checkboxInfo.element.checked = isVisible;
+                    } else {
+                        // Otherwise, the desired state takes precedence
+                        checkboxInfo.element.checked = this.desiredVisibilityState[path];
+                    }
                 }
             }
         } finally {
