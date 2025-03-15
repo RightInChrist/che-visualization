@@ -382,7 +382,6 @@ export class SceneEditor {
                 
                 // Explicitly force mesh to update
                 object.pipeMesh.refreshBoundingInfo();
-                object.pipeMesh._markSubMeshesAsAllDirty();
             }
             
             if (object.markers) {
@@ -404,7 +403,6 @@ export class SceneEditor {
                 
                 // Explicitly force mesh to update
                 object.panelMesh.refreshBoundingInfo();
-                object.panelMesh._markSubMeshesAsAllDirty();
             }
             
             // Force scene to update
