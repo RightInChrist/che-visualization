@@ -1,5 +1,5 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { useModelStore } from '@/store/modelStore';
 import PipeModel from './models/PipeModel';
 import PanelModel from './models/PanelModel';
@@ -8,11 +8,23 @@ import CompositeModel from './models/CompositeModel';
 import CameraController from './controllers/CameraController';
 import { Stats, Environment } from '@react-three/drei';
 import { PrimitiveModel, CompositeModel as CompositeModelType } from '@/types/models';
+import { Vector3 } from 'three';
 
 type ControllerType = 'orbit' | 'firstPerson' | 'flight';
 
 interface WindowWithController extends Window {
   setController?: (type: ControllerType) => void;
+}
+
+// Component to track camera position and report changes
+function CameraPositionTracker({ onPositionChange }: { onPositionChange: (position: Vector3) => void }) {
+  const { camera } = useThree();
+  
+  useFrame(() => {
+    onPositionChange(camera.position.clone());
+  });
+  
+  return null;
 }
 
 interface Scene3DProps {
@@ -23,6 +35,7 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
   const { models, instances, getModelById } = useModelStore();
   const [isFocused, setIsFocused] = useState(false);
   const [activeController, setActiveController] = useState<ControllerType>(controllerType);
+  const [cameraPosition, setCameraPosition] = useState<Vector3>(new Vector3(0, 50, 100));
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Create a list of instance IDs that are referenced by composite models
@@ -80,6 +93,11 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     };
   }, [handleKeyDown]);
 
+  // Function to update camera position from the Three.js scene
+  const handleCameraPositionUpdate = (position: Vector3) => {
+    setCameraPosition(position);
+  };
+
   return (
     <div 
       className="relative w-full h-full"
@@ -91,6 +109,14 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
           Click to interact
         </div>
       )}
+      
+      {/* Camera position display */}
+      <div className="absolute top-2 right-2 bg-black bg-opacity-70 text-white py-1 px-3 rounded text-xs z-10">
+        <p>Camera Position:</p>
+        <p>X: {cameraPosition.x.toFixed(2)}</p>
+        <p>Y: {cameraPosition.y.toFixed(2)}</p>
+        <p>Z: {cameraPosition.z.toFixed(2)}</p>
+      </div>
       
       <Canvas 
         ref={canvasRef}
@@ -104,6 +130,9 @@ export function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
         
         <CameraController defaultController={activeController} />
         <Environment preset="sunset" />
+        
+        {/* Tracking camera position */}
+        <CameraPositionTracker onPositionChange={handleCameraPositionUpdate} />
         
         {/* Render all visible instances that are not part of a composite */}
         {instances.map(instance => {
