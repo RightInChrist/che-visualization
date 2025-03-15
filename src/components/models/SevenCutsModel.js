@@ -50,7 +50,9 @@ export class SevenCutsModel extends CompositeModel {
         
         // Create 6 surrounding SingleCUTs in a hexagonal pattern
         for (let i = 0; i < 6; i++) {
-            const angle = (i * 2 * Math.PI) / 6;
+            // Original angle: multiples of 60 degrees (2π/6)
+            // Apply 45 degree counterclockwise shift (subtract π/4)
+            const angle = (i * 2 * Math.PI) / 6 - (Math.PI / 4);
             
             // Calculate the radius for this SingleCUT
             // Make SingleCUT #2 (i=0) closer to the center to connect properly
@@ -66,7 +68,7 @@ export class SevenCutsModel extends CompositeModel {
             
             const position = new Vector3(x, 0, z);
             
-            this.debugLog(`Creating SingleCUT #${i+2} at (${x.toFixed(2)}, 0, ${z.toFixed(2)})`);
+            this.debugLog(`Creating SingleCUT #${i+2} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
             
             const singleCut = new SingleCutModel(this.scene, position, {
                 radius: this.options.singleCutRadius
