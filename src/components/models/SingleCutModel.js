@@ -55,20 +55,20 @@ export class SingleCutModel {
     
     /**
      * Calculate panel position and rotation for connecting pipes
+     * @param {number} index - Index of the pipe
      * @param {Vector3} pipePos - Current pipe position
      * @param {Vector3} nextPipePos - Next pipe position
      * @returns {Object} - Position, rotation, and width for the panel
      */
-    calculatePanelTransform(pipePos, nextPipePos) {
+    calculatePanelTransform(index, pipePos, nextPipePos) {
         // Calculate midpoint between pipes for panel position
         const position = pipePos.add(nextPipePos).scale(0.5);
         
         // Calculate direction vector from current pipe to next pipe
         const direction = nextPipePos.subtract(pipePos).normalize();
-        
-        // Calculate base rotation from angle between pipes
-        // No additional rotation here - we'll handle all rotations in createPanel
-        const angle = Math.atan2(direction.z, direction.x);
+
+        const angle = 0; // don't care about angle between pipes for now
+
         const rotation = new BABYLON.Vector3(0, angle, 0);
         
         // Calculate distance between pipes for panel width
@@ -115,8 +115,11 @@ export class SingleCutModel {
         if (index === 1 || index === 4) { // Panels 2 and 5
             rotationAngle = 0; // No additional rotation for these panels
             this.debugLog(`Panel ${index+1}: No additional rotation (panel 2 or 5)`);
+        } else if (index === 2 || index === 5) {
+            rotationAngle = 120 * Math.PI / 180; // radians
+            this.debugLog(`Panel ${index+1}: Adding ${this.radToDeg(rotationAngle)} rotation`);
         } else {
-            rotationAngle = Math.PI/2; // 90-degree rotation for other panels
+            rotationAngle = 60 * Math.PI / 180; // radians
             this.debugLog(`Panel ${index+1}: Adding ${this.radToDeg(rotationAngle)} rotation`);
         }
         
@@ -181,6 +184,7 @@ export class SingleCutModel {
             
             // Get the transform for the panel (position, rotation, width)
             const transform = this.calculatePanelTransform(
+                i,
                 pipePositions[i], 
                 pipePositions[nextIndex]
             );
