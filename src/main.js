@@ -160,10 +160,10 @@ class CHEVisualization {
                 isVisible: false
             });
             
-            // Create the rotation controls for Layer One Ring
+            // Create rotation controls for both Layer One Ring and Layer One Star models
             const rotationControls = new RotationControl(
                 scene, 
-                this.layerOneRing, 
+                [this.layerOneRing, this.layerOneStar], 
                 this.layerRotationAngle,
                 {
                     position: { x: 10, y: 170 },
@@ -171,7 +171,7 @@ class CHEVisualization {
                     rotationMax: 360,
                     rotationDefault: this.layerRotationAngle,
                     isVisible: false,
-                    modelName: "Layer One Ring"
+                    modelNames: ["Layer One Ring", "Layer One Star"]
                 }
             );
             

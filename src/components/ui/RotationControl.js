@@ -2,19 +2,22 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/gui';
 
 /**
- * Creates slider controls for adjusting the rotation of models
+ * Creates slider controls for adjusting the rotation of multiple models
  */
 export class RotationControl {
     /**
-     * Create a new RotationControl instance
+     * Create a new RotationControl instance that can handle multiple models
      * @param {BABYLON.Scene} scene - The scene
-     * @param {Object} model - The model to control
-     * @param {number} rotationAngle - The current rotation angle in degrees
+     * @param {Object} models - Single model or array of models to control
+     * @param {number} rotationAngle - The current rotation angle in degrees (for legacy support)
      * @param {Object} options - Additional options
      */
-    constructor(scene, model, rotationAngle, options = {}) {
+    constructor(scene, models, rotationAngle, options = {}) {
         this.scene = scene;
-        this.model = model;
+        
+        // Handle both single model and array of models
+        this.models = Array.isArray(models) ? models : [models];
+        this.modelConfigs = [];
         
         // Default options
         const defaultOptions = {
@@ -29,18 +32,58 @@ export class RotationControl {
             sliderBarColor: "#444444", // Slider bar color
             sliderThumbColor: "#00aaff", // Slider thumb color
             isVisible: false,         // Initially hidden to avoid clutter
-            modelName: "Model"       // Name of the model being controlled
+            modelNames: null         // Array of names for models, or null for auto-naming
         };
         
         this.options = { ...defaultOptions, ...options };
         
-        // Current rotation value in degrees
-        this.currentRotation = this.options.rotationDefault;
+        // Set up model configurations
+        this.setupModelConfigs();
         
         // Create the UI for the rotation controls
         this.createUI();
         
-        console.log("RotationControl initialized with rotation", this.currentRotation);
+        console.log("RotationControl initialized with", this.models.length, "models");
+    }
+    
+    /**
+     * Set up model configurations with names and rotation values
+     */
+    setupModelConfigs() {
+        // If only one model but modelNames is not provided, use legacy modelName option
+        if (this.models.length === 1 && !this.options.modelNames && this.options.modelName) {
+            this.modelConfigs.push({
+                model: this.models[0],
+                name: this.options.modelName,
+                currentRotation: this.options.rotationDefault
+            });
+            return;
+        }
+        
+        // Process each model with its name
+        this.models.forEach((model, index) => {
+            // Determine model name
+            let modelName;
+            if (this.options.modelNames && this.options.modelNames[index]) {
+                modelName = this.options.modelNames[index];
+            } else if (model.constructor && model.constructor.name) {
+                modelName = model.constructor.name;
+            } else {
+                modelName = `Model ${index + 1}`;
+            }
+            
+            // Get current rotation for this model if available
+            let currentRotation = this.options.rotationDefault;
+            if (model.options && model.options.rotationAngle !== undefined) {
+                currentRotation = model.options.rotationAngle;
+            }
+            
+            this.modelConfigs.push({
+                model,
+                name: modelName,
+                currentRotation
+            });
+        });
     }
     
     /**
@@ -73,15 +116,25 @@ export class RotationControl {
             title.style.margin = '0 0 10px 0';
             this.panel.appendChild(title);
             
-            // Create rotation angle control
-            const rotationContainer = this.createSliderRow(
-                `${this.options.modelName} Rotation`,
-                this.options.rotationMin,
-                this.options.rotationMax,
-                this.currentRotation,
-                (value) => this.onRotationChange(value)
-            );
-            this.panel.appendChild(rotationContainer);
+            // Create rotation angle control for each model
+            this.modelConfigs.forEach((config, index) => {
+                const rotationContainer = this.createSliderRow(
+                    `${config.name} Rotation`,
+                    this.options.rotationMin,
+                    this.options.rotationMax,
+                    config.currentRotation,
+                    (value) => this.onRotationChange(index, value)
+                );
+                
+                // Add a separator between model controls if not the last one
+                if (index < this.modelConfigs.length - 1) {
+                    rotationContainer.style.borderBottom = '1px solid #444';
+                    rotationContainer.style.paddingBottom = '10px';
+                    rotationContainer.style.marginBottom = '15px';
+                }
+                
+                this.panel.appendChild(rotationContainer);
+            });
             
             // Add the panel to the control panels container
             this.controlPanels.appendChild(this.panel);
@@ -235,15 +288,23 @@ export class RotationControl {
     }
     
     /**
-     * Handle changes to rotation angle
+     * Handle changes to rotation angle for a specific model
+     * @param {number} modelIndex - Index of the model to update
      * @param {number} value - New rotation angle value in degrees
      */
-    onRotationChange(value) {
-        this.currentRotation = value;
+    onRotationChange(modelIndex, value) {
+        if (modelIndex < 0 || modelIndex >= this.modelConfigs.length) {
+            console.error(`Invalid model index: ${modelIndex}`);
+            return;
+        }
+        
+        const config = this.modelConfigs[modelIndex];
+        config.currentRotation = value;
         
         // Update the model rotation
-        if (this.model && typeof this.model.updateRotation === 'function') {
-            this.model.updateRotation(value);
+        const model = config.model;
+        if (model && typeof model.updateRotation === 'function') {
+            model.updateRotation(value);
         }
     }
     
