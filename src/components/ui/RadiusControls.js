@@ -1,4 +1,6 @@
 import * as BABYLON from '@babylonjs/core';
+import '@babylonjs/gui';
+import { AdvancedDynamicTexture, Rectangle, Grid, TextBlock, Slider, Button, Control } from '@babylonjs/gui';
 
 /**
  * Creates slider controls for adjusting the radius parameters of the Seven CUTs model and the SingleCUT models
@@ -49,18 +51,18 @@ export class RadiusControls {
      */
     createUI() {
         // Create AdvancedDynamicTexture for UI
-        this.advancedTexture = BABYLON.GUI.AdvancedDynamicTexture.CreateFullscreenUI("RadiusControlsUI");
+        this.advancedTexture = AdvancedDynamicTexture.CreateFullscreenUI("RadiusControlsUI");
         
         // Create a panel to hold the controls
-        this.panel = new BABYLON.GUI.Rectangle();
+        this.panel = new Rectangle();
         this.panel.width = this.options.width + "px";
         this.panel.height = this.options.height + "px";
         this.panel.cornerRadius = 10;
         this.panel.color = "#666666";
         this.panel.thickness = 2;
         this.panel.background = this.options.backgroundColor;
-        this.panel.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
-        this.panel.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        this.panel.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+        this.panel.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         this.panel.left = this.options.position.x + "px";
         this.panel.top = this.options.position.y + "px";
         this.panel.zIndex = 10;
@@ -68,7 +70,7 @@ export class RadiusControls {
         this.advancedTexture.addControl(this.panel);
         
         // Create a grid for organizing the controls
-        this.grid = new BABYLON.GUI.Grid();
+        this.grid = new Grid();
         this.grid.addRowDefinition(0.1, true); // Title
         this.grid.addRowDefinition(0.4, true); // Seven CUTs radius
         this.grid.addRowDefinition(0.4, true); // SingleCUT radius
@@ -77,7 +79,7 @@ export class RadiusControls {
         this.panel.addControl(this.grid);
         
         // Title text
-        const titleText = new BABYLON.GUI.TextBlock();
+        const titleText = new TextBlock();
         titleText.text = "Radius Controls";
         titleText.color = this.options.textColor;
         titleText.fontSize = 16;
@@ -104,14 +106,14 @@ export class RadiusControls {
         this.grid.addControl(singleCutRadiusRow, 2, 0);
         
         // Create close button
-        const closeButton = BABYLON.GUI.Button.CreateSimpleButton("closeButton", "X");
+        const closeButton = Button.CreateSimpleButton("closeButton", "X");
         closeButton.width = "24px";
         closeButton.height = "24px";
         closeButton.color = this.options.textColor;
         closeButton.background = "#aa0000";
         closeButton.cornerRadius = 12;
-        closeButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        closeButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_TOP;
+        closeButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        closeButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
         closeButton.top = "5px";
         closeButton.left = "-5px";
         closeButton.onPointerClickObservable.add(() => {
@@ -120,14 +122,14 @@ export class RadiusControls {
         this.panel.addControl(closeButton);
         
         // Create toggle button in the corner
-        this.toggleButton = BABYLON.GUI.Button.CreateSimpleButton("toggleRadiusControls", "R");
+        this.toggleButton = Button.CreateSimpleButton("toggleRadiusControls", "R");
         this.toggleButton.width = "40px";
         this.toggleButton.height = "40px";
         this.toggleButton.color = this.options.textColor;
         this.toggleButton.background = this.options.sliderThumbColor;
         this.toggleButton.cornerRadius = 20;
-        this.toggleButton.horizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
-        this.toggleButton.verticalAlignment = BABYLON.GUI.Control.VERTICAL_ALIGNMENT_BOTTOM;
+        this.toggleButton.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        this.toggleButton.verticalAlignment = Control.VERTICAL_ALIGNMENT_BOTTOM;
         this.toggleButton.top = "-20px";
         this.toggleButton.left = "-20px";
         this.toggleButton.onPointerClickObservable.add(() => {
@@ -146,23 +148,23 @@ export class RadiusControls {
      * @returns {BABYLON.GUI.Container} - The container with the row controls
      */
     createSliderRow(label, min, max, initial, onChange) {
-        const container = new BABYLON.GUI.Grid();
+        const container = new Grid();
         container.addRowDefinition(1);
         container.addColumnDefinition(0.3); // Label
         container.addColumnDefinition(0.5); // Slider
         container.addColumnDefinition(0.2); // Value
         
         // Label
-        const labelText = new BABYLON.GUI.TextBlock();
+        const labelText = new TextBlock();
         labelText.text = label;
         labelText.color = this.options.textColor;
         labelText.fontSize = 14;
-        labelText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_LEFT;
+        labelText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
         labelText.paddingLeft = "10px";
         container.addControl(labelText, 0, 0);
         
         // Slider
-        const slider = new BABYLON.GUI.Slider();
+        const slider = new Slider();
         slider.minimum = min;
         slider.maximum = max;
         slider.value = initial;
@@ -183,11 +185,11 @@ export class RadiusControls {
         container.addControl(slider, 0, 1);
         
         // Value display
-        const valueText = new BABYLON.GUI.TextBlock();
+        const valueText = new TextBlock();
         valueText.text = Math.round(initial).toString();
         valueText.color = this.options.textColor;
         valueText.fontSize = 14;
-        valueText.textHorizontalAlignment = BABYLON.GUI.Control.HORIZONTAL_ALIGNMENT_RIGHT;
+        valueText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_RIGHT;
         valueText.width = "100%";
         valueText.paddingRight = "10px";
         container.addControl(valueText, 0, 2);
