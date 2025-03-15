@@ -23,7 +23,7 @@ export class RadiusControls {
             outerRadiusDefault: 250, // Default radius for outer SingleCUTs
             singleCutRadiusMin: 10,  // Minimum radius for SingleCUT internal structure
             singleCutRadiusMax: 100, // Maximum radius for SingleCUT internal structure
-            singleCutRadiusDefault: 50, // Default radius for SingleCUT internal structure
+            singleCutRadiusDefault: 21, // Default radius for SingleCUT internal structure (updated to 21)
             position: { x: 10, y: 140 }, // Position of the controls container, moved down to avoid overlap
             width: 350,              // Width of the controls container
             height: 150,             // Height of the controls container

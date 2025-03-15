@@ -10,8 +10,8 @@ export class SevenCutsModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 250, // Distance from center to outer SingleCUTs (reduced from 500 to create overlap)
-            singleCutRadius: 150, // Radius for each individual SingleCUT
+            outerRadius: 42, // Distance from center to outer SingleCUTs (2x SingleCutModel radius for proper spacing)
+            singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging,
             showRadiusLines: true, // Whether to show radius lines on the ground
         };
@@ -55,6 +55,11 @@ export class SevenCutsModel extends CompositeModel {
             // Calculate the radius for this SingleCUT
             // Make SingleCUT #2 (i=0) closer to the center to connect properly
             let radius = this.options.outerRadius;
+            if (i === 0) {
+                // Position SingleCUT #2 closer to center
+                radius = 32; // Adjusted radius for better connection with the center
+                this.debugLog(`Using reduced radius (${radius}) for SingleCUT #2 to connect with center`);
+            }
             
             const x = radius * Math.cos(angle);
             const z = radius * Math.sin(angle);

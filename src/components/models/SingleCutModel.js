@@ -12,14 +12,14 @@ export class SingleCutModel extends BaseModel {
         // Default options
         const defaultOptions = {
             pipesCount: 6, // Number of pipes in the hexagonal arrangement (only the outer ring)
-            pipeRadius: 5, // meters
+            pipeRadius: 1, // meters (changed from 5 to 1)
             pipeHeight: 1000, // meters
             pipeColor: new Color3(0.7, 0.7, 0.7),
             panelWidth: 50, // meters
             panelHeight: 1000, // meters
             panelDepth: 2, // meters
             panelColor: new Color3(0.2, 0.6, 0.8),
-            radius: 150, // Distance from center to each pipe in hexagonal pattern
+            radius: 21, // Distance from center to each pipe in hexagonal pattern (changed from 150 to 21)
             debug: false, // Enable/disable debug logging
         };
 
