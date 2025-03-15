@@ -252,7 +252,8 @@ export class LayerOneModel extends CompositeModel {
      * @returns {Array} - Array of all SingleCUT models
      */
     get singleCuts() {
-        return this.getChildren();
+        // Simply return the childModels array from CompositeModel
+        return this.childModels;
     }
     
     /**
@@ -382,6 +383,7 @@ export class LayerOneModel extends CompositeModel {
      * @returns {Array} - Array of SingleCUT models
      */
     getChildren() {
-        return this.singleCuts;
+        // Use the parent class implementation from CompositeModel
+        return super.getChildren();
     }
 } 
