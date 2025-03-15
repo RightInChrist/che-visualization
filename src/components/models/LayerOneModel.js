@@ -28,6 +28,11 @@ export class LayerOneModel extends CompositeModel {
         if (this.options.showRadiusLines) {
             this.drawRadiusLines();
         }
+        
+        // Rotate the entire model by 60 degrees around the Y axis
+        const rotationAngle = 60 * (Math.PI / 180); // Convert 60 degrees to radians
+        this.rootNode.rotate(Axis.Y, rotationAngle, Space.WORLD);
+        this.debugLog(`Rotated Layer One Ring by 60 degrees (${rotationAngle.toFixed(2)} radians)`);
     }
     
     /**
