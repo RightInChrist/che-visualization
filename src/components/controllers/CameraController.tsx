@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, FlyControls, FirstPersonControls, PointerLockControls } from '@react-three/drei';
+import { OrbitControls, FlyControls, FirstPersonControls, PointerLockControls, Grid } from '@react-three/drei';
 import { Vector3 } from 'three';
 
 type ControllerType = 'orbit' | 'firstPerson' | 'flight';
@@ -35,6 +35,9 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
   // Movement speed with keys (adjust as needed)
   const MOVE_SPEED = 2;
   const VERTICAL_SPEED = 2;
+  
+  // Minimum height from ground to maintain (prevents going below ground)
+  const MIN_HEIGHT = 1;
 
   // Make controller change accessible from outside via window object for UI controls
   useEffect(() => {
@@ -67,7 +70,7 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
   // Set up keyboard controls that work across all controller types
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for arrow keys
+      // Check for arrow keys and space
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         e.preventDefault(); // Prevent default browser scrolling/actions
         keyStates.current[e.key as keyof typeof keyStates.current] = true;
@@ -80,7 +83,7 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
-      // Check for arrow keys
+      // Check for arrow keys and space
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
         keyStates.current[e.key as keyof typeof keyStates.current] = false;
       }
@@ -134,24 +137,45 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
       }
       
       // Apply vertical movement based on space and shift keys
+      let verticalMovement = 0;
       if (keyStates.current[' ']) {
-        moveDirection.y += VERTICAL_SPEED; // Move up with spacebar
+        verticalMovement += VERTICAL_SPEED; // Move up with spacebar
       }
       if (keyStates.current['Shift']) {
-        moveDirection.y -= VERTICAL_SPEED; // Move down with shift
+        verticalMovement -= VERTICAL_SPEED; // Move down with shift
       }
+      
+      // Check for minimum height constraint
+      if (camera.position.y + verticalMovement < MIN_HEIGHT && verticalMovement < 0) {
+        // If would go below minimum height, set to exactly minimum height
+        verticalMovement = MIN_HEIGHT - camera.position.y;
+      }
+      
+      moveDirection.y += verticalMovement;
       
       // Apply the movement to the camera position
       if (moveDirection.length() > 0) {
         camera.position.add(moveDirection);
         
-        // If using OrbitControls, update the target position to follow the camera horizontally
+        // Special handling for orbit controls to maintain proper view of the scene
         if (activeController === 'orbit' && orbitRef.current) {
           // @ts-ignore - OrbitControls has a target property
           const target = orbitRef.current.target;
-          // Only update X and Z for target (not Y) to maintain proper orbital behavior
+          
+          // For orbit camera, we want to:
+          // 1. Always update X and Z to follow the camera horizontally
+          // 2. For Y, we want to adjust it based on camera height to maintain a reasonable viewing angle
           target.x += moveDirection.x;
           target.z += moveDirection.z;
+          
+          // Dynamic target height adjustment:
+          // - At lower camera heights, keep target near ground
+          // - At higher heights, gradually raise target to look more downward
+          const cameraHeight = camera.position.y;
+          const targetHeight = Math.max(0, cameraHeight * 0.3 - 5);
+          
+          // Smoothly interpolate the target height toward the desired value
+          target.y += (targetHeight - target.y) * 0.1;
         }
       }
     }
@@ -159,6 +183,19 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
 
   return (
     <>
+      {/* Reference grid to provide visual orientation */}
+      <Grid 
+        infiniteGrid 
+        cellSize={5} 
+        cellThickness={0.5} 
+        cellColor="#444444" 
+        sectionSize={25}
+        sectionThickness={1}
+        sectionColor="#888888"
+        fadeDistance={100}
+        fadeStrength={1}
+      />
+      
       {/* Orbit controls - standard camera rotation around a target */}
       {activeController === 'orbit' && (
         <OrbitControls
@@ -169,6 +206,8 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
           enableRotate={true}
           minDistance={1}
           maxDistance={1000}
+          minPolarAngle={0.1} // Prevent going exactly overhead
+          maxPolarAngle={Math.PI - 0.1} // Prevent going exactly underneath
         />
       )}
       
