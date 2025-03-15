@@ -13,6 +13,10 @@ interface WindowWithController extends Window {
   setController?: (type: ControllerType) => void;
 }
 
+// Define valid keys for type safety
+type KeyName = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight' | ' ' | 'Shift' | 
+               'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D';
+
 export function CameraController({ defaultController = 'orbit' }: CameraControllerProps) {
   const [activeController, setActiveController] = useState<ControllerType>(defaultController);
   const orbitRef = useRef(null);
@@ -23,7 +27,7 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
   const [isLocked, setIsLocked] = useState(false);
   
   // Track key states
-  const keyStates = useRef({
+  const keyStates = useRef<Record<KeyName, boolean>>({
     ArrowUp: false,
     ArrowDown: false,
     ArrowLeft: false,
@@ -78,30 +82,78 @@ export function CameraController({ defaultController = 'orbit' }: CameraControll
   // Set up keyboard controls that work across all controller types
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Check for arrow keys, WASD and space
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 
-           'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
-        e.preventDefault(); // Prevent default browser scrolling/actions
-        keyStates.current[e.key as keyof typeof keyStates.current] = true;
+      const key = e.key.toLowerCase();
+      
+      // Handle WASD keys explicitly
+      if (['w', 'a', 's', 'd'].includes(key)) {
+        e.preventDefault();
+        // Safely set the key state
+        if (key in keyStates.current) {
+          keyStates.current[key as KeyName] = true;
+        }
+        
+        // Also set uppercase version for case-insensitive handling
+        const upperKey = key.toUpperCase() as KeyName;
+        if (upperKey in keyStates.current) {
+          keyStates.current[upperKey] = true;
+        }
+        return;
+      }
+      
+      // Handle arrow keys and space
+      if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) {
+        e.preventDefault();
+        
+        // For arrow keys, we need to use the original key since they're stored with capital letters
+        const storeKey = key === ' ' ? ' ' as KeyName : e.key as KeyName;
+        if (storeKey in keyStates.current) {
+          keyStates.current[storeKey] = true;
+        }
       }
       
       // Check for shift key
-      if (e.key === 'Shift') {
+      if (key === 'shift') {
         keyStates.current['Shift'] = true;
       }
+      
+      // Debug - log key states on keydown
+      console.log('Key Down:', e.key);
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
-      // Check for arrow keys, WASD and space
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 
-           'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(e.key)) {
-        keyStates.current[e.key as keyof typeof keyStates.current] = false;
+      const key = e.key.toLowerCase();
+      
+      // Handle WASD keys explicitly
+      if (['w', 'a', 's', 'd'].includes(key)) {
+        // Safely set the key state
+        if (key in keyStates.current) {
+          keyStates.current[key as KeyName] = false;
+        }
+        
+        // Also set uppercase version for case-insensitive handling
+        const upperKey = key.toUpperCase() as KeyName;
+        if (upperKey in keyStates.current) {
+          keyStates.current[upperKey] = false;
+        }
+        return;
+      }
+      
+      // Handle arrow keys and space
+      if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) {
+        // For arrow keys, we need to use the original key since they're stored with capital letters
+        const storeKey = key === ' ' ? ' ' as KeyName : e.key as KeyName;
+        if (storeKey in keyStates.current) {
+          keyStates.current[storeKey] = false;
+        }
       }
       
       // Check for shift key
-      if (e.key === 'Shift') {
+      if (key === 'shift') {
         keyStates.current['Shift'] = false;
       }
+      
+      // Debug - log key states on keyup
+      console.log('Key Up:', e.key);
     };
     
     window.addEventListener('keydown', handleKeyDown);
