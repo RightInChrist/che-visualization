@@ -46,6 +46,38 @@ export class SceneEditor {
         this.container.style.zIndex = '100';
         this.container.style.fontFamily = 'Arial, sans-serif';
         
+        // Add CSS styles for collapsible lists
+        const styleElement = document.createElement('style');
+        styleElement.textContent = `
+            .collapse-btn {
+                cursor: pointer;
+                user-select: none;
+                margin-right: 5px;
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                text-align: center;
+                line-height: 14px;
+                border: 1px solid #555;
+                border-radius: 2px;
+                background-color: #333;
+            }
+            .collapse-btn:hover {
+                background-color: #444;
+            }
+            .collapsed {
+                display: none !important;
+            }
+            .object-label {
+                cursor: pointer;
+            }
+            .object-row {
+                display: flex;
+                align-items: center;
+            }
+        `;
+        document.head.appendChild(styleElement);
+        
         // Create header
         const header = document.createElement('div');
         header.style.display = 'flex';
@@ -66,15 +98,57 @@ export class SceneEditor {
         closeBtn.style.fontSize = '16px';
         closeBtn.addEventListener('click', () => this.toggle());
         
+        // Add expand/collapse all buttons
+        const actionBtns = document.createElement('div');
+        actionBtns.style.display = 'flex';
+        actionBtns.style.gap = '10px';
+        
+        const expandAllBtn = document.createElement('button');
+        expandAllBtn.textContent = 'Expand All';
+        expandAllBtn.style.fontSize = '11px';
+        expandAllBtn.style.padding = '2px 5px';
+        expandAllBtn.style.backgroundColor = '#333';
+        expandAllBtn.style.color = 'white';
+        expandAllBtn.style.border = '1px solid #555';
+        expandAllBtn.style.borderRadius = '3px';
+        expandAllBtn.style.cursor = 'pointer';
+        expandAllBtn.addEventListener('click', () => this.expandAll());
+        
+        const collapseAllBtn = document.createElement('button');
+        collapseAllBtn.textContent = 'Collapse All';
+        collapseAllBtn.style.fontSize = '11px';
+        collapseAllBtn.style.padding = '2px 5px';
+        collapseAllBtn.style.backgroundColor = '#333';
+        collapseAllBtn.style.color = 'white';
+        collapseAllBtn.style.border = '1px solid #555';
+        collapseAllBtn.style.borderRadius = '3px';
+        collapseAllBtn.style.cursor = 'pointer';
+        collapseAllBtn.addEventListener('click', () => this.collapseAll());
+        
+        actionBtns.appendChild(expandAllBtn);
+        actionBtns.appendChild(collapseAllBtn);
+        
         header.appendChild(title);
-        header.appendChild(closeBtn);
+        header.appendChild(actionBtns);
+        
+        const closeBtnWrapper = document.createElement('div');
+        closeBtnWrapper.appendChild(closeBtn);
+        
+        const headerRow = document.createElement('div');
+        headerRow.style.display = 'flex';
+        headerRow.style.justifyContent = 'space-between';
+        headerRow.style.alignItems = 'center';
+        headerRow.style.marginBottom = '10px';
+        
+        headerRow.appendChild(header);
+        headerRow.appendChild(closeBtnWrapper);
         
         // Create object list container
         this.objectListContainer = document.createElement('div');
         this.objectListContainer.id = 'objectList';
         
         // Assemble container
-        this.container.appendChild(header);
+        this.container.appendChild(headerRow);
         this.container.appendChild(this.objectListContainer);
         
         // Add to DOM
@@ -93,6 +167,36 @@ export class SceneEditor {
         this.toggleButton.addEventListener('click', () => this.toggle());
         
         document.body.appendChild(this.toggleButton);
+    }
+    
+    /**
+     * Expand all collapsible sections
+     */
+    expandAll() {
+        const collapseBtns = this.container.querySelectorAll('.collapse-btn');
+        collapseBtns.forEach(btn => {
+            const targetId = btn.getAttribute('data-target');
+            const targetElement = document.getElementById(targetId);
+            if (targetElement && targetElement.classList.contains('collapsed')) {
+                targetElement.classList.remove('collapsed');
+                btn.textContent = '-';
+            }
+        });
+    }
+    
+    /**
+     * Collapse all collapsible sections
+     */
+    collapseAll() {
+        const collapseBtns = this.container.querySelectorAll('.collapse-btn');
+        collapseBtns.forEach(btn => {
+            const targetId = btn.getAttribute('data-target');
+            const targetElement = document.getElementById(targetId);
+            if (targetElement && !targetElement.classList.contains('collapsed')) {
+                targetElement.classList.add('collapsed');
+                btn.textContent = '+';
+            }
+        });
     }
     
     /**
@@ -150,8 +254,7 @@ export class SceneEditor {
         objectItem.id = `item-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
         
         const objectContainer = document.createElement('div');
-        objectContainer.style.display = 'flex';
-        objectContainer.style.alignItems = 'center';
+        objectContainer.className = 'object-row';
         
         // Check if this is a permanently hidden pipe or panel
         const isPermanentlyHidden = this.isElementPermanentlyHidden(name, object);
@@ -179,6 +282,42 @@ export class SceneEditor {
         const isPipe = object && object.pipeMesh;
         const isPanel = object && object.panelMesh;
         const isToggable = isModel || isPipe || isPanel || name.includes('Pipe #') || name.includes('Panel #');
+        
+        // Determine if this object has children for collapse button
+        const hasChildElements = this.hasChildren(object);
+        
+        // Add collapse button if the object has children
+        if (hasChildElements) {
+            const collapseBtn = document.createElement('span');
+            collapseBtn.className = 'collapse-btn';
+            collapseBtn.textContent = '+'; // Closed by default
+            
+            const childListId = `childList-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
+            collapseBtn.setAttribute('data-target', childListId);
+            
+            collapseBtn.addEventListener('click', () => {
+                const targetElement = document.getElementById(childListId);
+                if (targetElement) {
+                    const isCollapsed = targetElement.classList.contains('collapsed');
+                    if (isCollapsed) {
+                        targetElement.classList.remove('collapsed');
+                        collapseBtn.textContent = '-';
+                    } else {
+                        targetElement.classList.add('collapsed');
+                        collapseBtn.textContent = '+';
+                    }
+                }
+            });
+            
+            objectContainer.appendChild(collapseBtn);
+        } else {
+            // Add spacing for alignment if no collapse button
+            const spacer = document.createElement('span');
+            spacer.style.width = '16px';
+            spacer.style.display = 'inline-block';
+            spacer.innerHTML = '&nbsp;';
+            objectContainer.appendChild(spacer);
+        }
         
         if (isToggable) {
             if (isPermanentlyHidden) {
@@ -222,16 +361,34 @@ export class SceneEditor {
         const objectLabel = document.createElement('span');
         objectLabel.textContent = displayName;
         objectLabel.style.marginLeft = '5px';
+        objectLabel.className = 'object-label';
+        
+        // Make the label also toggle collapse if the object has children
+        if (hasChildElements) {
+            objectLabel.addEventListener('click', () => {
+                const collapseBtn = objectContainer.querySelector('.collapse-btn');
+                if (collapseBtn) {
+                    collapseBtn.click();
+                }
+            });
+        }
+        
         objectContainer.appendChild(objectLabel);
         
         // Add the object container to the list item
         objectItem.appendChild(objectContainer);
         
         // Add child items container if this object has children
-        if (this.hasChildren(object)) {
+        if (hasChildElements) {
             const childList = document.createElement('ul');
             childList.style.paddingLeft = '20px';
             childList.style.listStyle = 'none';
+            
+            // Assign an ID to the child list for collapse functionality
+            childList.id = `childList-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
+            
+            // Set the child list to be collapsed by default
+            childList.classList.add('collapsed');
             
             // Determine the appropriate way to add children based on object properties
             if (object.model && object.model.singleCuts && object.model.singleCuts.length > 0) {
