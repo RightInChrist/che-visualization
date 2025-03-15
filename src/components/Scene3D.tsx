@@ -12,6 +12,11 @@ import { Stats, Environment, Loader } from '@react-three/drei';
 import { PrimitiveModel, CompositeModel as CompositeModelType } from '@/types/models';
 import { Vector3, Object3D, WebGLRenderer, Mesh, Material } from 'three';
 
+// Add window interface with setController
+interface WindowWithController extends Window {
+  setController?: (type: 'orbit' | 'firstPerson' | 'flight') => void;
+}
+
 // Memory-optimized renderer with automatic recovery
 function OptimizedRenderer() {
   const { gl, scene, camera } = useThree();
@@ -527,6 +532,18 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
   const [inputEventLog, setInputEventLog] = useState<InputEvent[]>([]);
   const [showDebugOverlay, setShowDebugOverlay] = useState(true);
   
+  // Keep activeController in sync with props
+  useEffect(() => {
+    setActiveController(controllerType);
+    // Set controller in window object for external control
+    if (typeof window !== 'undefined') {
+      const customWindow = window as WindowWithController;
+      if (customWindow.setController) {
+        customWindow.setController(controllerType);
+      }
+    }
+  }, [controllerType]);
+  
   // Modified key state handler to update our overlay state
   const handleKeyStateChange = useCallback((newKeyStates: Record<KeyName, boolean>) => {
     setActiveKeys({...newKeyStates});
@@ -638,7 +655,8 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
       
       {/* Camera controls help overlay */}
       <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white py-1 px-2 rounded text-sm">
-        <p>Camera: [1] Orbit | [F1] Toggle Debug Info</p>
+        <p>Camera: [1] Orbit | [2] First Person | [3] Flight | [F1] Toggle Debug Info</p>
+        <p>Movement: WASD + Space/Shift | {activeController === 'orbit' ? 'Click+Drag to orbit' : 'Mouse to look around'}</p>
       </div>
       
       {/* Debug info overlay - outside the WebGL context */}

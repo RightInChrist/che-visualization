@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, MutableRefObject } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, PointerLockControls } from '@react-three/drei';
 import { Vector3, Raycaster, Object3D } from 'three';
 
 type ControllerType = 'orbit' | 'firstPerson' | 'flight';
@@ -47,7 +47,9 @@ export function CameraController({
 }: CameraControllerProps) {
   const [activeController, setActiveController] = useState<ControllerType>(defaultController);
   const orbitRef = useRef(null);
+  const pointerLockRef = useRef(null);
   const { camera, scene } = useThree();
+  const [isLocked, setIsLocked] = useState(false);
   
   // Movement tracking
   const keyStates = useRef<Record<KeyName, boolean>>({
@@ -81,15 +83,54 @@ export function CameraController({
       customWindow.setController = (type: ControllerType) => {
         if (['orbit', 'firstPerson', 'flight'].includes(type)) {
           setActiveController(type);
+          
+          // If switching to a mode that requires pointer lock
+          if (type === 'firstPerson' && pointerLockRef.current) {
+            // Small timeout to ensure component is ready
+            setTimeout(() => {
+              if (pointerLockRef.current) {
+                // @ts-ignore - PointerLockControls has a lock method
+                pointerLockRef.current.lock();
+              }
+            }, 100);
+          }
         }
       };
     }
   }, []);
   
+  // Handle pointer lock change events
+  const handleLock = () => {
+    setIsLocked(true);
+  };
+  
+  const handleUnlock = () => {
+    setIsLocked(false);
+  };
+  
   // Set up keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
+      
+      // Handle number keys for camera mode switching
+      if (['1', '2', '3'].includes(key)) {
+        e.preventDefault();
+        
+        if (key === '1') {
+          setActiveController('orbit');
+        } else if (key === '2') {
+          setActiveController('firstPerson');
+          if (pointerLockRef.current) {
+            // @ts-ignore - PointerLockControls has a lock method
+            pointerLockRef.current.lock();
+          }
+        } else if (key === '3') {
+          setActiveController('flight');
+        }
+        
+        return;
+      }
       
       // Handle WASD keys
       if (['w', 'a', 's', 'd'].includes(key)) {
@@ -315,6 +356,24 @@ export function CameraController({
           maxDistance={5000}
           minPolarAngle={0.1}
           maxPolarAngle={Math.PI - 0.1}
+        />
+      )}
+      
+      {/* First person controls (uses pointer lock for mouse look) */}
+      {activeController === 'firstPerson' && (
+        <PointerLockControls
+          ref={pointerLockRef}
+          onLock={handleLock}
+          onUnlock={handleUnlock}
+        />
+      )}
+      
+      {/* Flight controls (similar to first person) */}
+      {activeController === 'flight' && (
+        <PointerLockControls
+          ref={pointerLockRef}
+          onLock={handleLock}
+          onUnlock={handleUnlock}
         />
       )}
     </React.Fragment>
