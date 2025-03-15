@@ -30,7 +30,7 @@ function CollapsibleSection({ title, children, defaultOpen = false }: Collapsibl
         ) : (
           <ChevronRightIcon className="h-4 w-4 mr-1" />
         )}
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <h3 className="text-base font-semibold">{title}</h3>
       </div>
       
       {isOpen && (
@@ -216,8 +216,8 @@ export function Sidebar({ setController }: SidebarProps) {
 
   const getButtonClass = (type: ControllerType) => {
     return type === activeController
-      ? "bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded font-semibold"
-      : "bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded";
+      ? "bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded font-semibold text-xs"
+      : "bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded text-xs";
   };
 
   // This effect reruns whenever visibilityVersion changes, but doesn't do anything
@@ -227,8 +227,34 @@ export function Sidebar({ setController }: SidebarProps) {
   }, [visibilityVersion]);
 
   return (
-    <div className="bg-gray-800 text-white p-4 w-64 h-full overflow-y-auto flex flex-col">
-      <h2 className="text-xl font-bold mb-4">3D Visualizer</h2>
+    <div className="bg-gray-800 text-white p-3 w-64 h-full overflow-y-auto flex flex-col text-xs">
+      <CollapsibleSection title="Camera Controls" defaultOpen={true}>
+        <div className="flex flex-col gap-2">
+          <button 
+            onClick={() => handleControllerChange('orbit')}
+            className={getButtonClass('orbit')}
+          >
+            Orbit Mode
+          </button>
+          <button 
+            onClick={() => handleControllerChange('firstPerson')}
+            className={getButtonClass('firstPerson')}
+          >
+            First Person Walking
+          </button>
+          <button 
+            onClick={() => handleControllerChange('flight')}
+            className={getButtonClass('flight')}
+          >
+            Flight Mode
+          </button>
+        </div>
+        <div className="mt-2 text-xs text-gray-300">
+          <p>Click the scene to interact</p>
+          <p>Press ESC to exit interaction mode</p>
+          <p>Keyboard shortcuts: 1, 2, 3 to change modes</p>
+        </div>
+      </CollapsibleSection>
       
       {/* Scenes section - for hierarchical scene organization */}
       <CollapsibleSection title="Scenes" defaultOpen={true}>
@@ -244,7 +270,7 @@ export function Sidebar({ setController }: SidebarProps) {
               ) : (
                 <ChevronRightIcon className="h-3 w-3 mr-1" />
               )}
-              <span className="font-medium text-blue-300">Convective Heat Engine #1</span>
+              <span className="font-medium text-blue-300 text-xs">Convective Heat Engine #1</span>
             </div>
             <input
               type="checkbox"
@@ -275,7 +301,7 @@ export function Sidebar({ setController }: SidebarProps) {
                   if (!model) return null;
                   
                   return (
-                    <li key={instance.instanceId} className="flex items-center text-sm">
+                    <li key={instance.instanceId} className="flex items-center text-xs">
                       <input
                         type="checkbox"
                         id={`scene-item-${instance.instanceId}`}
@@ -315,7 +341,7 @@ export function Sidebar({ setController }: SidebarProps) {
                           ) : (
                             <ChevronRightIcon className="h-3 w-3 mr-1" />
                           )}
-                          <span>Single CUT #1</span>
+                          <span className="text-xs">Single CUT #1</span>
                         </div>
                         <input
                           type="checkbox"
@@ -333,7 +359,7 @@ export function Sidebar({ setController }: SidebarProps) {
                             if (!childModel) return null;
                             
                             return (
-                              <li key={childInstance.instanceId} className="flex items-center text-sm">
+                              <li key={childInstance.instanceId} className="flex items-center text-xs">
                                 <input
                                   type="checkbox"
                                   id={`scene-child-${childInstance.instanceId}`}
@@ -379,7 +405,7 @@ export function Sidebar({ setController }: SidebarProps) {
                   ) : (
                     <ChevronRightIcon className="h-3 w-3 mr-1" />
                   )}
-                  <span className="font-medium text-blue-300">{model.name}</span>
+                  <span className="font-medium text-blue-300 text-xs">{model.name}</span>
                 </div>
                 
                 <input
@@ -399,7 +425,7 @@ export function Sidebar({ setController }: SidebarProps) {
               {isExpanded && (
                 <ul className="ml-5 mt-1 space-y-1">
                   {modelInstances.map(instance => (
-                    <li key={instance.instanceId} className="flex items-center text-sm">
+                    <li key={instance.instanceId} className="flex items-center text-xs">
                       <input
                         type="checkbox"
                         id={`instance-${instance.instanceId}`}
@@ -414,41 +440,13 @@ export function Sidebar({ setController }: SidebarProps) {
                   ))}
                   
                   {modelInstances.length === 0 && (
-                    <li className="text-gray-400 text-sm italic">No instances</li>
+                    <li className="text-gray-400 text-xs italic">No instances</li>
                   )}
                 </ul>
               )}
             </div>
           );
         })}
-      </CollapsibleSection>
-
-      <CollapsibleSection title="Camera Controls" defaultOpen={true}>
-        <div className="flex flex-col gap-2">
-          <button 
-            onClick={() => handleControllerChange('orbit')}
-            className={getButtonClass('orbit')}
-          >
-            Orbit Mode
-          </button>
-          <button 
-            onClick={() => handleControllerChange('firstPerson')}
-            className={getButtonClass('firstPerson')}
-          >
-            First Person Walking
-          </button>
-          <button 
-            onClick={() => handleControllerChange('flight')}
-            className={getButtonClass('flight')}
-          >
-            Flight Mode
-          </button>
-        </div>
-        <div className="mt-2 text-sm text-gray-300">
-          <p>Click the scene to interact</p>
-          <p>Press ESC to exit interaction mode</p>
-          <p>Keyboard shortcuts: 1, 2, 3 to change modes</p>
-        </div>
       </CollapsibleSection>
     </div>
   );
