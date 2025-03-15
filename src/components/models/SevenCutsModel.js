@@ -42,8 +42,18 @@ export class SevenCutsModel extends CompositeModel {
         // Create 6 surrounding SingleCUTs in a hexagonal pattern
         for (let i = 0; i < 6; i++) {
             const angle = (i * 2 * Math.PI) / 6;
-            const x = this.options.outerRadius * Math.cos(angle);
-            const z = this.options.outerRadius * Math.sin(angle);
+            
+            // Calculate the radius for this SingleCUT
+            // Make SingleCUT #2 (i=0) closer to the center to connect properly
+            let radius = this.options.outerRadius;
+            if (i === 0) {
+                // Position SingleCUT #2 closer to center
+                radius = 200; // Adjusted radius for better connection with the center
+                this.debugLog(`Using reduced radius (${radius}) for SingleCUT #2 to connect with center`);
+            }
+            
+            const x = radius * Math.cos(angle);
+            const z = radius * Math.sin(angle);
             
             const position = new Vector3(x, 0, z);
             
