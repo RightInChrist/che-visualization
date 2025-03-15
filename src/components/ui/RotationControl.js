@@ -2,19 +2,19 @@ import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/gui';
 
 /**
- * Creates slider controls for adjusting the rotation of the Layer One Ring model
+ * Creates slider controls for adjusting the rotation of models
  */
-export class LayerRotationControl {
+export class RotationControl {
     /**
-     * Create a new LayerRotationControl instance
+     * Create a new RotationControl instance
      * @param {BABYLON.Scene} scene - The scene
-     * @param {Object} layerOneRingModel - The Layer One Ring model to control
+     * @param {Object} model - The model to control
      * @param {number} rotationAngle - The current rotation angle in degrees
      * @param {Object} options - Additional options
      */
-    constructor(scene, layerOneRingModel, rotationAngle, options = {}) {
+    constructor(scene, model, rotationAngle, options = {}) {
         this.scene = scene;
-        this.layerOneRingModel = layerOneRingModel;
+        this.model = model;
         
         // Default options
         const defaultOptions = {
@@ -28,7 +28,8 @@ export class LayerRotationControl {
             textColor: "#ffffff",    // Text color
             sliderBarColor: "#444444", // Slider bar color
             sliderThumbColor: "#00aaff", // Slider thumb color
-            isVisible: false          // Initially hidden to avoid clutter
+            isVisible: false,         // Initially hidden to avoid clutter
+            modelName: "Model"       // Name of the model being controlled
         };
         
         this.options = { ...defaultOptions, ...options };
@@ -39,7 +40,7 @@ export class LayerRotationControl {
         // Create the UI for the rotation controls
         this.createUI();
         
-        console.log("LayerRotationControl initialized with rotation", this.currentRotation);
+        console.log("RotationControl initialized with rotation", this.currentRotation);
     }
     
     /**
@@ -47,7 +48,7 @@ export class LayerRotationControl {
      */
     createUI() {
         try {
-            console.log("Creating LayerRotationControl UI");
+            console.log("Creating RotationControl UI");
             
             // Find the control panels container
             this.controlPanels = document.getElementById('controlPanels');
@@ -74,7 +75,7 @@ export class LayerRotationControl {
             
             // Create rotation angle control
             const rotationContainer = this.createSliderRow(
-                "Layer One Ring Rotation",
+                `${this.options.modelName} Rotation`,
                 this.options.rotationMin,
                 this.options.rotationMax,
                 this.currentRotation,
@@ -88,9 +89,9 @@ export class LayerRotationControl {
             // Create HTML button for rotation controls toggle
             this.createHTMLToggleButton();
             
-            console.log("LayerRotationControl UI created successfully");
+            console.log("RotationControl UI created successfully");
         } catch (error) {
-            console.error("Error creating LayerRotationControl UI:", error);
+            console.error("Error creating RotationControl UI:", error);
         }
     }
     
@@ -241,8 +242,8 @@ export class LayerRotationControl {
         this.currentRotation = value;
         
         // Update the model rotation
-        if (this.layerOneRingModel && typeof this.layerOneRingModel.updateRotation === 'function') {
-            this.layerOneRingModel.updateRotation(value);
+        if (this.model && typeof this.model.updateRotation === 'function') {
+            this.model.updateRotation(value);
         }
     }
     

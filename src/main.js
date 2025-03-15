@@ -12,7 +12,7 @@ import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
 import { RadiusControls } from './components/ui/RadiusControls';
-import { LayerRotationControl } from './components/ui/LayerRotationControl';
+import { RotationControl } from './components/ui/RotationControl';
 
 /**
  * Main application entry point
@@ -161,7 +161,7 @@ class CHEVisualization {
             });
             
             // Create the rotation controls for Layer One Ring
-            const rotationControls = new LayerRotationControl(
+            const rotationControls = new RotationControl(
                 scene, 
                 this.layerOneRing, 
                 this.layerRotationAngle,
@@ -170,7 +170,8 @@ class CHEVisualization {
                     rotationMin: 0,
                     rotationMax: 360,
                     rotationDefault: this.layerRotationAngle,
-                    isVisible: false
+                    isVisible: false,
+                    modelName: "Layer One Ring"
                 }
             );
             
