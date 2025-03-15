@@ -4,13 +4,22 @@ import { useState } from 'react';
 import Scene3D from '@/components/Scene3D';
 import Sidebar from '@/components/ui/Sidebar';
 
+type ControllerType = 'orbit' | 'firstPerson' | 'flight';
+
+interface WindowWithController extends Window {
+  setController?: (type: ControllerType) => void;
+}
+
 export default function Home() {
-  const [controllerType, setControllerType] = useState<'orbit' | 'firstPerson' | 'flight'>('orbit');
+  const [controllerType, setControllerType] = useState<ControllerType>('orbit');
   
-  const handleControllerChange = (type: 'orbit' | 'firstPerson' | 'flight') => {
+  const handleControllerChange = (type: ControllerType) => {
     setControllerType(type);
-    if (typeof window !== 'undefined' && (window as any).setController) {
-      (window as any).setController(type);
+    if (typeof window !== 'undefined') {
+      const customWindow = window as WindowWithController;
+      if (customWindow.setController) {
+        customWindow.setController(type);
+      }
     }
   };
 

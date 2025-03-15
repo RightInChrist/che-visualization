@@ -8,19 +8,25 @@ interface CameraControllerProps {
   defaultController?: ControllerType;
 }
 
+interface WindowWithController extends Window {
+  setController?: (type: ControllerType) => void;
+}
+
 export function CameraController({ defaultController = 'orbit' }: CameraControllerProps) {
   const [activeController, setActiveController] = useState<ControllerType>(defaultController);
   const orbitRef = useRef(null);
   const flyRef = useRef(null);
   const firstPersonRef = useRef(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { camera } = useThree();
 
   // Make controller change accessible from outside via window object for UI controls
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).setController = (type: ControllerType) => {
+      const customWindow = window as WindowWithController;
+      customWindow.setController = (type: ControllerType) => {
         if (['orbit', 'firstPerson', 'flight'].includes(type)) {
-          setActiveController(type as ControllerType);
+          setActiveController(type);
         }
       };
     }

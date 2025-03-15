@@ -1,5 +1,4 @@
 import React from 'react';
-import { useGLTF } from '@react-three/drei';
 import { PrimitiveModel } from '@/types/models';
 
 interface PipeModelProps {
