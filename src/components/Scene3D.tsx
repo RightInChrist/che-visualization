@@ -666,6 +666,9 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
             <strong>Camera:</strong> [{cameraPosition.x.toFixed(1)}, {cameraPosition.y.toFixed(1)}, {cameraPosition.z.toFixed(1)}]
           </div>
           <div className="mb-1">
+            <strong>Height from ground:</strong> {cameraPosition.y.toFixed(1)}m ({(cameraPosition.y / 10).toFixed(1)}% of pipe height)
+          </div>
+          <div className="mb-1">
             <strong>Controller:</strong> {activeController}
           </div>
           <div className="mb-1">

@@ -72,7 +72,7 @@ export function CameraController({
   
   // Movement speed and limits
   const MOVE_SPEED = 2;
-  const VERTICAL_SPEED = 2;
+  const VERTICAL_SPEED = 5;  // Adjusted to be faster to navigate the 1000m tall pipes
   const MIN_HEIGHT = 1;
   const groundY = useRef(0);
 
