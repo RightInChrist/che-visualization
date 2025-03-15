@@ -326,6 +326,18 @@ export class RotationControls {
     onRotationChange(model, axis, value) {
         if (!model) return;
         
+        // First, check if this is a model that only supports Y-axis rotation with a single parameter
+        if (axis === 'y' && typeof model.updateRotation === 'function' && 
+            typeof model.getDefaultRotation === 'function' && 
+            typeof model.getMinRotation === 'function' && 
+            typeof model.getMaxRotation === 'function') {
+            // This appears to be a model that uses the single parameter rotation pattern
+            // Call it with degrees directly
+            model.updateRotation(value);
+            return;
+        }
+        
+        // For models that support multi-axis rotation with radians
         // Convert from degrees to radians
         const valueInRadians = (value * Math.PI) / 180;
         
