@@ -37,6 +37,10 @@ export class CameraController {
         this.keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
         this.maxPipeHeight = 1000; // height of pipes in meters
         
+        // Debug settings
+        this.showCollisionRays = false;
+        this.useDebugUI = false; // Whether to use the old debug UI
+        
         // Setup cameras
         this.setupCameras();
         
@@ -47,7 +51,6 @@ export class CameraController {
         this.setupControls();
         
         // Debug settings
-        this.showCollisionRays = false;
         this.collisionRayHelpers = [];
     }
     
@@ -166,8 +169,10 @@ export class CameraController {
             }
         });
         
-        // Update the UI with camera info
-        this.scene.registerBeforeRender(() => this.updateCameraInfo());
+        // Update the UI with camera info only if useDebugUI is true
+        if (this.useDebugUI) {
+            this.scene.registerBeforeRender(() => this.updateCameraInfo());
+        }
         
         // Register rendering loop to handle camera movement
         this.scene.registerBeforeRender(() => this.updateCameraMovement());
@@ -175,25 +180,43 @@ export class CameraController {
     
     /**
      * Updates the UI with the current camera position and other info
+     * This method is now optional and only runs if the old debug elements exist
      */
     updateCameraInfo() {
+        // Skip if required elements don't exist
+        if (!document.getElementById('positionText')) {
+            // Old debug panel has been removed, no need to update
+            return;
+        }
+        
         const camera = this.currentCamera;
         const position = camera.position;
         
         // Update position text
-        document.getElementById('positionText').textContent = 
-            `${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)}`;
+        const positionText = document.getElementById('positionText');
+        if (positionText) {
+            positionText.textContent = `${position.x.toFixed(1)}, ${position.y.toFixed(1)}, ${position.z.toFixed(1)}`;
+        }
         
         // Update height text
         const height = position.y;
-        document.getElementById('heightText').textContent = `${height.toFixed(1)}m`;
+        const heightText = document.getElementById('heightText');
+        if (heightText) {
+            heightText.textContent = `${height.toFixed(1)}m`;
+        }
         
         // Update height percentage text
         const heightPercent = (height / this.maxPipeHeight) * 100;
-        document.getElementById('heightPercentText').textContent = `${heightPercent.toFixed(1)}%`;
+        const heightPercentText = document.getElementById('heightPercentText');
+        if (heightPercentText) {
+            heightPercentText.textContent = `${heightPercent.toFixed(1)}%`;
+        }
         
         // Update camera mode text
-        document.getElementById('cameraModeText').textContent = this.currentMode;
+        const cameraModeText = document.getElementById('cameraModeText');
+        if (cameraModeText) {
+            cameraModeText.textContent = this.currentMode;
+        }
     }
     
     /**
