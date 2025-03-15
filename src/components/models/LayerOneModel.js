@@ -14,7 +14,7 @@ export class LayerOneModel extends CompositeModel {
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
-            rotationAngle: 60, // Default rotation angle in degrees
+            rotationAngle: 30, // Default rotation angle in degrees (changed from 60 to 30)
         };
 
         // Call parent constructor
@@ -71,9 +71,10 @@ export class LayerOneModel extends CompositeModel {
             
             this.debugLog(`Creating SingleCUT #${i+1} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
             
-            // Create a SingleCUT with its own panels
+            // Create a SingleCUT with its own panels and set rotation angle to 30 degrees
             const singleCut = new SingleCutModel(this.scene, position, {
-                radius: this.options.singleCutRadius
+                radius: this.options.singleCutRadius,
+                rotationAngle: 30 // Set default rotation angle to 30 degrees for all SingleCutModels
             });
             
             // Add to the model children
@@ -202,8 +203,14 @@ export class LayerOneModel extends CompositeModel {
      * Dispose child models
      */
     disposeChildren() {
-        // Call parent implementation to dispose all child models
-        super.disposeChildren();
+        // Dispose all child models directly
+        if (this.childModels && Array.isArray(this.childModels)) {
+            this.childModels.forEach(child => {
+                if (child && typeof child.dispose === 'function') {
+                    child.dispose();
+                }
+            });
+        }
         
         // Reset child models array
         this.childModels = [];
