@@ -18,9 +18,9 @@ export class RadiusControls {
         
         // Default options
         const defaultOptions = {
-            outerRadiusMin: 150,    // Minimum radius for outer SingleCUTs
-            outerRadiusMax: 400,    // Maximum radius for outer SingleCUTs
-            outerRadiusDefault: 250, // Default radius for outer SingleCUTs
+            outerRadiusMin: 10,     // Minimum radius for outer SingleCUTs (changed from 150 to 10)
+            outerRadiusMax: 100,    // Maximum radius for outer SingleCUTs (changed from 400 to 100)
+            outerRadiusDefault: 42, // Default radius for outer SingleCUTs (changed from 250 to 42)
             singleCutRadiusMin: 10,  // Minimum radius for SingleCUT internal structure
             singleCutRadiusMax: 100, // Maximum radius for SingleCUT internal structure
             singleCutRadiusDefault: 21, // Default radius for SingleCUT internal structure (updated to 21)
@@ -31,7 +31,7 @@ export class RadiusControls {
             textColor: "#ffffff",    // Text color
             sliderBarColor: "#444444", // Slider bar color
             sliderThumbColor: "#00aaff", // Slider thumb color
-            special2RadiousDefault: 200, // Default radius for SingleCUT #2
+            special2RadiousDefault: 32, // Default radius for SingleCUT #2 (changed from 200 to 32)
             isVisible: false          // Initially hidden to avoid clutter
         };
         
