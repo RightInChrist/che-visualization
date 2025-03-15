@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useModelStore } from '@/store/modelStore';
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
@@ -52,6 +52,39 @@ export function Sidebar({ setController }: SidebarProps) {
   const [activeController, setActiveController] = useState<ControllerType>('orbit');
   const [expandedModels, setExpandedModels] = useState<Record<string, boolean>>({});
   const [expandedInstances, setExpandedInstances] = useState<Record<string, boolean>>({});
+
+  // Generate instance counters for each model type
+  const instanceCounters = useMemo(() => {
+    const counters: Record<string, Record<string, number>> = {};
+    
+    // Initialize counters for each model
+    models.forEach(model => {
+      counters[model.id] = {};
+    });
+    
+    // Assign numbers to instances based on their model type
+    instances.forEach(instance => {
+      if (!counters[instance.modelId]) return;
+      
+      const modelCounter = counters[instance.modelId];
+      const count = Object.keys(modelCounter).length + 1;
+      modelCounter[instance.instanceId] = count;
+    });
+    
+    return counters;
+  }, [models, instances]);
+
+  // Get display name for an instance
+  const getInstanceDisplayName = (instance: any, model: any) => {
+    if (instance.name) return instance.name;
+    
+    const counter = instanceCounters[model.id]?.[instance.instanceId];
+    if (counter) {
+      return `${model.name} #${counter}`;
+    }
+    
+    return `${model.name} Instance`;
+  };
 
   // Toggle expansion state for model sections
   const toggleModelExpansion = (modelId: string) => {
@@ -207,7 +240,7 @@ export function Sidebar({ setController }: SidebarProps) {
                         className="mr-2"
                       />
                       <label htmlFor={`instance-${instance.instanceId}`} className="text-gray-300">
-                        {instance.name || `${model.name} Instance`}
+                        {getInstanceDisplayName(instance, model)}
                       </label>
                     </li>
                   ))}
@@ -238,7 +271,9 @@ export function Sidebar({ setController }: SidebarProps) {
           })
           .map(instance => {
             const model = models.find(m => m.id === instance.modelId);
-            const isComposite = model?.type === 'composite';
+            if (!model) return null;
+
+            const isComposite = model.type === 'composite';
             const isExpanded = expandedInstances[instance.instanceId] || false;
             let childInstances: any[] = [];
             
@@ -259,10 +294,10 @@ export function Sidebar({ setController }: SidebarProps) {
                       ) : (
                         <ChevronRightIcon className="h-3 w-3 mr-1" />
                       )}
-                      <span>{instance.name || `${model?.name} Instance`}</span>
+                      <span>{getInstanceDisplayName(instance, model)}</span>
                     </div>
                   ) : (
-                    <span className="ml-4">{instance.name || `${model?.name} Instance`}</span>
+                    <span className="ml-4">{getInstanceDisplayName(instance, model)}</span>
                   )}
                   
                   <input
@@ -278,6 +313,8 @@ export function Sidebar({ setController }: SidebarProps) {
                   <ul className="ml-6 mt-1 space-y-1">
                     {childInstances.map(childInstance => {
                       const childModel = models.find(m => m.id === childInstance.modelId);
+                      if (!childModel) return null;
+                      
                       return (
                         <li key={childInstance.instanceId} className="flex items-center text-sm">
                           <input
@@ -291,7 +328,7 @@ export function Sidebar({ setController }: SidebarProps) {
                             htmlFor={`hierarchy-child-${childInstance.instanceId}`}
                             className="text-gray-300"
                           >
-                            {childInstance.name || `${childModel?.name} Instance`}
+                            {getInstanceDisplayName(childInstance, childModel)}
                           </label>
                         </li>
                       );
