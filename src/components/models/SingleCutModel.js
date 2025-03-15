@@ -70,9 +70,10 @@ export class SingleCutModel {
      * @param {BABYLON.Vector3} position - Position of the panel
      * @param {BABYLON.Vector3} rotation - Rotation of the panel
      * @param {number} width - Width of the panel
+     * @param {number} index - Panel index (0-5)
      * @returns {Object} - The created panel object
      */
-    createPanel(position, rotation, width) {
+    createPanel(position, rotation, width, index) {
         const panel = new PanelModel(this.scene, position, {
             height: this.options.panelHeight,
             width: width,
@@ -84,8 +85,14 @@ export class SingleCutModel {
         // The panel's local Z-axis should be along the line between pipes
         panel.rootNode.rotation = rotation;
         
-        // Rotate panel 90 degrees around Y-axis to align depth with radius
-        panel.rootNode.rotate(BABYLON.Axis.Y, Math.PI/2, BABYLON.Space.LOCAL);
+        // Panels 2 and 5 need special rotation (90 degrees different)
+        if (index === 1 || index === 4) { // Index 1 = Panel #2, Index 4 = Panel #5
+            // Rotate these panels differently
+            panel.rootNode.rotate(BABYLON.Axis.Y, Math.PI, BABYLON.Space.LOCAL);
+        } else {
+            // Rotate other panels 90 degrees around Y-axis to align depth with radius
+            panel.rootNode.rotate(BABYLON.Axis.Y, Math.PI/2, BABYLON.Space.LOCAL);
+        }
         
         // Set parent to the root node
         panel.rootNode.parent = this.rootNode;
@@ -135,7 +142,7 @@ export class SingleCutModel {
             );
             
             // Create panel with calculated transform and store the full panel object
-            const panel = this.createPanel(transform.position, transform.rotation, transform.width);
+            const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
             
             this.panels.push(panel);
         }
