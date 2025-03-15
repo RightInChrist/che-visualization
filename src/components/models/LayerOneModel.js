@@ -15,7 +15,6 @@ export class LayerOneModel extends CompositeModel {
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
             rotationAngle: 30, // Default rotation angle in degrees (changed from 60 to 30)
-            useProvidedOuterRadius: true, // Whether to use the provided outer radius directly
         };
 
         // Call parent constructor
@@ -46,40 +45,20 @@ export class LayerOneModel extends CompositeModel {
         // Track permanently hidden elements for scene editor
         this.permanentlyHiddenElements = [];
         
-        let hexagonRadius;
+        const hexagonRadius = this.options.outerRadius;
         
-        // Determine the outer radius to use
-        if (this.options.useProvidedOuterRadius) {
-            // Use the provided outer radius directly
-            hexagonRadius = this.options.outerRadius;
-            
-            // Calculate the appropriate singleCutRadius based on the outer radius
-            // to maintain proper panel alignment
-            // This is the inverse of the formula below
-            const idealSingleCutRadius = hexagonRadius * Math.sin(Math.PI / 6) / 2;
-            
-            // Only log a warning if the difference is significant (more than 5%)
-            if (Math.abs(idealSingleCutRadius - this.options.singleCutRadius) > 0.05 * this.options.singleCutRadius) {
-                this.debugLog(`WARNING: Provided singleCutRadius (${this.options.singleCutRadius.toFixed(2)}) ` +
-                     `may not be optimal for the outerRadius (${hexagonRadius.toFixed(2)}). ` +
-                     `Ideal value would be ${idealSingleCutRadius.toFixed(2)}.`);
-            }
-        } else {
-            // Calculate the distance for properly positioning SingleCuts so they share panels
-            // For sharing panels, the distance between adjacent SingleCUTs should be exactly double the internal radius 
-            // of each SingleCUT
-            const distanceBetweenSingleCuts = this.options.singleCutRadius * 2;
-            
-            // Calculate the radius of the hexagon that will fit 6 SingleCUTs at this distance
-            // In a regular hexagon, the distance between opposite vertices is 2r
-            // The distance between adjacent vertices is s = r
-            // For our case, we want the distance between adjacent vertices to be distanceBetweenSingleCuts
-            hexagonRadius = distanceBetweenSingleCuts / (2 * Math.sin(Math.PI / 6));
-            
-            // Store the calculated outer radius
-            this.options.outerRadius = hexagonRadius;
+        // Calculate the appropriate singleCutRadius based on the outer radius
+        // to maintain proper panel alignment
+        // This is the inverse of the formula below
+        const idealSingleCutRadius = hexagonRadius * Math.sin(Math.PI / 6) / 2;
+        
+        // Only log a warning if the difference is significant (more than 5%)
+        if (Math.abs(idealSingleCutRadius - this.options.singleCutRadius) > 0.05 * this.options.singleCutRadius) {
+            this.debugLog(`WARNING: Provided singleCutRadius (${this.options.singleCutRadius.toFixed(2)}) ` +
+                    `may not be optimal for the outerRadius (${hexagonRadius.toFixed(2)}). ` +
+                    `Ideal value would be ${idealSingleCutRadius.toFixed(2)}.`);
         }
-        
+
         this.debugLog(`Using hexagon radius: ${hexagonRadius.toFixed(2)}, SingleCUT radius: ${this.options.singleCutRadius.toFixed(2)}`);
         
         // Create 6 SingleCUTs in a hexagonal pattern
@@ -324,5 +303,85 @@ export class LayerOneModel extends CompositeModel {
         
         // Store the current angle
         this.options.rotationAngle = rotationAngleDegrees;
+    }
+    
+    /**
+     * Get the default outer radius value for this model
+     * @returns {number} - Default outer radius
+     */
+    getDefaultRadius() {
+        return this.options.outerRadius;
+    }
+    
+    /**
+     * Get the min outer radius value for this model
+     * @returns {number} - Minimum outer radius
+     */
+    getMinRadius() {
+        return 30; // Minimum sensible radius for LayerOne
+    }
+    
+    /**
+     * Get the max outer radius value for this model
+     * @returns {number} - Maximum outer radius
+     */
+    getMaxRadius() {
+        return 60; // Maximum sensible radius for LayerOne
+    }
+    
+    /**
+     * Get the default SingleCut radius value for this model
+     * @returns {number} - Default SingleCut radius
+     */
+    getDefaultSingleCutRadius() {
+        return this.options.singleCutRadius;
+    }
+    
+    /**
+     * Get the min SingleCut radius value for this model
+     * @returns {number} - Minimum SingleCut radius
+     */
+    getMinSingleCutRadius() {
+        return 10; // Minimum sensible SingleCut radius
+    }
+    
+    /**
+     * Get the max SingleCut radius value for this model
+     * @returns {number} - Maximum SingleCut radius
+     */
+    getMaxSingleCutRadius() {
+        return 30; // Maximum sensible SingleCut radius
+    }
+    
+    /**
+     * Get the default rotation value for this model
+     * @returns {number} - Default rotation in degrees
+     */
+    getDefaultRotation() {
+        return this.options.rotationAngle;
+    }
+    
+    /**
+     * Get the min rotation value for this model
+     * @returns {number} - Minimum rotation in degrees
+     */
+    getMinRotation() {
+        return 0;
+    }
+    
+    /**
+     * Get the max rotation value for this model
+     * @returns {number} - Maximum rotation in degrees
+     */
+    getMaxRotation() {
+        return 360;
+    }
+    
+    /**
+     * Get all SingleCUT child models
+     * @returns {Array} - Array of SingleCUT models
+     */
+    getChildren() {
+        return this.singleCuts;
     }
 } 

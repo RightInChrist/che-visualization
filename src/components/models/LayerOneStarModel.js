@@ -310,18 +310,93 @@ export class LayerOneStarModel extends CompositeModel {
      * @param {number} rotationAngleDegrees - New rotation angle in degrees
      */
     updateRotation(rotationAngleDegrees) {
-        // First, reset rotation to zero
-        this.rootNode.rotation = new Vector3(0, 0, 0);
+        // Convert to radians
+        const rotationAngle = (rotationAngleDegrees * Math.PI) / 180;
         
-        // Store the new rotation angle
+        // Update root node rotation
+        this.rootNode.rotation = new Vector3(0, rotationAngle, 0);
+        
+        // Store the current angle
         this.options.rotationAngle = rotationAngleDegrees;
-        
-        // Convert degrees to radians
-        const rotationAngle = rotationAngleDegrees * (Math.PI / 180);
-        
-        // Apply the rotation around the Y axis
-        this.rootNode.rotate(Axis.Y, rotationAngle, Space.WORLD);
-        
-        this.debugLog(`Updated Layer One Star rotation to ${rotationAngleDegrees} degrees (${rotationAngle.toFixed(2)} radians)`);
+    }
+    
+    /**
+     * Get the default outer radius value for this model
+     * @returns {number} - Default outer radius
+     */
+    getDefaultRadius() {
+        return this.options.outerRadius;
+    }
+    
+    /**
+     * Get the min outer radius value for this model
+     * @returns {number} - Minimum outer radius
+     */
+    getMinRadius() {
+        return 30; // Minimum sensible radius for LayerOneStar
+    }
+    
+    /**
+     * Get the max outer radius value for this model
+     * @returns {number} - Maximum outer radius
+     */
+    getMaxRadius() {
+        return 60; // Maximum sensible radius for LayerOneStar
+    }
+    
+    /**
+     * Get the default SingleCut radius value for this model
+     * @returns {number} - Default SingleCut radius
+     */
+    getDefaultSingleCutRadius() {
+        return this.options.singleCutRadius;
+    }
+    
+    /**
+     * Get the min SingleCut radius value for this model
+     * @returns {number} - Minimum SingleCut radius
+     */
+    getMinSingleCutRadius() {
+        return 10; // Minimum sensible SingleCut radius
+    }
+    
+    /**
+     * Get the max SingleCut radius value for this model
+     * @returns {number} - Maximum SingleCut radius
+     */
+    getMaxSingleCutRadius() {
+        return 30; // Maximum sensible SingleCut radius
+    }
+    
+    /**
+     * Get the default rotation value for this model
+     * @returns {number} - Default rotation in degrees
+     */
+    getDefaultRotation() {
+        return this.options.rotationAngle;
+    }
+    
+    /**
+     * Get the min rotation value for this model
+     * @returns {number} - Minimum rotation in degrees
+     */
+    getMinRotation() {
+        return 0;
+    }
+    
+    /**
+     * Get the max rotation value for this model
+     * @returns {number} - Maximum rotation in degrees
+     */
+    getMaxRotation() {
+        return 360;
+    }
+    
+    /**
+     * Get all SingleCUT child models
+     * @returns {Array} - Array of SingleCUT models
+     */
+    getChildren() {
+        return this.singleCuts;
     }
 } 

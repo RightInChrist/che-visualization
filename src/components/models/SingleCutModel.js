@@ -253,4 +253,60 @@ export class SingleCutModel extends BaseModel {
         
         this.debugLog(`Updated SingleCUT rotation to ${rotationAngleDegrees} degrees`);
     }
+    
+    /**
+     * Get the default radius value for this model
+     * @returns {number} - Default radius
+     */
+    getDefaultRadius() {
+        return this.options.radius;
+    }
+    
+    /**
+     * Get the min radius value for this model
+     * @returns {number} - Minimum radius
+     */
+    getMinRadius() {
+        return 10; // Minimum sensible radius for a SingleCUT
+    }
+    
+    /**
+     * Get the max radius value for this model
+     * @returns {number} - Maximum radius
+     */
+    getMaxRadius() {
+        return 30; // Maximum sensible radius for a SingleCUT
+    }
+    
+    /**
+     * Get the default rotation value for this model
+     * @returns {number} - Default rotation in degrees
+     */
+    getDefaultRotation() {
+        return this.options.rotationAngle;
+    }
+    
+    /**
+     * Get the min rotation value for this model
+     * @returns {number} - Minimum rotation in degrees
+     */
+    getMinRotation() {
+        return 0;
+    }
+    
+    /**
+     * Get the max rotation value for this model
+     * @returns {number} - Maximum rotation in degrees
+     */
+    getMaxRotation() {
+        return 360;
+    }
+    
+    /**
+     * Get child models (none for SingleCUTModel since it's a leaf node)
+     * @returns {Array} - Empty array since SingleCUTModel has no child models
+     */
+    getChildren() {
+        return [];
+    }
 } 
