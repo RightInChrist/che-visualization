@@ -4,13 +4,13 @@ import { CompositeModel } from './CompositeModel';
 
 /**
  * Creates a Seven CUTs model with 7 SingleCUT models arranged in a specific pattern
- * One central SingleCUT and 6 surrounding in a larger hexagonal pattern
+ * One central SingleCUT and 6 surrounding in a larger hexagonal pattern with overlap
  */
 export class SevenCutsModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 500, // Distance from center to outer SingleCUTs
+            outerRadius: 250, // Distance from center to outer SingleCUTs (reduced from 500 to create overlap)
             singleCutRadius: 150, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
         };
@@ -51,9 +51,57 @@ export class SevenCutsModel extends CompositeModel {
             });
             
             this.addChild(singleCut);
+            
+            // Hide overlapping pipes and panels for outer SingleCUTs
+            // Each outer SingleCUT needs to hide:
+            // 1. The pipes and panels facing the center
+            // 2. The pipes and panels counter-clockwise to the ones facing the center
+            
+            // Calculate which pipe is pointing toward the center (opposite of the angle)
+            const centerFacingIndex = this.getIndexFacingCenter(i, angle);
+            
+            // Pipe facing the center
+            singleCut.pipes[centerFacingIndex].setVisible(false);
+            this.debugLog(`Hiding pipe ${centerFacingIndex + 1} for SingleCUT #${i+2} (facing center)`);
+            
+            // Pipe counter-clockwise to the center-facing one
+            const ccwIndex = (centerFacingIndex - 1 + 6) % 6;
+            singleCut.pipes[ccwIndex].setVisible(false);
+            this.debugLog(`Hiding pipe ${ccwIndex + 1} for SingleCUT #${i+2} (counter-clockwise to center)`);
+            
+            // Panel between the hidden pipes (connecting them)
+            const panelBetweenIndex = Math.min(centerFacingIndex, ccwIndex);
+            singleCut.panels[panelBetweenIndex].setVisible(false);
+            this.debugLog(`Hiding panel ${panelBetweenIndex + 1} for SingleCUT #${i+2} (between hidden pipes)`);
+            
+            // Panel before the center-facing pipe
+            const panelBeforeIndex = (centerFacingIndex + 5) % 6;
+            singleCut.panels[panelBeforeIndex].setVisible(false);
+            this.debugLog(`Hiding panel ${panelBeforeIndex + 1} for SingleCUT #${i+2} (before center-facing pipe)`);
         }
         
         this.debugLog('Seven CUTs model creation complete');
+    }
+    
+    /**
+     * Calculate the index of the pipe facing the center for an outer SingleCUT
+     * @param {number} modelIndex - The index of the SingleCUT (0-5)
+     * @param {number} modelAngle - The angle of the SingleCUT from the center
+     * @returns {number} - The index of the pipe facing the center (0-5)
+     */
+    getIndexFacingCenter(modelIndex, modelAngle) {
+        // The pipe direction is opposite of the model's angle from center
+        // Convert this to an index in the range 0-5 based on the closest pipe angle
+        
+        // Inverse angle (pointing toward center)
+        const inverseAngle = (modelAngle + Math.PI) % (2 * Math.PI);
+        
+        // Convert angle to pipe index (finding closest pipe to this angle)
+        // Each pipe is at 60° (π/3 radians) intervals
+        const normalizedAngle = inverseAngle < 0 ? inverseAngle + 2 * Math.PI : inverseAngle;
+        const pipeIndex = Math.round(normalizedAngle / (Math.PI / 3)) % 6;
+        
+        return pipeIndex;
     }
     
     /**
