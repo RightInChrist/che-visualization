@@ -98,6 +98,9 @@ export class RadiusControls {
             );
             this.panel.appendChild(singleCutRadiusContainer);
             
+            // Create panel distance indicator
+            this.createPanelDistanceIndicator();
+            
             // Add the panel to the control panels container
             this.controlPanels.appendChild(this.panel);
             
@@ -166,6 +169,43 @@ export class RadiusControls {
     }
     
     /**
+     * Create an indicator showing the distance between opposite panels
+     */
+    createPanelDistanceIndicator() {
+        // Create container
+        const container = document.createElement('div');
+        container.style.marginTop = '15px';
+        container.style.padding = '8px';
+        container.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+        
+        // Create label
+        const label = document.createElement('div');
+        label.textContent = 'Distance between opposite panels:';
+        label.style.marginBottom = '5px';
+        container.appendChild(label);
+        
+        // Create value display
+        this.panelDistanceDisplay = document.createElement('div');
+        this.panelDistanceDisplay.style.fontSize = '16px';
+        this.panelDistanceDisplay.style.fontWeight = 'bold';
+        
+        // Calculate and display initial value
+        this.updatePanelDistanceDisplay();
+        
+        container.appendChild(this.panelDistanceDisplay);
+        this.panel.appendChild(container);
+    }
+    
+    /**
+     * Update the panel distance display with current value
+     */
+    updatePanelDistanceDisplay() {
+        // Calculate distance (approximately 2 * radius)
+        const distance = 2 * this.currentSingleCutRadius;
+        this.panelDistanceDisplay.textContent = `${distance} units`;
+    }
+    
+    /**
      * Handle changes to the outer radius slider
      * @param {number} value - The new value
      */
@@ -188,6 +228,9 @@ export class RadiusControls {
         const newValue = Math.round(value);
         console.log(`SingleCUT radius changed to ${newValue}`);
         this.currentSingleCutRadius = newValue;
+        
+        // Update the panel distance display
+        this.updatePanelDistanceDisplay();
         
         // Update the model with new radius values
         this.sevenCutsModel.updateRadiusSettings(this.currentOuterRadius, newValue);
