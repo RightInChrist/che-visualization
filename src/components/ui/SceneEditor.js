@@ -17,6 +17,9 @@ export class SceneEditor {
         
         // Setup keyboard shortcut (E key)
         this.setupKeyboardShortcut();
+
+        // Store checkbox elements for updating
+        this.checkboxElements = {};
     }
     
     /**
@@ -99,6 +102,7 @@ export class SceneEditor {
         // If showing, update immediately
         if (this.isVisible) {
             this.renderSceneObjects();
+            this.updateCheckboxStates();
         }
     }
     
@@ -108,6 +112,7 @@ export class SceneEditor {
     renderSceneObjects() {
         // Clear existing content
         this.objectListContainer.innerHTML = '';
+        this.checkboxElements = {};
         
         // Create object list
         const objectTree = document.createElement('ul');
@@ -132,6 +137,7 @@ export class SceneEditor {
     createObjectListItem(name, object) {
         const objectItem = document.createElement('li');
         objectItem.style.margin = '5px 0';
+        objectItem.id = `item-${name.replace(/[\s#]/g, '-')}`;
         
         const objectContainer = document.createElement('div');
         objectContainer.style.display = 'flex';
@@ -140,6 +146,10 @@ export class SceneEditor {
         // Create visibility toggle checkbox
         const toggleCheckbox = document.createElement('input');
         toggleCheckbox.type = 'checkbox';
+        toggleCheckbox.id = `checkbox-${name.replace(/[\s#]/g, '-')}`;
+        
+        // Store checkbox element for later updates
+        this.checkboxElements[name] = toggleCheckbox;
         
         // Check if this is a toggleable object
         if (name === 'Ground #1' || name === 'Single CUT #1' || name.startsWith('Pipe #') || name.startsWith('Panel #')) {
@@ -147,7 +157,7 @@ export class SceneEditor {
             if (name === 'Ground #1') {
                 toggleCheckbox.checked = object.mesh && object.mesh.isVisible;
             } else if (name === 'Single CUT #1') {
-                // Check if the first pipe is visible
+                // Check if the pipes are visible
                 toggleCheckbox.checked = object.pipes && object.pipes.length > 0 && 
                                          object.pipes[0].pipeMesh && 
                                          object.pipes[0].pipeMesh.isVisible;
@@ -160,6 +170,11 @@ export class SceneEditor {
             // Add event listener
             toggleCheckbox.addEventListener('change', (e) => {
                 this.toggleObjectVisibility(name, object, e.target.checked);
+                
+                // If this is a parent object, update all child checkboxes
+                if (name === 'Single CUT #1') {
+                    this.updateNestedCheckboxes(name, e.target.checked);
+                }
             });
         } else {
             // Non-toggleable objects
@@ -182,6 +197,7 @@ export class SceneEditor {
             const childList = document.createElement('ul');
             childList.style.listStyleType = 'none';
             childList.style.paddingLeft = '20px';
+            childList.id = `children-${name.replace(/[\s#]/g, '-')}`;
             
             if (name === 'Single CUT #1') {
                 this.addSingleCutChildren(childList, object);
@@ -201,7 +217,7 @@ export class SceneEditor {
      * @param {Object} cutModel - The SingleCUT model
      */
     addSingleCutChildren(parentElement, cutModel) {
-        // Add all pipes - now there's no center pipe to skip
+        // Add all pipes
         if (cutModel.pipes && cutModel.pipes.length > 0) {
             cutModel.pipes.forEach((pipe, index) => {
                 const pipeItem = this.createObjectListItem(`Pipe #${index + 1}`, pipe);
@@ -244,12 +260,75 @@ export class SceneEditor {
     }
     
     /**
+     * Update all nested checkboxes under a parent
+     * @param {string} parentName - Name of the parent object
+     * @param {boolean} isChecked - Whether the checkboxes should be checked
+     */
+    updateNestedCheckboxes(parentName, isChecked) {
+        if (parentName === 'Single CUT #1') {
+            // Update all pipe and panel checkboxes
+            for (const key in this.checkboxElements) {
+                if (key.startsWith('Pipe #') || key.startsWith('Panel #')) {
+                    if (this.checkboxElements[key]) {
+                        this.checkboxElements[key].checked = isChecked;
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * Update all checkbox states based on actual object visibility
+     */
+    updateCheckboxStates() {
+        // Update SingleCUT checkbox and its children
+        if (this.sceneObjects['Single CUT #1'] && this.checkboxElements['Single CUT #1']) {
+            const singleCutModel = this.sceneObjects['Single CUT #1'];
+            const isVisible = singleCutModel.pipes && 
+                              singleCutModel.pipes.length > 0 && 
+                              singleCutModel.pipes[0].pipeMesh && 
+                              singleCutModel.pipes[0].pipeMesh.isVisible;
+                              
+            this.checkboxElements['Single CUT #1'].checked = isVisible;
+            
+            // Update pipe checkboxes
+            if (singleCutModel.pipes) {
+                singleCutModel.pipes.forEach((pipe, index) => {
+                    const pipeName = `Pipe #${index + 1}`;
+                    if (this.checkboxElements[pipeName]) {
+                        this.checkboxElements[pipeName].checked = pipe.pipeMesh && pipe.pipeMesh.isVisible;
+                    }
+                });
+            }
+            
+            // Update panel checkboxes
+            if (singleCutModel.panels) {
+                singleCutModel.panels.forEach((panel, index) => {
+                    const panelName = `Panel #${index + 1}`;
+                    if (this.checkboxElements[panelName]) {
+                        this.checkboxElements[panelName].checked = panel.panelMesh && panel.panelMesh.isVisible;
+                    }
+                });
+            }
+        }
+        
+        // Update Ground checkbox
+        if (this.sceneObjects['Ground #1'] && this.checkboxElements['Ground #1']) {
+            const ground = this.sceneObjects['Ground #1'];
+            this.checkboxElements['Ground #1'].checked = ground.mesh && ground.mesh.isVisible;
+        }
+    }
+    
+    /**
      * Toggle the visibility of an object
      * @param {string} name - Name of the object
      * @param {Object} object - The object to toggle
      * @param {boolean} isVisible - Whether the object should be visible
      */
     toggleObjectVisibility(name, object, isVisible) {
+        // Log for debugging
+        console.log(`Toggling ${name} visibility to ${isVisible}`);
+        
         if (name === 'Ground #1') {
             // Toggle ground
             if (object.mesh) {
@@ -261,6 +340,7 @@ export class SceneEditor {
                 object.pipes.forEach(pipe => {
                     if (pipe.pipeMesh) {
                         pipe.pipeMesh.isVisible = isVisible;
+                        console.log(`Setting pipe visibility to ${isVisible}, result: ${pipe.pipeMesh.isVisible}`);
                     }
                     if (pipe.markers) {
                         pipe.markers.forEach(marker => {
@@ -274,6 +354,7 @@ export class SceneEditor {
                 object.panels.forEach(panel => {
                     if (panel.panelMesh) {
                         panel.panelMesh.isVisible = isVisible;
+                        console.log(`Setting panel visibility to ${isVisible}, result: ${panel.panelMesh.isVisible}`);
                     }
                 });
             }
@@ -281,6 +362,7 @@ export class SceneEditor {
             // Toggle individual pipe
             if (object.pipeMesh) {
                 object.pipeMesh.isVisible = isVisible;
+                console.log(`Setting individual pipe visibility to ${isVisible}, result: ${object.pipeMesh.isVisible}`);
             }
             if (object.markers) {
                 object.markers.forEach(marker => {
@@ -291,11 +373,12 @@ export class SceneEditor {
             // Toggle individual panel
             if (object.panelMesh) {
                 object.panelMesh.isVisible = isVisible;
+                console.log(`Setting individual panel visibility to ${isVisible}, result: ${object.panelMesh.isVisible}`);
             }
         }
         
         // Update the UI to reflect changes
-        this.renderSceneObjects();
+        this.updateCheckboxStates();
     }
     
     /**
@@ -310,7 +393,7 @@ export class SceneEditor {
         
         // Only update periodically to avoid performance issues
         if (now - this.lastUpdateTime > this.updateInterval) {
-            this.renderSceneObjects();
+            this.updateCheckboxStates();
             this.lastUpdateTime = now;
         }
     }

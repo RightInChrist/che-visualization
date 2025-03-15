@@ -42,7 +42,11 @@ export class SingleCutModel {
         // Create pipes and panels in a hexagonal pattern
         // No center pipe - only create the hexagon vertices
         const angleStep = (2 * Math.PI) / 6; // 60 degrees in radians
+        
+        // Store pipe positions for panel placement
+        const pipePositions = [];
             
+        // Create pipes first
         for (let i = 0; i < 6; i++) {
             const angle = i * angleStep;
             const x = Math.sin(angle) * this.options.hexRadius;
@@ -58,20 +62,27 @@ export class SingleCutModel {
             pipe.rootNode.parent = this.rootNode;
             this.pipes.push(pipe);
             
-            // Create panel between current pipe and next pipe
-            const nextAngle = ((i + 1) % 6) * angleStep;
-            const nextX = Math.sin(nextAngle) * this.options.hexRadius;
-            const nextZ = Math.cos(nextAngle) * this.options.hexRadius;
+            // Store the position for later use with panels
+            pipePositions.push(new Vector3(x, 0, z));
+        }
+        
+        // Now create panels between pipes
+        for (let i = 0; i < 6; i++) {
+            const currentPipePos = pipePositions[i];
+            const nextPipePos = pipePositions[(i + 1) % 6];
+            
+            // Calculate vector from current pipe to next pipe
+            const pipeToNextPipe = nextPipePos.subtract(currentPipePos).normalize();
             
             // Calculate panel position (midpoint between pipes)
-            const panelX = (x + nextX) / 2;
-            const panelZ = (z + nextZ) / 2;
+            const panelPos = currentPipePos.add(nextPipePos).scale(0.5);
             
-            // Calculate panel rotation (perpendicular to line between pipes)
-            const panelRotation = Math.atan2(nextZ - z, nextX - x) - Math.PI / 2;
+            // Calculate panel rotation to face correctly between pipes
+            // We want the panel's width to be perpendicular to the line between pipes
+            const panelRotationY = Math.atan2(pipeToNextPipe.x, pipeToNextPipe.z);
             
             // Create panel
-            const panel = new PanelModel(this.scene, new Vector3(panelX, 0, panelZ), {
+            const panel = new PanelModel(this.scene, new Vector3(panelPos.x, 0, panelPos.z), {
                 height: this.options.panelHeight,
                 width: this.options.panelWidth,
                 depth: this.options.panelDepth,
@@ -79,7 +90,7 @@ export class SingleCutModel {
             });
             
             // Rotate panel to face correctly
-            panel.rootNode.rotation.y = panelRotation;
+            panel.rootNode.rotation.y = panelRotationY;
             
             panel.rootNode.parent = this.rootNode;
             this.panels.push(panel);
