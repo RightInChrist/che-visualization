@@ -351,33 +351,32 @@ export class RadiusControls {
      * Create an HTML toggle button that matches the style of other UI controls
      */
     createHTMLToggleButton() {
-        // Create the button if it doesn't exist already
-        if (!document.getElementById('radiusControlToggle')) {
-            const toggleButton = document.createElement('button');
-            toggleButton.id = 'radiusControlToggle';
-            toggleButton.textContent = 'Radius Control';
-            toggleButton.style.position = 'absolute';
-            toggleButton.style.top = '10px'; // Position at top
-            toggleButton.style.right = '10px';
-            toggleButton.style.padding = '5px 10px';
-            toggleButton.style.borderRadius = '5px';
-            toggleButton.style.backgroundColor = '#444';
-            toggleButton.style.color = '#fff';
-            toggleButton.style.border = 'none';
-            toggleButton.style.cursor = 'pointer';
-            toggleButton.style.zIndex = '100';
-            
-            // Toggle panel visibility when button is clicked
-            toggleButton.addEventListener('click', () => {
-                const isVisible = this.panel.style.display !== 'none';
-                this.togglePanel(!isVisible);
-            });
-            
-            document.body.appendChild(toggleButton);
-            
-            // Store reference
-            this.htmlToggleButton = toggleButton;
+        // Find the control buttons container
+        const controlButtonsContainer = document.getElementById('controlButtons');
+        if (!controlButtonsContainer) {
+            console.error("Control buttons container not found");
+            return;
         }
+        
+        // Create button element
+        const button = document.createElement('button');
+        button.id = 'radiusToggle';
+        button.className = 'control-button tooltip';
+        button.setAttribute('data-tooltip', 'Toggle Radius Controls');
+        button.textContent = 'R';
+        button.style.backgroundColor = '#9C27B0'; // Purple
+        
+        // Add click event
+        button.addEventListener('click', () => {
+            const isVisible = this.panel.style.display !== 'none';
+            this.togglePanel(!isVisible);
+        });
+        
+        // Add to container
+        controlButtonsContainer.appendChild(button);
+        
+        // Store reference
+        this.htmlToggleButton = button;
     }
     
     /**
@@ -397,10 +396,8 @@ export class RadiusControls {
         if (this.htmlToggleButton) {
             if (isVisible) {
                 this.htmlToggleButton.classList.add('active');
-                this.htmlToggleButton.style.backgroundColor = '#666';
             } else {
                 this.htmlToggleButton.classList.remove('active');
-                this.htmlToggleButton.style.backgroundColor = '#444';
             }
         }
     }

@@ -205,30 +205,32 @@ export class LayerRotationControl {
      * Create HTML button for toggling controls
      */
     createHTMLToggleButton() {
-        // Create the button if it doesn't exist already
-        if (!document.getElementById('rotationControlToggle')) {
-            const toggleButton = document.createElement('button');
-            toggleButton.id = 'rotationControlToggle';
-            toggleButton.textContent = 'Rotation Control';
-            toggleButton.style.position = 'absolute';
-            toggleButton.style.top = '40px'; // Position below other buttons
-            toggleButton.style.right = '10px';
-            toggleButton.style.padding = '5px 10px';
-            toggleButton.style.borderRadius = '5px';
-            toggleButton.style.backgroundColor = '#444';
-            toggleButton.style.color = '#fff';
-            toggleButton.style.border = 'none';
-            toggleButton.style.cursor = 'pointer';
-            toggleButton.style.zIndex = '100';
-            
-            // Toggle panel visibility when button is clicked
-            toggleButton.addEventListener('click', () => {
-                const isVisible = this.panel.style.display !== 'none';
-                this.togglePanel(!isVisible);
-            });
-            
-            document.body.appendChild(toggleButton);
+        // Find the control buttons container
+        const controlButtonsContainer = document.getElementById('controlButtons');
+        if (!controlButtonsContainer) {
+            console.error("Control buttons container not found");
+            return;
         }
+        
+        // Create button element
+        const button = document.createElement('button');
+        button.id = 'rotationToggle';
+        button.className = 'control-button tooltip';
+        button.setAttribute('data-tooltip', 'Toggle Rotation Controls');
+        button.textContent = 'O';
+        button.style.backgroundColor = '#FF9800'; // Orange
+        
+        // Add click event
+        button.addEventListener('click', () => {
+            const isVisible = this.panel.style.display !== 'none';
+            this.togglePanel(!isVisible);
+        });
+        
+        // Add to container
+        controlButtonsContainer.appendChild(button);
+        
+        // Store reference
+        this.htmlToggleButton = button;
     }
     
     /**
@@ -251,5 +253,14 @@ export class LayerRotationControl {
     togglePanel(isVisible) {
         this.panel.style.display = isVisible ? 'block' : 'none';
         this.options.isVisible = isVisible;
+        
+        // Update button active state
+        if (this.htmlToggleButton) {
+            if (isVisible) {
+                this.htmlToggleButton.classList.add('active');
+            } else {
+                this.htmlToggleButton.classList.remove('active');
+            }
+        }
     }
 } 
