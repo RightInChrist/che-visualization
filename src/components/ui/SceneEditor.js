@@ -110,21 +110,20 @@ export class SceneEditor {
         objectTree.style.paddingLeft = '0';
         
         // Add scene objects to the tree
-        this.addObjectsToTree(objectTree, this.sceneObjects);
+        this.addTopLevelObjectsToTree(objectTree, this.sceneObjects);
         
         this.objectListContainer.appendChild(objectTree);
     }
     
     /**
-     * Add objects to the tree structure recursively
+     * Add top-level objects to the tree structure
      * @param {HTMLElement} parentElement - Parent DOM element to add to
      * @param {Object} objects - Objects to add to the tree
-     * @param {string} parentPath - Path string for nested objects
      */
-    addObjectsToTree(parentElement, objects, parentPath = '') {
-        // Iterate through the object keys
+    addTopLevelObjectsToTree(parentElement, objects) {
+        // This method ensures we only add top-level objects and let the nested structure
+        // be handled by addObjectsToTree
         Object.entries(objects).forEach(([key, value]) => {
-            const objectPath = parentPath ? `${parentPath}.${key}` : key;
             const objectItem = document.createElement('li');
             objectItem.style.margin = '5px 0';
             
@@ -132,7 +131,7 @@ export class SceneEditor {
             objectContainer.style.display = 'flex';
             objectContainer.style.alignItems = 'center';
             
-            // Create visibility toggle checkbox
+            // Create visibility toggle checkbox for items with a mesh
             if (value.mesh || (value.pipeMesh || value.panelMesh)) {
                 const toggleCheckbox = document.createElement('input');
                 toggleCheckbox.type = 'checkbox';
@@ -166,23 +165,22 @@ export class SceneEditor {
                 childList.style.listStyleType = 'none';
                 childList.style.paddingLeft = '20px';
                 
-                // First add any pipes
-                if (value.pipes) {
-                    value.pipes.forEach((pipe, index) => {
-                        this.addObjectsToTree(childList, { [`Pipe #${index + 1}`]: pipe }, objectPath);
-                    });
-                }
-                
-                // Then add any panels
-                if (value.panels) {
-                    value.panels.forEach((panel, index) => {
-                        this.addObjectsToTree(childList, { [`Panel #${index + 1}`]: panel }, objectPath);
-                    });
-                }
-                
-                // Add any other children
-                if (value.children) {
-                    this.addObjectsToTree(childList, value.children, objectPath);
+                // Handle pipes and panels for SingleCUT model
+                if (key === 'Single CUT #1') {
+                    if (value.pipes) {
+                        value.pipes.forEach((pipe, index) => {
+                            this.addNestedObject(childList, `Pipe #${index + 1}`, pipe);
+                        });
+                    }
+                    
+                    if (value.panels) {
+                        value.panels.forEach((panel, index) => {
+                            this.addNestedObject(childList, `Panel #${index + 1}`, panel);
+                        });
+                    }
+                } else if (key === 'Lights' || key === 'Camera Controller' || value.children) {
+                    // Handle any other nested objects
+                    this.addNestedChildren(childList, value);
                 }
                 
                 objectItem.appendChild(childList);
@@ -190,6 +188,71 @@ export class SceneEditor {
             
             parentElement.appendChild(objectItem);
         });
+    }
+    
+    /**
+     * Add a nested object to the tree
+     * @param {HTMLElement} parentElement - Parent element to add to
+     * @param {string} name - Name of the object
+     * @param {Object} object - The object to add
+     */
+    addNestedObject(parentElement, name, object) {
+        const objectItem = document.createElement('li');
+        objectItem.style.margin = '5px 0';
+        
+        const objectContainer = document.createElement('div');
+        objectContainer.style.display = 'flex';
+        objectContainer.style.alignItems = 'center';
+        
+        // Create visibility toggle checkbox
+        if (object.mesh || object.pipeMesh || object.panelMesh) {
+            const toggleCheckbox = document.createElement('input');
+            toggleCheckbox.type = 'checkbox';
+            toggleCheckbox.checked = object.mesh ? object.mesh.isVisible : 
+                                    (object.pipeMesh ? object.pipeMesh.isVisible : 
+                                    (object.panelMesh ? object.panelMesh.isVisible : true));
+                                    
+            toggleCheckbox.addEventListener('change', (e) => {
+                this.toggleObjectVisibility(object, e.target.checked);
+            });
+            
+            objectContainer.appendChild(toggleCheckbox);
+        } else {
+            // Add a spacer for consistent alignment
+            const spacer = document.createElement('div');
+            spacer.style.width = '20px';
+            objectContainer.appendChild(spacer);
+        }
+        
+        // Create object label
+        const objectLabel = document.createElement('span');
+        objectLabel.textContent = name;
+        objectLabel.style.marginLeft = '5px';
+        objectContainer.appendChild(objectLabel);
+        
+        objectItem.appendChild(objectContainer);
+        parentElement.appendChild(objectItem);
+    }
+    
+    /**
+     * Add nested children to the tree from objects with 'children' property
+     * @param {HTMLElement} parentElement - Parent element to add to
+     * @param {Object} parentObject - Object containing the children
+     */
+    addNestedChildren(parentElement, parentObject) {
+        // For objects like Lights that have named properties
+        if (parentObject.children) {
+            Object.entries(parentObject.children).forEach(([key, value]) => {
+                this.addNestedObject(parentElement, key, value);
+            });
+        } else {
+            // For objects that have properties directly
+            for (const key in parentObject) {
+                if (parentObject.hasOwnProperty(key) && key !== 'pipes' && key !== 'panels' && typeof parentObject[key] === 'object') {
+                    this.addNestedObject(parentElement, key, parentObject[key]);
+                }
+            }
+        }
     }
     
     /**

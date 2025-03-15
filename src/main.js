@@ -71,10 +71,18 @@ class CHEVisualization {
             const sceneObjects = {
                 'Ground #1': this.ground,
                 'Single CUT #1': this.cheModel,
-                'Camera Controller': this.cameraController,
+                'Camera Controller': {
+                    children: {
+                        'Orbit Camera': this.cameraController.orbitCamera,
+                        'First Person Camera': this.cameraController.firstPersonCamera,
+                        'Flight Camera': this.cameraController.flightCamera
+                    }
+                },
                 'Lights': {
-                    'Hemispheric Light': scene.getLightByName('hemisphericLight'),
-                    'Directional Light': scene.getLightByName('directionalLight')
+                    children: {
+                        'Hemispheric Light': scene.getLightByName('hemisphericLight'),
+                        'Directional Light': scene.getLightByName('directionalLight')
+                    }
                 },
                 'Axes': axesViewer
             };
