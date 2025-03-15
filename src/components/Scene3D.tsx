@@ -349,7 +349,17 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
   const [activeController, setActiveController] = useState(controllerType);
   const [cameraPosition, setCameraPosition] = useState(new Vector3(0, 50, 100));
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Create a proper ground reference that will persist
   const groundRef = useRef<Object3D>(null);
+  
+  // Create a custom handler for ground capture
+  const captureGroundRef = useCallback((groundObject: Object3D | null) => {
+    if (groundObject) {
+      groundRef.current = groundObject;
+      console.log('Ground reference captured:', groundObject.position.y);
+    }
+  }, []);
   
   // Re-add input tracking for the overlay display
   const [activeKeys, setActiveKeys] = useState<Record<KeyName, boolean>>({
@@ -369,6 +379,149 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     'D': false,
     'F1': false
   });
+  
+  // Modified SimpleModelRenderer that captures ground reference
+  const EnhancedModelRenderer = React.memo(() => {
+    const { models, instances, getModelById } = useModelStore();
+    
+    // Create a list of instance IDs that are referenced by composite models
+    const compositeMemberIds = useMemo(() => {
+      const memberIds = new Set<string>();
+      
+      models.forEach(model => {
+        if (model.type === 'composite') {
+          const compositeModel = model as CompositeModelType;
+          if (compositeModel.references) {
+            compositeModel.references.forEach(ref => {
+              memberIds.add(ref.instanceId);
+            });
+          }
+        }
+      });
+      
+      return memberIds;
+    }, [models]);
+    
+    useEffect(() => {
+      isStoreInitialized();
+    }, []);
+    
+    // Only render visible instances that aren't part of composites
+    const visibleInstances = useMemo(() => {
+      return instances.filter(instance => 
+        instance.visible && 
+        !compositeMemberIds.has(instance.instanceId)
+      );
+    }, [instances, compositeMemberIds]);
+    
+    return (
+      <React.Fragment>
+        {visibleInstances.map(instance => {
+          const model = getModelById(instance.modelId);
+          if (!model) return null;
+          
+          if (model.type === 'primitive') {
+            const primitiveModel = model as PrimitiveModel;
+            
+            // Render different primitive types based on model ID
+            if (model.id === 'green-ground') {
+              return (
+                <GroundModelWithRef 
+                  key={instance.instanceId}
+                  model={primitiveModel}
+                  instanceId={instance.instanceId}
+                  position={instance.position}
+                  rotation={instance.rotation}
+                  scale={instance.scale}
+                  captureRef={captureGroundRef}
+                />
+              );
+            } 
+            else if (model.id.includes('pipe')) {
+              return (
+                <PipeModel
+                  key={instance.instanceId}
+                  model={primitiveModel}
+                  instanceId={instance.instanceId}
+                  position={instance.position}
+                  rotation={instance.rotation}
+                  scale={instance.scale}
+                />
+              );
+            }
+            else if (model.id.includes('panel')) {
+              return (
+                <PanelModel
+                  key={instance.instanceId}
+                  model={primitiveModel}
+                  instanceId={instance.instanceId}
+                  position={instance.position}
+                  rotation={instance.rotation}
+                  scale={instance.scale}
+                />
+              );
+            }
+          }
+          else if (model.type === 'composite') {
+            return (
+              <CompositeModel
+                key={instance.instanceId}
+                model={model as CompositeModelType}
+                instanceId={instance.instanceId}
+                position={instance.position}
+                rotation={instance.rotation}
+                scale={instance.scale}
+              />
+            );
+          }
+          
+          return null;
+        })}
+      </React.Fragment>
+    );
+  });
+
+  EnhancedModelRenderer.displayName = 'EnhancedModelRenderer';
+  
+  // Update the GroundModelWithRef to properly use refs
+  const GroundModelWithRef = ({ 
+    model, 
+    instanceId, 
+    position, 
+    rotation, 
+    scale, 
+    captureRef 
+  }: {
+    model: PrimitiveModel;
+    instanceId: string;
+    position: [number, number, number];
+    rotation: [number, number, number];
+    scale: [number, number, number];
+    captureRef: (ref: Object3D | null) => void;
+  }) => {
+    // Use a local ref that will be passed to GroundModel and also captured in useEffect
+    const localGroundRef = useRef<Object3D>(null);
+    
+    // Capture the ref when it's available
+    useEffect(() => {
+      if (localGroundRef.current) {
+        captureRef(localGroundRef.current);
+      }
+    }, [captureRef, localGroundRef]);
+    
+    return (
+      <GroundModel
+        ref={localGroundRef}
+        model={model}
+        instanceId={instanceId}
+        position={position}
+        rotation={rotation}
+        scale={scale}
+      />
+    );
+  };
+  
+  GroundModelWithRef.displayName = 'GroundModelWithRef';
   
   // Track input events for the overlay
   const [inputEventLog, setInputEventLog] = useState<InputEvent[]>([]);
@@ -441,21 +594,21 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
     <div className="relative w-full h-full flex flex-1">
       <Canvas
         ref={canvasRef}
-        shadows={false} // Disable shadows for performance
-        flat={true} // Disable tone mapping for performance
+        shadows={false}
+        flat={true}
         camera={{ position: [0, 50, 100], fov: 50 }}
         gl={{ 
-          antialias: false, // Disable antialiasing for performance
+          antialias: false,
           alpha: false,
           stencil: false,
           depth: true,
-          powerPreference: 'low-power' // Request low-power mode for stability
+          powerPreference: 'low-power'
         }}
-        dpr={1} // Force pixel ratio to 1 for stability
-        frameloop="demand" // Only render when needed
+        dpr={1}
+        frameloop="demand"
         style={{ width: '100%', height: '100%' }}
         onCreated={({ gl }) => {
-          gl.setClearColor(0x87ceeb, 1); // Light blue sky background
+          gl.setClearColor(0x87ceeb, 1);
         }}
       >
         <Suspense fallback={null}>
@@ -475,8 +628,8 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
           {/* Minimal lighting - single light */}
           <ambientLight intensity={0.8} />
           
-          {/* Simplified models */}
-          <SimpleModelRenderer />
+          {/* Enhanced models with ground ref capture */}
+          <EnhancedModelRenderer />
         </Suspense>
       </Canvas>
       
