@@ -18,20 +18,19 @@ export class RadiusControls {
         
         // Default options
         const defaultOptions = {
-            outerRadiusMin: 10,     // Minimum radius for outer SingleCUTs (changed from 150 to 10)
-            outerRadiusMax: 100,    // Maximum radius for outer SingleCUTs (changed from 400 to 100)
-            outerRadiusDefault: 42, // Default radius for outer SingleCUTs (changed from 250 to 42)
+            outerRadiusMin: 10,     // Minimum radius for outer SingleCUTs
+            outerRadiusMax: 100,    // Maximum radius for outer SingleCUTs
+            outerRadiusDefault: 42, // Default radius for outer SingleCUTs
             singleCutRadiusMin: 10,  // Minimum radius for SingleCUT internal structure
             singleCutRadiusMax: 100, // Maximum radius for SingleCUT internal structure
-            singleCutRadiusDefault: 21, // Default radius for SingleCUT internal structure (updated to 21)
-            position: { x: 10, y: 140 }, // Position of the controls container, moved down to avoid overlap
+            singleCutRadiusDefault: 21, // Default radius for SingleCUT internal structure
+            position: { x: 10, y: 140 }, // Position of the controls container
             width: 350,              // Width of the controls container
             height: 150,             // Height of the controls container
             backgroundColor: "#222222", // Background color
             textColor: "#ffffff",    // Text color
             sliderBarColor: "#444444", // Slider bar color
             sliderThumbColor: "#00aaff", // Slider thumb color
-            special2RadiousDefault: 32, // Default radius for SingleCUT #2 (changed from 200 to 32)
             isVisible: false          // Initially hidden to avoid clutter
         };
         
@@ -40,7 +39,6 @@ export class RadiusControls {
         // Current values
         this.currentOuterRadius = this.options.outerRadiusDefault;
         this.currentSingleCutRadius = this.options.singleCutRadiusDefault;
-        this.currentSpecial2Radius = this.options.special2RadiousDefault;
         
         // Create the UI for the radius controls
         this.createUI();
@@ -257,13 +255,13 @@ export class RadiusControls {
      * Update the panel distance display with current value
      */
     updatePanelDistanceDisplay() {
-        // Get pipe radius from the model (default is 5 if not accessible)
+        // Get pipe radius from the model (default is 1 if not accessible)
         const pipeRadius = (this.layerOneRingModel && 
                           this.layerOneRingModel.singleCuts && 
                           this.layerOneRingModel.singleCuts[0] && 
                           this.layerOneRingModel.singleCuts[0].options) 
-                          ? this.layerOneRingModel.singleCuts[0].options.pipeRadius || 5 
-                          : 5;
+                          ? this.layerOneRingModel.singleCuts[0].options.pipeRadius || 1 
+                          : 1;
         
         // Calculate distance between pipe centers
         const pipeCentersDistance = 2 * this.currentSingleCutRadius;
@@ -353,48 +351,58 @@ export class RadiusControls {
      * Create an HTML toggle button that matches the style of other UI controls
      */
     createHTMLToggleButton() {
-        // Find the control buttons container
-        const controlButtonsContainer = document.getElementById('controlButtons');
-        if (!controlButtonsContainer) {
-            console.error("Control buttons container not found");
-            return;
+        // Create the button if it doesn't exist already
+        if (!document.getElementById('radiusControlToggle')) {
+            const toggleButton = document.createElement('button');
+            toggleButton.id = 'radiusControlToggle';
+            toggleButton.textContent = 'Radius Control';
+            toggleButton.style.position = 'absolute';
+            toggleButton.style.top = '10px'; // Position at top
+            toggleButton.style.right = '10px';
+            toggleButton.style.padding = '5px 10px';
+            toggleButton.style.borderRadius = '5px';
+            toggleButton.style.backgroundColor = '#444';
+            toggleButton.style.color = '#fff';
+            toggleButton.style.border = 'none';
+            toggleButton.style.cursor = 'pointer';
+            toggleButton.style.zIndex = '100';
+            
+            // Toggle panel visibility when button is clicked
+            toggleButton.addEventListener('click', () => {
+                const isVisible = this.panel.style.display !== 'none';
+                this.togglePanel(!isVisible);
+            });
+            
+            document.body.appendChild(toggleButton);
+            
+            // Store reference
+            this.htmlToggleButton = toggleButton;
+        }
+    }
+    
+    /**
+     * Toggle panel visibility
+     * @param {boolean} isVisible - Whether panel should be visible
+     */
+    togglePanel(isVisible) {
+        this.panel.style.display = isVisible ? 'block' : 'none';
+        this.options.isVisible = isVisible;
+        
+        // Toggle radius lines visibility in the model
+        if (this.layerOneRingModel && typeof this.layerOneRingModel.setRadiusLinesVisible === 'function') {
+            this.layerOneRingModel.setRadiusLinesVisible(isVisible);
         }
         
-        // Create button element
-        const button = document.createElement('button');
-        button.id = 'radiusToggle';
-        button.className = 'control-button tooltip';
-        button.setAttribute('data-tooltip', 'Toggle Radius Controls');
-        button.textContent = 'R';
-        button.style.backgroundColor = '#9C27B0'; // Purple
-        
-        // Add click event
-        button.addEventListener('click', () => {
-            const newVisible = this.panel.style.display === 'none';
-            this.panel.style.display = newVisible ? 'block' : 'none';
-            
-            // Toggle radius lines visibility in the model
-            if (this.layerOneRingModel && typeof this.layerOneRingModel.setRadiusLinesVisible === 'function') {
-                this.layerOneRingModel.setRadiusLinesVisible(newVisible);
-            }
-            
-            // Update button active state
-            if (newVisible) {
-                button.classList.add('active');
+        // Update button active state
+        if (this.htmlToggleButton) {
+            if (isVisible) {
+                this.htmlToggleButton.classList.add('active');
+                this.htmlToggleButton.style.backgroundColor = '#666';
             } else {
-                button.classList.remove('active');
+                this.htmlToggleButton.classList.remove('active');
+                this.htmlToggleButton.style.backgroundColor = '#444';
             }
-            
-            console.log("Panel visibility toggled:", newVisible);
-        });
-        
-        // Add to container
-        controlButtonsContainer.appendChild(button);
-        
-        // Store reference
-        this.htmlToggleButton = button;
-        
-        console.log("HTML toggle button created for radius controls");
+        }
     }
     
     /**
