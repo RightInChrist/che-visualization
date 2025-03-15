@@ -436,20 +436,42 @@ export class SceneEditor {
             this.checkboxElements[parentPath].element.checked = isChecked;
         }
         
+        // Debug all available checkbox paths
+        console.log("All checkbox paths:", Object.keys(this.checkboxElements));
+        
         // Update all child checkboxes (any checkbox with a path that starts with parentPath)
         for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
-            // Check if this path is a child of the parent path
-            // We need to check both exact match (parent/child) and hierarchical match (parent/)
-            if (path !== parentPath && (
-                path.startsWith(parentPath + '/') || // Direct child (e.g., "Single CUT #1/Pipe #1")
-                (parentPath === 'Seven CUTs #1' && path.startsWith('Single CUT #')) // Special case for Seven CUTs
-            )) {
-                console.log(`Setting checkbox for ${path} to ${isChecked}`);
+            // Debug each path being checked
+            console.log(`Checking path: ${path}, against parent: ${parentPath}`);
+            
+            // For Seven CUTs parent, we need to update all SingleCUTs and their children
+            if (parentPath === 'Seven CUTs #1') {
+                // Update all SingleCUT checkboxes and their children (pipes and panels)
+                if (path.startsWith('Single CUT #') || 
+                    path.includes('/Pipe #') || 
+                    path.includes('/Panel #')) {
+                    
+                    console.log(`Setting checkbox for ${path} to ${isChecked} (Seven CUTs child)`);
+                    if (checkboxInfo.element) {
+                        checkboxInfo.element.checked = isChecked;
+                    }
+                    continue; // Skip the next checks since we've handled this path
+                }
+            } 
+            
+            // For regular parent-child relationships, use path prefix matching
+            if (path !== parentPath && path.startsWith(parentPath + '/')) {
+                console.log(`Setting checkbox for ${path} to ${isChecked} (direct child)`);
                 if (checkboxInfo.element) {
                     checkboxInfo.element.checked = isChecked;
                 }
             }
         }
+        
+        // Force a render to ensure checkboxes display correctly
+        setTimeout(() => {
+            this.scene.render();
+        }, 0);
     }
     
     /**
