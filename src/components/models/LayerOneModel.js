@@ -64,13 +64,7 @@ export class LayerOneModel extends CompositeModel {
             
             this.addChild(singleCut);
             
-            // Hide specific pipes and panels for interconnected appearance
-            // Based on the pattern in the original SevenCutsModel
-
-            // For each SingleCUT, determine which pipes and panels need to be hidden
-            // to create a connected appearance with adjacent SingleCUTs
-            
-            // Arrays of panels and pipes to hide for each cut (specified as 1-indexed)
+            // Arrays of panels and pipes that would normally be hidden (for reference only)
             const panelsToHide = {
                 1: [3, 4], // Cut 1: panels 3 and 4
                 2: [4, 5], // Cut 2: panels 4 and 5
@@ -89,38 +83,32 @@ export class LayerOneModel extends CompositeModel {
                 6: [4, 3, 2]  // Cut 6: pipes 4, 3, 2
             };
             
-            // Hide panels for this cut
+            // Log panels for this cut (but don't hide them)
             const cutNumber = i + 1;
             if (panelsToHide[cutNumber]) {
                 panelsToHide[cutNumber].forEach(panelNumber => {
                     // Convert from 1-indexed to 0-indexed
                     const panelIndex = panelNumber - 1;
                     
-                    singleCut.panels[panelIndex].setVisible(false);
-                    singleCut.panels[panelIndex].isPermanentlyHidden = true;
-                    this.permanentlyHiddenElements.push({
-                        modelIndex: i,
-                        type: 'panel',
-                        index: panelIndex
-                    });
-                    this.debugLog(`Hiding panel ${panelNumber} for SingleCUT #${cutNumber}`);
+                    // No longer hiding panels
+                    // singleCut.panels[panelIndex].setVisible(false);
+                    // singleCut.panels[panelIndex].isPermanentlyHidden = true;
+                    
+                    this.debugLog(`NOT hiding panel ${panelNumber} for SingleCUT #${cutNumber} (all panels shown)`);
                 });
             }
             
-            // Hide pipes for this cut
+            // Log pipes for this cut (but don't hide them)
             if (pipesToHide[cutNumber]) {
                 pipesToHide[cutNumber].forEach(pipeNumber => {
                     // Convert from 1-indexed to 0-indexed
                     const pipeIndex = pipeNumber - 1;
                     
-                    singleCut.pipes[pipeIndex].setVisible(false);
-                    singleCut.pipes[pipeIndex].isPermanentlyHidden = true;
-                    this.permanentlyHiddenElements.push({
-                        modelIndex: i,
-                        type: 'pipe',
-                        index: pipeIndex
-                    });
-                    this.debugLog(`Hiding pipe ${pipeNumber} for SingleCUT #${cutNumber}`);
+                    // No longer hiding pipes
+                    // singleCut.pipes[pipeIndex].setVisible(false);
+                    // singleCut.pipes[pipeIndex].isPermanentlyHidden = true;
+                    
+                    this.debugLog(`NOT hiding pipe ${pipeNumber} for SingleCUT #${cutNumber} (all pipes shown)`);
                 });
             }
         }
