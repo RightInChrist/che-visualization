@@ -79,49 +79,49 @@ export class SevenCutsModel extends CompositeModel {
             // Calculate which pipe is pointing toward the center (opposite of the angle)
             const centerFacingIndex = this.getIndexFacingCenter(i, angle);
             
-            // Pipe facing the center
-            singleCut.pipes[centerFacingIndex].setVisible(false);
-            singleCut.pipes[centerFacingIndex].isPermanentlyHidden = true;
-            this.permanentlyHiddenElements.push({
-                modelIndex: i + 1,
-                type: 'pipe',
-                index: centerFacingIndex
-            });
-            this.debugLog(`Hiding pipe ${centerFacingIndex + 1} for SingleCUT #${i+2} (facing center)`);
+            // // Pipe facing the center
+            // singleCut.pipes[centerFacingIndex].setVisible(false);
+            // singleCut.pipes[centerFacingIndex].isPermanentlyHidden = true;
+            // this.permanentlyHiddenElements.push({
+            //     modelIndex: i + 1,
+            //     type: 'pipe',
+            //     index: centerFacingIndex
+            // });
+            // this.debugLog(`Hiding pipe ${centerFacingIndex + 1} for SingleCUT #${i+2} (facing center)`);
             
-            // Pipe clockwise to the center-facing one (instead of counter-clockwise)
-            const cwIndex = (centerFacingIndex + 1) % 6;
-            singleCut.pipes[cwIndex].setVisible(false);
-            singleCut.pipes[cwIndex].isPermanentlyHidden = true;
-            this.permanentlyHiddenElements.push({
-                modelIndex: i + 1,
-                type: 'pipe',
-                index: cwIndex
-            });
-            this.debugLog(`Hiding pipe ${cwIndex + 1} for SingleCUT #${i+2} (clockwise to center)`);
+            // // Pipe clockwise to the center-facing one (instead of counter-clockwise)
+            // const cwIndex = (centerFacingIndex + 1) % 6;
+            // singleCut.pipes[cwIndex].setVisible(false);
+            // singleCut.pipes[cwIndex].isPermanentlyHidden = true;
+            // this.permanentlyHiddenElements.push({
+            //     modelIndex: i + 1,
+            //     type: 'pipe',
+            //     index: cwIndex
+            // });
+            // this.debugLog(`Hiding pipe ${cwIndex + 1} for SingleCUT #${i+2} (clockwise to center)`);
             
-            // Panel between the hidden pipes (connecting them)
-            // The panel index might be either centerFacingIndex or one less, depending on how indices wrap
-            const panelBetweenIndex = centerFacingIndex;
-            singleCut.panels[panelBetweenIndex].setVisible(false);
-            singleCut.panels[panelBetweenIndex].isPermanentlyHidden = true;
-            this.permanentlyHiddenElements.push({
-                modelIndex: i + 1,
-                type: 'panel',
-                index: panelBetweenIndex
-            });
-            this.debugLog(`Hiding panel ${panelBetweenIndex + 1} for SingleCUT #${i+2} (between hidden pipes)`);
+            // // Panel between the hidden pipes (connecting them)
+            // // The panel index might be either centerFacingIndex or one less, depending on how indices wrap
+            // const panelBetweenIndex = centerFacingIndex;
+            // singleCut.panels[panelBetweenIndex].setVisible(false);
+            // singleCut.panels[panelBetweenIndex].isPermanentlyHidden = true;
+            // this.permanentlyHiddenElements.push({
+            //     modelIndex: i + 1,
+            //     type: 'panel',
+            //     index: panelBetweenIndex
+            // });
+            // this.debugLog(`Hiding panel ${panelBetweenIndex + 1} for SingleCUT #${i+2} (between hidden pipes)`);
             
-            // Panel clockwise to the center-facing pipe
-            const panelClockwiseIndex = (centerFacingIndex + 1) % 6;
-            singleCut.panels[panelClockwiseIndex].setVisible(false);
-            singleCut.panels[panelClockwiseIndex].isPermanentlyHidden = true;
-            this.permanentlyHiddenElements.push({
-                modelIndex: i + 1,
-                type: 'panel',
-                index: panelClockwiseIndex
-            });
-            this.debugLog(`Hiding panel ${panelClockwiseIndex + 1} for SingleCUT #${i+2} (clockwise to center-facing pipe)`);
+            // // Panel clockwise to the center-facing pipe
+            // const panelClockwiseIndex = (centerFacingIndex + 1) % 6;
+            // singleCut.panels[panelClockwiseIndex].setVisible(false);
+            // singleCut.panels[panelClockwiseIndex].isPermanentlyHidden = true;
+            // this.permanentlyHiddenElements.push({
+            //     modelIndex: i + 1,
+            //     type: 'panel',
+            //     index: panelClockwiseIndex
+            // });
+            // this.debugLog(`Hiding panel ${panelClockwiseIndex + 1} for SingleCUT #${i+2} (clockwise to center-facing pipe)`);
         }
         
         this.debugLog('Seven CUTs model creation complete');

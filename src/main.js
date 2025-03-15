@@ -44,7 +44,7 @@ class CHEVisualization {
             
             // Create ground
             this.ground = new GroundModel(scene, 5000);
-            this.sevenCutRadius = 36.1;
+            this.sevenCutRadius = 38; // 36.4;
             
             // Create Seven CUTs model
             this.cheModel = new SevenCutsModel(scene, new Vector3(0, 0, 0), {
