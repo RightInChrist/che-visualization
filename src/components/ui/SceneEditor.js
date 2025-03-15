@@ -269,7 +269,55 @@ export class SceneEditor {
      */
     updateNestedCheckboxes(parentName, isChecked) {
         if (parentName === 'Single CUT #1') {
-            // Update all pipe and panel checkboxes
+            const singleCUT = this.sceneObjects['Single CUT #1'];
+            
+            // Update all pipe and panel visibility directly
+            if (singleCUT) {
+                // Update pipes
+                if (singleCUT.pipes) {
+                    singleCUT.pipes.forEach((pipe, index) => {
+                        if (pipe && pipe.pipeMesh) {
+                            // Set custom property
+                            pipe._isVisible = isChecked;
+                            
+                            // Set visibility on pipe
+                            pipe.pipeMesh.isVisible = isChecked;
+                            if (pipe.rootNode) {
+                                pipe.rootNode.setEnabled(isChecked);
+                            }
+                            
+                            // Set markers visibility
+                            if (pipe.markers) {
+                                pipe.markers.forEach(marker => {
+                                    marker.isVisible = isChecked;
+                                });
+                            }
+                        }
+                    });
+                }
+                
+                // Update panels
+                if (singleCUT.panels) {
+                    singleCUT.panels.forEach((panel, index) => {
+                        if (panel) {
+                            // Set custom property
+                            panel._isVisible = isChecked;
+                            
+                            // Try different properties
+                            if (panel.panelMesh) {
+                                panel.panelMesh.isVisible = isChecked;
+                                if (panel.rootNode) {
+                                    panel.rootNode.setEnabled(isChecked);
+                                }
+                            } else if (typeof panel.setVisible === 'function') {
+                                panel.setVisible(isChecked);
+                            }
+                        }
+                    });
+                }
+            }
+            
+            // Update all pipe and panel checkboxes in UI
             for (const key in this.checkboxElements) {
                 if (key.startsWith('Pipe #') || key.startsWith('Panel #')) {
                     if (this.checkboxElements[key]) {
@@ -291,10 +339,15 @@ export class SceneEditor {
             // Update SingleCUT checkbox and its children
             if (this.sceneObjects['Single CUT #1'] && this.checkboxElements['Single CUT #1']) {
                 const singleCutModel = this.sceneObjects['Single CUT #1'];
-                const isVisible = singleCutModel.pipes && 
+                
+                // Check custom property first, then mesh visibility
+                let isVisible = singleCutModel._isVisible;
+                if (isVisible === undefined) {
+                    isVisible = singleCutModel.pipes && 
                                 singleCutModel.pipes.length > 0 && 
                                 singleCutModel.pipes[0].pipeMesh && 
                                 singleCutModel.pipes[0].pipeMesh.isVisible;
+                }
                                 
                 this.checkboxElements['Single CUT #1'].checked = isVisible;
                 
@@ -303,7 +356,12 @@ export class SceneEditor {
                     singleCutModel.pipes.forEach((pipe, index) => {
                         const pipeName = `Pipe #${index + 1}`;
                         if (this.checkboxElements[pipeName]) {
-                            this.checkboxElements[pipeName].checked = pipe.pipeMesh && pipe.pipeMesh.isVisible;
+                            // Check custom property first, then mesh visibility
+                            let pipeVisible = pipe._isVisible;
+                            if (pipeVisible === undefined) {
+                                pipeVisible = pipe.pipeMesh && pipe.pipeMesh.isVisible;
+                            }
+                            this.checkboxElements[pipeName].checked = pipeVisible;
                         }
                     });
                 }
@@ -313,7 +371,12 @@ export class SceneEditor {
                     singleCutModel.panels.forEach((panel, index) => {
                         const panelName = `Panel #${index + 1}`;
                         if (this.checkboxElements[panelName]) {
-                            this.checkboxElements[panelName].checked = panel.panelMesh && panel.panelMesh.isVisible;
+                            // Check custom property first, then mesh visibility
+                            let panelVisible = panel._isVisible;
+                            if (panelVisible === undefined) {
+                                panelVisible = panel.panelMesh && panel.panelMesh.isVisible;
+                            }
+                            this.checkboxElements[panelName].checked = panelVisible;
                         }
                     });
                 }
@@ -322,7 +385,13 @@ export class SceneEditor {
             // Update Ground checkbox
             if (this.sceneObjects['Ground #1'] && this.checkboxElements['Ground #1']) {
                 const ground = this.sceneObjects['Ground #1'];
-                this.checkboxElements['Ground #1'].checked = ground.mesh && ground.mesh.isVisible;
+                
+                // Check custom property first, then mesh visibility
+                let groundVisible = ground._isVisible;
+                if (groundVisible === undefined) {
+                    groundVisible = ground.mesh && ground.mesh.isVisible;
+                }
+                this.checkboxElements['Ground #1'].checked = groundVisible;
             }
         } finally {
             this.isUpdating = false;
@@ -366,6 +435,7 @@ export class SceneEditor {
             
             if (object.panels) {
                 object.panels.forEach(panel => {
+                    // Try different properties that might exist on panels
                     if (panel.panelMesh) {
                         // Set visibility on both root node and panel mesh
                         if (panel.rootNode) {
@@ -373,9 +443,16 @@ export class SceneEditor {
                         }
                         panel.panelMesh.isVisible = isVisible;
                         console.log(`Setting panel visibility to ${isVisible}, result: ${panel.panelMesh.isVisible}, root enabled: ${panel.rootNode ? panel.rootNode.isEnabled() : 'N/A'}`);
+                    } else if (typeof panel.setVisible === 'function') {
+                        // Use setVisible if available
+                        panel.setVisible(isVisible);
+                        console.log(`Using setVisible method for panel - ${isVisible}`);
                     }
                 });
             }
+            
+            // Store the state in a custom property to ensure it's remembered
+            object._isVisible = isVisible;
             
             // Force scene to update
             this.scene.render();
@@ -402,6 +479,9 @@ export class SceneEditor {
                 });
             }
             
+            // Store the state in a custom property
+            object._isVisible = isVisible;
+            
             // Force scene to update
             this.scene.render();
         } else if (name.startsWith('Panel #')) {
@@ -419,16 +499,24 @@ export class SceneEditor {
                 
                 // Explicitly force mesh to update
                 object.panelMesh.refreshBoundingInfo();
+            } else if (typeof object.setVisible === 'function') {
+                // Use setVisible if available
+                object.setVisible(isVisible);
+                console.log(`Using setVisible method for panel - ${isVisible}`);
             }
+            
+            // Store the state in a custom property
+            object._isVisible = isVisible;
             
             // Force scene to update
             this.scene.render();
         }
         
-        // Update the UI to reflect changes
-        setTimeout(() => {
-            this.updateCheckboxStates();
-        }, 50);
+        // Always update checkboxes to match the desired state
+        this.updateNestedCheckboxes(name, isVisible);
+        
+        // Update the UI to reflect changes immediately
+        this.updateCheckboxStates();
     }
     
     /**

@@ -68,7 +68,7 @@ export class SingleCutModel {
      * @param {BABYLON.Vector3} position - Position of the panel
      * @param {BABYLON.Vector3} rotation - Rotation of the panel
      * @param {number} width - Width of the panel
-     * @returns {BABYLON.Mesh} - The created panel mesh
+     * @returns {Object} - The created panel object
      */
     createPanel(position, rotation, width) {
         const panel = new PanelModel(this.scene, position, {
@@ -84,7 +84,8 @@ export class SingleCutModel {
         // Set parent to the root node
         panel.rootNode.parent = this.rootNode;
         
-        return panel.panelMesh;
+        // Return the entire panel object, not just the mesh
+        return panel;
     }
     
     /**
@@ -127,10 +128,8 @@ export class SingleCutModel {
                 pipePositions[nextIndex]
             );
             
-            // Create panel with calculated transform
-            const panel = {
-                panelMesh: this.createPanel(transform.position, transform.rotation, transform.width)
-            };
+            // Create panel with calculated transform and store the full panel object
+            const panel = this.createPanel(transform.position, transform.rotation, transform.width);
             
             this.panels.push(panel);
         }
