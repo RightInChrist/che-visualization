@@ -50,19 +50,24 @@ const initialModels: Model3D[] = [
 ];
 
 // Define initial instances
-const initialInstances: ModelInstance[] = [
-  // Ground instance
-  {
-    instanceId: 'instance-ground',
-    modelId: 'green-ground',
-    name: 'Ground Plane',
-    visible: true,
-    position: [0, 0, 0],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1]
-  },
-  
-  // Independent primitive model instances
+const initialInstances: ModelInstance[] = [];
+
+// Ground instance
+const groundInstance: ModelInstance = {
+  instanceId: 'instance-ground',
+  modelId: 'green-ground',
+  name: 'Ground Plane',
+  visible: true,
+  position: [0, 0, 0],
+  rotation: [0, 0, 0],
+  scale: [1, 1, 1]
+};
+
+// Add ground to instances
+initialInstances.push(groundInstance);
+
+// Independent primitive model instances
+const standaloneInstances: ModelInstance[] = [
   {
     instanceId: 'instance-pipe-standalone',
     modelId: 'big-pipe',
@@ -82,6 +87,9 @@ const initialInstances: ModelInstance[] = [
     scale: [1, 1, 1]
   }
 ];
+
+// Add standalone instances to initial instances
+initialInstances.push(...standaloneInstances);
 
 // Pre-create pipe and panel instances for the hexagon
 const hexPipeInstances: ModelInstance[] = [
@@ -186,7 +194,7 @@ const hexPanelInstances: ModelInstance[] = [
   }
 ];
 
-// Add to initial instances
+// Add hex components to initial instances
 initialInstances.push(...hexPipeInstances, ...hexPanelInstances);
 
 // Single Cut instance with references to the pipe and panel instances
@@ -224,6 +232,16 @@ const singleCutModel = initialModels.find(model => model.id === 'single-cut') as
 if (singleCutModel) {
   singleCutModel.references = singleCutReferences;
 }
+
+// Define scene structure (future enhancement)
+// This doesn't change the instances yet, but prepares for future multi-scene support
+const sceneHierarchy = {
+  'convective-heat-engine': {
+    name: 'Convective Heat Engine #1',
+    rootInstanceIds: ['instance-ground', 'instance-single-cut'],
+    childInstanceIds: [] // For future use with nested scene components
+  }
+};
 
 // Create the store
 export const useModelStore = create<ModelStore>((set, get) => ({
@@ -295,5 +313,11 @@ export const useModelStore = create<ModelStore>((set, get) => ({
     
     get().addInstance(instance);
     return instanceId;
+  },
+  
+  // Scene-related helpers (for future enhancement)
+  getSceneHierarchy: () => {
+    // This is a simple placeholder. In the future, this would be part of the store state
+    return sceneHierarchy;
   }
 })); 
