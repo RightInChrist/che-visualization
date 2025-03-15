@@ -2,30 +2,26 @@ import {
     MeshBuilder, 
     StandardMaterial, 
     Color3, 
-    Vector3,
-    TransformNode
+    Vector3
 } from '@babylonjs/core';
+import { BaseModel } from './BaseModel';
 
 /**
  * Creates a tall panel for the Convective Heat Engine
  */
-export class PanelModel {
+export class PanelModel extends BaseModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
-        this.scene = scene;
-        this.position = position;
-        
         // Default options
-        this.options = {
+        const defaultOptions = {
             height: 1000, // meters
             width: 50,    // meters
             depth: 2,     // meters
             color: new Color3(0.2, 0.6, 0.8),
-            ...options
+            name: 'panel'
         };
         
-        // Create parent node for all meshes
-        this.rootNode = new TransformNode('panel', this.scene);
-        this.rootNode.position = this.position;
+        // Call parent constructor
+        super(scene, position, { ...defaultOptions, ...options });
         
         // Create panel
         this.createPanel();
@@ -79,7 +75,7 @@ export class PanelModel {
      * Disposes of all resources
      */
     dispose() {
-        this.panelMesh.dispose();
-        this.rootNode.dispose();
+        if (this.panelMesh) this.panelMesh.dispose();
+        super.dispose();
     }
 } 

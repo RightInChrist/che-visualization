@@ -1,55 +1,38 @@
-import { Vector3, TransformNode, Color3 } from '@babylonjs/core';
+import { Vector3, Color3 } from '@babylonjs/core';
 import { SingleCutModel } from './SingleCutModel';
+import { CompositeModel } from './CompositeModel';
 
 /**
  * Creates a Seven CUTs model with 7 SingleCUT models arranged in a specific pattern
  * One central SingleCUT and 6 surrounding in a larger hexagonal pattern
  */
-export class SevenCutsModel {
+export class SevenCutsModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
-        this.scene = scene;
-        this.position = position;
-        
         // Default options
-        this.options = {
+        const defaultOptions = {
             outerRadius: 500, // Distance from center to outer SingleCUTs
             singleCutRadius: 150, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
-            ...options
         };
-        
-        // Create parent node for all models
-        this.rootNode = new TransformNode('sevenCuts', this.scene);
-        this.rootNode.position = this.position;
+
+        // Call parent constructor
+        super(scene, position, { ...defaultOptions, ...options });
         
         // Create the models
         this.createModels();
     }
     
     /**
-     * Debug logging function that only logs when debug is enabled
-     * @param {...any} args - Arguments to log
-     */
-    debugLog(...args) {
-        if (this.options.debug) {
-            console.log('[SevenCUTs Debug]', ...args);
-        }
-    }
-    
-    /**
      * Create all the SingleCUT models
      */
     createModels() {
-        this.singleCuts = [];
-        
         this.debugLog('Creating Seven CUTs model');
         
         // Create center SingleCUT
         const centerCut = new SingleCutModel(this.scene, new Vector3(0, 0, 0), {
             radius: this.options.singleCutRadius
         });
-        centerCut.rootNode.parent = this.rootNode;
-        this.singleCuts.push(centerCut);
+        this.addChild(centerCut);
         
         this.debugLog('Created center SingleCUT at (0, 0, 0)');
         
@@ -67,22 +50,10 @@ export class SevenCutsModel {
                 radius: this.options.singleCutRadius
             });
             
-            singleCut.rootNode.parent = this.rootNode;
-            this.singleCuts.push(singleCut);
+            this.addChild(singleCut);
         }
         
         this.debugLog('Seven CUTs model creation complete');
-    }
-    
-    /**
-     * Updates the level of detail based on camera distance
-     * @param {Vector3} cameraPosition - The camera position
-     */
-    updateLOD(cameraPosition) {
-        // Update LOD for each SingleCUT model
-        this.singleCuts.forEach(singleCut => {
-            singleCut.updateLOD(cameraPosition);
-        });
     }
     
     /**
@@ -90,24 +61,14 @@ export class SevenCutsModel {
      * @returns {Array} - Array of all pipe meshes
      */
     getAllPipes() {
-        const allPipes = [];
-        
-        this.singleCuts.forEach(singleCut => {
-            singleCut.pipes.forEach(pipe => {
-                allPipes.push(pipe);
-            });
-        });
-        
-        return allPipes;
+        return this.getAllMeshes('pipes');
     }
     
     /**
-     * Disposes of all resources
+     * Provides access to all SingleCUT models (for backward compatibility)
+     * @returns {Array} - Array of all SingleCUT models
      */
-    dispose() {
-        this.singleCuts.forEach(singleCut => {
-            singleCut.dispose();
-        });
-        this.rootNode.dispose();
+    get singleCuts() {
+        return this.getChildren();
     }
 } 

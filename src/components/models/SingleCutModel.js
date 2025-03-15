@@ -1,18 +1,16 @@
-import { Vector3, TransformNode, Color3 } from '@babylonjs/core';
+import { Vector3, Color3 } from '@babylonjs/core';
 import { PipeModel } from './PipeModel';
 import { PanelModel } from './PanelModel';
 import * as BABYLON from '@babylonjs/core';
+import { BaseModel } from './BaseModel';
 
 /**
  * Creates a Single CUT model (Convective Heat Engine) with pipes and panels arranged in a hexagonal pattern
  */
-export class SingleCutModel {
+export class SingleCutModel extends BaseModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
-        this.scene = scene;
-        this.position = position;
-        
         // Default options
-        this.options = {
+        const defaultOptions = {
             pipesCount: 6, // Number of pipes in the hexagonal arrangement (only the outer ring)
             pipeRadius: 5, // meters
             pipeHeight: 1000, // meters
@@ -23,14 +21,12 @@ export class SingleCutModel {
             panelColor: new Color3(0.2, 0.6, 0.8),
             radius: 150, // Distance from center to each pipe in hexagonal pattern
             debug: false, // Enable/disable debug logging
-            ...options
         };
+
+        // Call parent constructor with merged options
+        super(scene, position, { ...defaultOptions, ...options });
         
-        // Create parent node
-        this.rootNode = new TransformNode('singleCut', this.scene);
-        this.rootNode.position = this.position;
-        
-        // Create models
+        // Create the models
         this.createModels();
     }
     
@@ -41,16 +37,6 @@ export class SingleCutModel {
      */
     radToDeg(radians) {
         return (radians * 180 / Math.PI).toFixed(2) + '°';
-    }
-    
-    /**
-     * Debug logging function that only logs when debug is enabled
-     * @param {...any} args - Arguments to log
-     */
-    debugLog(...args) {
-        if (this.options.debug) {
-            console.log('[SingleCUT Debug]', ...args);
-        }
     }
     
     /**
@@ -236,6 +222,6 @@ export class SingleCutModel {
     dispose() {
         this.pipes.forEach(pipe => pipe.dispose());
         this.panels.forEach(panel => panel.dispose());
-        this.rootNode.dispose();
+        super.dispose();
     }
 } 

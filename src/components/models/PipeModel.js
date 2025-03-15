@@ -3,32 +3,27 @@ import {
     StandardMaterial, 
     Color3, 
     Vector3,
-    TransformNode,
-    Mesh,
-    Material
+    Mesh
 } from '@babylonjs/core';
+import { BaseModel } from './BaseModel';
 
 /**
  * Creates a 1000m tall pipe with height markers every 100m
  */
-export class PipeModel {
+export class PipeModel extends BaseModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
-        this.scene = scene;
-        this.position = position;
-        
         // Default options
-        this.options = {
+        const defaultOptions = {
             height: 1000, // meters
             radius: 5,    // meters
             color: new Color3(0.7, 0.7, 0.7),
             markerInterval: 100, // meters between regular markers
             mainMarkerInterval: 500, // meters between main markers
-            ...options
+            name: 'pipe'
         };
         
-        // Create parent node for all meshes
-        this.rootNode = new TransformNode('pipe', this.scene);
-        this.rootNode.position = this.position;
+        // Call parent constructor
+        super(scene, position, { ...defaultOptions, ...options });
         
         // Create pipe and markers
         this.createPipe();
@@ -177,8 +172,8 @@ export class PipeModel {
      * Disposes of all resources
      */
     dispose() {
-        this.pipeMesh.dispose();
-        this.markers.forEach(marker => marker.dispose());
-        this.rootNode.dispose();
+        if (this.pipeMesh) this.pipeMesh.dispose();
+        if (this.markers) this.markers.forEach(marker => marker.dispose());
+        super.dispose();
     }
 } 
