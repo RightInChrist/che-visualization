@@ -137,25 +137,35 @@ export class SceneEditor {
         objectContainer.style.display = 'flex';
         objectContainer.style.alignItems = 'center';
         
-        // Create visibility toggle checkbox - ALL objects should have one
+        // Create visibility toggle checkbox
         const toggleCheckbox = document.createElement('input');
         toggleCheckbox.type = 'checkbox';
         
-        // Determine if the object should be checked based on its type
-        if (object.mesh) {
-            toggleCheckbox.checked = object.mesh.isVisible;
-        } else if (object.pipeMesh) {
-            toggleCheckbox.checked = object.pipeMesh.isVisible;
-        } else if (object.panelMesh) {
-            toggleCheckbox.checked = object.panelMesh.isVisible;
+        // Check if this is a toggleable object
+        if (name === 'Ground #1' || name === 'Single CUT #1' || name.startsWith('Pipe #') || name.startsWith('Panel #')) {
+            // Determine the initial checked state
+            if (name === 'Ground #1') {
+                toggleCheckbox.checked = object.mesh && object.mesh.isVisible;
+            } else if (name === 'Single CUT #1') {
+                // Check if the first pipe is visible
+                toggleCheckbox.checked = object.pipes && object.pipes.length > 0 && 
+                                         object.pipes[0].pipeMesh && 
+                                         object.pipes[0].pipeMesh.isVisible;
+            } else if (name.startsWith('Pipe #')) {
+                toggleCheckbox.checked = object.pipeMesh && object.pipeMesh.isVisible;
+            } else if (name.startsWith('Panel #')) {
+                toggleCheckbox.checked = object.panelMesh && object.panelMesh.isVisible;
+            }
+            
+            // Add event listener
+            toggleCheckbox.addEventListener('change', (e) => {
+                this.toggleObjectVisibility(name, object, e.target.checked);
+            });
         } else {
-            // Default to checked for container objects
+            // Non-toggleable objects
+            toggleCheckbox.disabled = true;
             toggleCheckbox.checked = true;
         }
-        
-        toggleCheckbox.addEventListener('change', (e) => {
-            this.toggleObjectVisibility(object, e.target.checked);
-        });
         
         objectContainer.appendChild(toggleCheckbox);
         
@@ -173,8 +183,11 @@ export class SceneEditor {
             childList.style.listStyleType = 'none';
             childList.style.paddingLeft = '20px';
             
-            // Add nested objects
-            this.addNestedObjects(childList, object);
+            if (name === 'Single CUT #1') {
+                this.addSingleCutChildren(childList, object);
+            } else if (object.children) {
+                this.addChildrenObjects(childList, object.children);
+            }
             
             objectItem.appendChild(childList);
         }
@@ -183,77 +196,103 @@ export class SceneEditor {
     }
     
     /**
+     * Add children for the SingleCUT model
+     * @param {HTMLElement} parentElement - Parent element to add to
+     * @param {Object} cutModel - The SingleCUT model
+     */
+    addSingleCutChildren(parentElement, cutModel) {
+        // Add pipes except the first one (center pipe)
+        if (cutModel.pipes && cutModel.pipes.length > 1) {
+            // Start from index 1 to skip the center pipe
+            for (let i = 1; i < cutModel.pipes.length; i++) {
+                const pipeItem = this.createObjectListItem(`Pipe #${i + 1}`, cutModel.pipes[i]);
+                parentElement.appendChild(pipeItem);
+            }
+        }
+        
+        // Add panels
+        if (cutModel.panels && cutModel.panels.length > 0) {
+            cutModel.panels.forEach((panel, index) => {
+                const panelItem = this.createObjectListItem(`Panel #${index + 1}`, panel);
+                parentElement.appendChild(panelItem);
+            });
+        }
+    }
+    
+    /**
+     * Add generic children objects
+     * @param {HTMLElement} parentElement - Parent element to add to
+     * @param {Object} children - Children objects
+     */
+    addChildrenObjects(parentElement, children) {
+        Object.entries(children).forEach(([key, value]) => {
+            const childItem = this.createObjectListItem(key, value);
+            parentElement.appendChild(childItem);
+        });
+    }
+    
+    /**
      * Check if an object has children
      * @param {Object} object - The object to check
      * @returns {boolean} - Whether the object has children
      */
     hasChildren(object) {
-        return object.pipes || object.panels || object.children;
-    }
-    
-    /**
-     * Add nested objects to a parent element
-     * @param {HTMLElement} parentElement - The parent element to add to
-     * @param {Object} parentObject - The parent object
-     */
-    addNestedObjects(parentElement, parentObject) {
-        // Add pipes if present
-        if (parentObject.pipes) {
-            parentObject.pipes.forEach((pipe, index) => {
-                const pipeItem = this.createObjectListItem(`Pipe #${index + 1}`, pipe);
-                parentElement.appendChild(pipeItem);
-            });
-        }
-        
-        // Add panels if present
-        if (parentObject.panels) {
-            parentObject.panels.forEach((panel, index) => {
-                const panelItem = this.createObjectListItem(`Panel #${index + 1}`, panel);
-                parentElement.appendChild(panelItem);
-            });
-        }
-        
-        // Add other children if present
-        if (parentObject.children) {
-            Object.entries(parentObject.children).forEach(([key, value]) => {
-                const childItem = this.createObjectListItem(key, value);
-                parentElement.appendChild(childItem);
-            });
-        }
+        return (
+            (object.pipes && object.pipes.length > 1) || // Only consider pipes if there's more than one (skip center pipe)
+            (object.panels && object.panels.length > 0) || 
+            (object.children && Object.keys(object.children).length > 0)
+        );
     }
     
     /**
      * Toggle the visibility of an object
+     * @param {string} name - Name of the object
      * @param {Object} object - The object to toggle
      * @param {boolean} isVisible - Whether the object should be visible
      */
-    toggleObjectVisibility(object, isVisible) {
-        // Toggle this object's visibility
-        if (object.mesh) {
-            object.mesh.isVisible = isVisible;
-        } else if (object.pipeMesh) {
-            object.pipeMesh.isVisible = isVisible;
-        } else if (object.panelMesh) {
-            object.panelMesh.isVisible = isVisible;
-        }
-        
-        // Toggle visibility of child objects
-        if (object.pipes) {
-            object.pipes.forEach(pipe => {
-                this.toggleObjectVisibility(pipe, isVisible);
-            });
-        }
-        
-        if (object.panels) {
-            object.panels.forEach(panel => {
-                this.toggleObjectVisibility(panel, isVisible);
-            });
-        }
-        
-        if (object.children) {
-            Object.values(object.children).forEach(child => {
-                this.toggleObjectVisibility(child, isVisible);
-            });
+    toggleObjectVisibility(name, object, isVisible) {
+        if (name === 'Ground #1') {
+            // Toggle ground
+            if (object.mesh) {
+                object.mesh.isVisible = isVisible;
+            }
+        } else if (name === 'Single CUT #1') {
+            // Toggle all pipes and panels in the SingleCUT model
+            if (object.pipes) {
+                object.pipes.forEach(pipe => {
+                    if (pipe.pipeMesh) {
+                        pipe.pipeMesh.isVisible = isVisible;
+                    }
+                    if (pipe.markers) {
+                        pipe.markers.forEach(marker => {
+                            marker.isVisible = isVisible;
+                        });
+                    }
+                });
+            }
+            
+            if (object.panels) {
+                object.panels.forEach(panel => {
+                    if (panel.panelMesh) {
+                        panel.panelMesh.isVisible = isVisible;
+                    }
+                });
+            }
+        } else if (name.startsWith('Pipe #')) {
+            // Toggle individual pipe
+            if (object.pipeMesh) {
+                object.pipeMesh.isVisible = isVisible;
+            }
+            if (object.markers) {
+                object.markers.forEach(marker => {
+                    marker.isVisible = isVisible;
+                });
+            }
+        } else if (name.startsWith('Panel #')) {
+            // Toggle individual panel
+            if (object.panelMesh) {
+                object.panelMesh.isVisible = isVisible;
+            }
         }
         
         // Update the UI to reflect changes
