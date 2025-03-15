@@ -182,7 +182,7 @@ class CHEVisualization {
                 scene, 
                 [this.layerOneRing, this.layerOneStar], 
                 {
-                    isVisible: true,
+                    isVisible: false,
                     modelNames: ["Layer One Ring", "Layer One Star"]
                 }
             );
