@@ -7,6 +7,7 @@ import { createScene } from './core/scene';
 import { GroundModel } from './components/models/GroundModel';
 import { SingleCutModel } from './components/models/SingleCutModel';
 import { LayerOneModel } from './components/models/LayerOneModel';
+import { LayerOneStarModel } from './components/models/LayerOneStarModel';
 import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
@@ -48,19 +49,29 @@ class CHEVisualization {
             this.ground = new GroundModel(scene, 5000);
             this.layerOneRadius = 42;
             this.singleCutRadius = 21;
-            this.layerRotationAngle = 60; // Layer One Ring rotation angle in degrees
+            this.layerRotationAngle = 60; // Layer rotation angle in degrees
             
             // Create Central CUT model
             this.centralCut = new SingleCutModel(scene, new Vector3(0, 0, 0), {
                 radius: this.singleCutRadius
             });
             
-            // Create Layer One Ring model
+            // Create Layer One Ring model (with shared panels)
             this.layerOneRing = new LayerOneModel(scene, new Vector3(0, 0, 0), {
                 outerRadius: this.layerOneRadius,
                 singleCutRadius: this.singleCutRadius,
                 rotationAngle: this.layerRotationAngle
             });
+            
+            // Create Layer One Star model (with separate panels)
+            this.layerOneStar = new LayerOneStarModel(scene, new Vector3(0, 0, 0), {
+                outerRadius: this.layerOneRadius,
+                singleCutRadius: this.singleCutRadius,
+                rotationAngle: this.layerRotationAngle
+            });
+            
+            // Hide the Layer One Star model initially
+            this.layerOneStar.setVisible(false);
             
             // Add shadows to all pipes in the scene
             const allCentralPipes = this.centralCut.pipes;
@@ -73,10 +84,16 @@ class CHEVisualization {
                 shadowGenerator.addShadowCaster(pipe.pipeMesh);
             });
             
+            const allLayerOneStarPipes = this.layerOneStar.getAllPipes();
+            allLayerOneStarPipes.forEach(pipe => {
+                shadowGenerator.addShadowCaster(pipe.pipeMesh);
+            });
+            
             // Combine all pipe meshes for collision detection
             const centralPipeMeshes = allCentralPipes.map(pipe => pipe.pipeMesh);
             const layerOnePipeMeshes = allLayerOnePipes.map(pipe => pipe.pipeMesh);
-            const pipeMeshes = [...centralPipeMeshes, ...layerOnePipeMeshes];
+            const layerOneStarPipeMeshes = allLayerOneStarPipes.map(pipe => pipe.pipeMesh);
+            const pipeMeshes = [...centralPipeMeshes, ...layerOnePipeMeshes, ...layerOneStarPipeMeshes];
             
             // Create camera controller
             this.cameraController = new CameraController(
@@ -91,10 +108,16 @@ class CHEVisualization {
             
             // Create a nested structure for the scene editor
             const layerOneSingleCutsObjects = {};
+            const layerOneStarSingleCutsObjects = {};
             
             // Add each LayerOne SingleCUT model to the scene editor
             this.layerOneRing.singleCuts.forEach((singleCut, index) => {
                 layerOneSingleCutsObjects[`Single CUT #${index + 1}`] = singleCut;
+            });
+            
+            // Add each LayerOneStar SingleCUT model to the scene editor
+            this.layerOneStar.singleCuts.forEach((singleCut, index) => {
+                layerOneStarSingleCutsObjects[`Single CUT #${index + 1}`] = singleCut;
             });
             
             // Organize scene objects for the scene editor
@@ -104,6 +127,10 @@ class CHEVisualization {
                 'Layer One Ring': {
                     model: this.layerOneRing,
                     children: layerOneSingleCutsObjects
+                },
+                'Layer One Star': {
+                    model: this.layerOneStar,
+                    children: layerOneStarSingleCutsObjects
                 },
                 'Camera Controller': {
                     children: {
@@ -124,7 +151,7 @@ class CHEVisualization {
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, sceneObjects);
             
-            // Create the radius controls
+            // Create the radius controls for Layer One Ring
             const radiusControls = new RadiusControls(scene, this.layerOneRing, {
                 position: { x: 10, y: 10 },
                 outerRadiusMin: 30,
@@ -133,7 +160,7 @@ class CHEVisualization {
                 isVisible: false
             });
             
-            // Create the rotation controls
+            // Create the rotation controls for Layer One Ring
             const rotationControls = new LayerRotationControl(
                 scene, 
                 this.layerOneRing, 
@@ -166,6 +193,7 @@ class CHEVisualization {
                 const cameraPosition = this.scene.activeCamera.position;
                 this.centralCut.updateLOD(cameraPosition);
                 this.layerOneRing.updateLOD(cameraPosition);
+                this.layerOneStar.updateLOD(cameraPosition);
                 
                 // Update scene editor if needed
                 if (this.sceneEditor) {

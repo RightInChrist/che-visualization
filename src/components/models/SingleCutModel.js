@@ -21,6 +21,7 @@ export class SingleCutModel extends BaseModel {
             panelColor: new Color3(0.2, 0.6, 0.8),
             radius: 21, // Distance from center to each pipe in hexagonal pattern (changed from 150 to 21)
             debug: false, // Enable/disable debug logging
+            skipPanels: false, // New option to skip creating panels, for models that share panels across SingleCUTs
         };
 
         // Call parent constructor with merged options
@@ -162,23 +163,28 @@ export class SingleCutModel extends BaseModel {
             this.pipes.push(pipe);
         }
         
-        // Create panels connecting pipes
-        for (let i = 0; i < this.options.pipesCount; i++) {
-            const nextIndex = (i + 1) % this.options.pipesCount;
-            
-            this.debugLog(`Creating panel ${i+1} between pipes ${i+1} and ${nextIndex+1}`);
-            
-            // Get the transform for the panel (position, rotation, width)
-            const transform = this.calculatePanelTransform(
-                i,
-                pipePositions[i], 
-                pipePositions[nextIndex]
-            );
-            
-            // Create panel with calculated transform and store the full panel object
-            const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
-            
-            this.panels.push(panel);
+        // Only create panels if not skipping them
+        if (!this.options.skipPanels) {
+            // Create panels connecting pipes
+            for (let i = 0; i < this.options.pipesCount; i++) {
+                const nextIndex = (i + 1) % this.options.pipesCount;
+                
+                this.debugLog(`Creating panel ${i+1} between pipes ${i+1} and ${nextIndex+1}`);
+                
+                // Get the transform for the panel (position, rotation, width)
+                const transform = this.calculatePanelTransform(
+                    i,
+                    pipePositions[i], 
+                    pipePositions[nextIndex]
+                );
+                
+                // Create panel with calculated transform and store the full panel object
+                const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
+                
+                this.panels.push(panel);
+            }
+        } else {
+            this.debugLog('Skipping panel creation as requested by skipPanels option');
         }
         
         this.debugLog('SingleCUT model creation complete');
