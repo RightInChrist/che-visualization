@@ -1,6 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/gui';
-import { AdvancedDynamicTexture, Rectangle, Grid, TextBlock, Slider, Button, Control } from '@babylonjs/gui';
 import { ModelConfigHelper } from './ModelConfigHelper';
 
 /**
@@ -21,9 +20,9 @@ export class RadiusControls {
         
         // Default options
         const defaultOptions = {
-            position: { x: 10, y: 140 }, // Position of the controls container
+            position: { x: 10, y: 350 }, // Position of the controls container
             width: 350,              // Width of the controls container
-            height: 150,             // Height of the controls container
+            height: 200,             // Height of the controls container
             backgroundColor: "#222222", // Background color
             textColor: "#ffffff",    // Text color
             sliderBarColor: "#444444", // Slider bar color
@@ -41,13 +40,6 @@ export class RadiusControls {
         
         // Create the UI for the radius controls
         this.createUI();
-        
-        // Set initial radius lines visibility to match panel visibility
-        this.models.forEach(model => {
-            if (model && typeof model.setRadiusLinesVisible === 'function') {
-                model.setRadiusLinesVisible(this.options.isVisible);
-            }
-        });
         
         console.log("RadiusControls initialized with", this.models.length, "models");
     }
@@ -106,7 +98,7 @@ export class RadiusControls {
     }
     
     /**
-     * Create a section for a model with all its controls recursively
+     * Create a section for a model with all its radius controls recursively
      * @param {Object} config - Model configuration
      * @param {number} modelIndex - Model index
      * @param {number} level - Nesting level (0 for top level)
@@ -138,67 +130,104 @@ export class RadiusControls {
         modelNameHeader.style.margin = '0 0 10px 0';
         modelSection.appendChild(modelNameHeader);
         
-        // Create outer radius control
-        const outerRadiusContainer = this.createSliderRow(
-            "Outer Radius",
-            config.radius.min,
-            config.radius.max,
-            config.radius.default,
-            (value) => this.onOuterRadiusChange(config.model, value)
-        );
-        modelSection.appendChild(outerRadiusContainer);
-        
-        // Create SingleCUT radius control
-        const singleCutRadiusContainer = this.createSliderRow(
-            "SingleCUT Radius",
-            config.singleCutRadius.min,
-            config.singleCutRadius.max,
-            config.singleCutRadius.default,
-            (value) => this.onSingleCutRadiusChange(config.model, value)
-        );
-        modelSection.appendChild(singleCutRadiusContainer);
-        
-        // Create panel distance indicator for this model
-        this.createPanelDistanceIndicator(modelSection, config.model);
+        // Create outer radius control if available
+        if (config.model && typeof config.model.updateRadiusSettings === 'function') {
+            // Get current values or defaults
+            let outerRadius = 42; // Default
+            let singleCutRadius = 21; // Default
+            
+            if (config.model.options) {
+                outerRadius = config.model.options.outerRadius || outerRadius;
+                singleCutRadius = config.model.options.singleCutRadius || singleCutRadius;
+            }
+            
+            // Create outer radius slider
+            const outerRadiusContainer = this.createSliderRow(
+                "Outer Radius",
+                30,
+                100,
+                outerRadius,
+                (value) => this.onOuterRadiusChange(config.model, value)
+            );
+            modelSection.appendChild(outerRadiusContainer);
+            
+            // Create SingleCut radius control
+            const hasSingleCutControl = config.model && (
+                (config.model.constructor.name === 'LayerOneStarModel') ||
+                (config.model.constructor.name === 'LayerOneModel') ||
+                (config.model.children && config.model.children.some(child => 
+                    child.constructor.name === 'SingleCutModel'))
+            );
+            
+            if (hasSingleCutControl) {
+                const singleCutRadiusContainer = this.createSliderRow(
+                    "SingleCUT Radius",
+                    10,
+                    40,
+                    singleCutRadius,
+                    (value) => this.onSingleCutRadiusChange(config.model, value)
+                );
+                
+                // Style the SingleCut radius control differently
+                singleCutRadiusContainer.style.paddingLeft = '10px';
+                singleCutRadiusContainer.style.borderLeft = '3px solid #3399ff';
+                singleCutRadiusContainer.style.backgroundColor = 'rgba(51, 153, 255, 0.1)';
+                
+                modelSection.appendChild(singleCutRadiusContainer);
+                
+                // Create panel distance indicator
+                this.createPanelDistanceIndicator(modelSection, config.model);
+            }
+        }
         
         // Recursively create sections for children if enabled
         if (this.options.recursive && config.children && config.children.length > 0) {
-            const childrenContainer = document.createElement('div');
-            childrenContainer.className = 'children-container';
-            childrenContainer.style.marginTop = '15px';
+            // Only create child sections for non-SingleCutModel children
+            const childrenToShow = config.children.filter(child => 
+                child.name !== 'SingleCutModel'
+            );
             
-            config.children.forEach((childConfig, childIndex) => {
-                const childSection = this.createModelSection(childConfig, childIndex, level + 1);
-                childrenContainer.appendChild(childSection);
-            });
-            
-            modelSection.appendChild(childrenContainer);
+            if (childrenToShow.length > 0) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.className = 'children-container';
+                childrenContainer.style.marginTop = '15px';
+                
+                childrenToShow.forEach((childConfig, childIndex) => {
+                    const childSection = this.createModelSection(childConfig, childIndex, level + 1);
+                    childrenContainer.appendChild(childSection);
+                });
+                
+                modelSection.appendChild(childrenContainer);
+            }
         }
         
         return modelSection;
     }
     
     /**
-     * Create a row with a label, slider, and value display
-     * @param {string} label - The label text
+     * Create a slider row with label, value display, and precise input
+     * @param {string} label - Label for the slider
      * @param {number} min - Minimum value
      * @param {number} max - Maximum value
-     * @param {number} initial - Initial value
-     * @param {Function} onChange - Callback when value changes
-     * @returns {HTMLElement} - The container with the row controls
+     * @param {number} value - Initial value
+     * @param {Function} onChange - Callback for value changes
+     * @returns {HTMLElement} - The slider row container
      */
-    createSliderRow(label, min, max, initial, onChange) {
-        // Create container
+    createSliderRow(label, min, max, value, onChange) {
         const container = document.createElement('div');
         container.style.marginBottom = '15px';
+        container.style.padding = '8px';
+        container.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+        container.style.borderRadius = '4px';
         
         // Create label
         const labelElement = document.createElement('div');
         labelElement.textContent = label;
-        labelElement.style.marginBottom = '5px';
+        labelElement.style.marginBottom = '8px';
+        labelElement.style.fontWeight = 'bold';
         container.appendChild(labelElement);
         
-        // Create slider row (slider and value display)
+        // Create slider row
         const sliderRow = document.createElement('div');
         sliderRow.style.display = 'flex';
         sliderRow.style.alignItems = 'center';
@@ -209,78 +238,70 @@ export class RadiusControls {
         slider.type = 'range';
         slider.min = min;
         slider.max = max;
-        slider.value = initial;
+        slider.value = Math.round(value);
         slider.style.flex = '1';
+        slider.style.height = '20px';
+        slider.style.accentColor = '#00aaff';
         
         // Create value display
         const valueDisplay = document.createElement('span');
-        valueDisplay.textContent = Math.round(initial);
-        valueDisplay.style.minWidth = '30px';
+        valueDisplay.textContent = Math.round(value);
+        valueDisplay.style.minWidth = '50px';
         valueDisplay.style.textAlign = 'right';
+        valueDisplay.style.fontWeight = 'bold';
+        valueDisplay.style.fontSize = '14px';
         
         // Create precise input field
         const preciseInput = document.createElement('input');
         preciseInput.type = 'number';
         preciseInput.min = min;
         preciseInput.max = max;
-        preciseInput.step = '0.01'; // Allow hundredths place
-        preciseInput.value = initial;
-        preciseInput.style.width = '80px';
-        preciseInput.style.padding = '2px 5px';
+        preciseInput.step = '1';
+        preciseInput.value = value;
+        preciseInput.style.width = '60px';
+        preciseInput.style.padding = '3px 5px';
+        preciseInput.style.marginLeft = '5px';
         preciseInput.style.borderRadius = '3px';
         preciseInput.style.border = '1px solid #555';
         preciseInput.style.backgroundColor = '#333';
         preciseInput.style.color = '#fff';
         
         // Add event listener for slider
-        slider.addEventListener('input', (event) => {
-            const value = parseInt(event.target.value);
-            valueDisplay.textContent = value;
-            preciseInput.value = value; // Update the precise input when slider changes
-            onChange(value);
+        slider.addEventListener('input', () => {
+            const newValue = parseInt(slider.value);
+            valueDisplay.textContent = newValue;
+            preciseInput.value = newValue;
+            if (onChange) {
+                onChange(newValue);
+            }
         });
         
         // Add event listener for precise input
-        preciseInput.addEventListener('change', (event) => {
-            let value = parseFloat(event.target.value);
+        preciseInput.addEventListener('change', () => {
+            let newValue = parseInt(preciseInput.value);
             
             // Enforce min/max bounds
-            if (value < min) value = min;
-            if (value > max) value = max;
+            if (newValue < min) newValue = min;
+            if (newValue > max) newValue = max;
             
             // Update the precise input to the bounded value
-            preciseInput.value = value;
+            preciseInput.value = newValue;
             
             // Update slider and value display (slider can only handle integers)
-            slider.value = Math.round(value);
-            valueDisplay.textContent = Math.round(value);
+            slider.value = Math.round(newValue);
+            valueDisplay.textContent = Math.round(newValue);
             
             // Call the callback with the precise value
-            onChange(value);
+            if (onChange) {
+                onChange(newValue);
+            }
         });
         
         // Add elements to the row
         sliderRow.appendChild(slider);
         sliderRow.appendChild(valueDisplay);
-        
-        // Create a new row for the precise input
-        const preciseRow = document.createElement('div');
-        preciseRow.style.display = 'flex';
-        preciseRow.style.alignItems = 'center';
-        preciseRow.style.justifyContent = 'flex-end';
-        preciseRow.style.marginTop = '5px';
-        
-        const preciseLabel = document.createElement('span');
-        preciseLabel.textContent = 'Precise value:';
-        preciseLabel.style.marginRight = '10px';
-        preciseLabel.style.fontSize = '12px';
-        
-        preciseRow.appendChild(preciseLabel);
-        preciseRow.appendChild(preciseInput);
-        
-        // Add all rows to the container
+        sliderRow.appendChild(preciseInput);
         container.appendChild(sliderRow);
-        container.appendChild(preciseRow);
         
         return container;
     }
@@ -352,6 +373,8 @@ export class RadiusControls {
     onOuterRadiusChange(model, value) {
         if (!model) return;
         
+        console.log(`Outer radius change: model=${model.constructor.name}, value=${value}`);
+        
         // Get current singleCutRadius if available
         let singleCutRadius = 21; // Default
         if (model.options && model.options.singleCutRadius !== undefined) {
@@ -375,6 +398,8 @@ export class RadiusControls {
     onSingleCutRadiusChange(model, value) {
         if (!model) return;
         
+        console.log(`SingleCut radius change: model=${model.constructor.name}, value=${value}`);
+        
         // Get current outerRadius if available
         let outerRadius = 42; // Default
         if (model.options && model.options.outerRadius !== undefined) {
@@ -395,26 +420,38 @@ export class RadiusControls {
      */
     createHTMLToggleButton() {
         try {
-            // Create button container if it doesn't exist
-            let buttonContainer = document.querySelector('.control-buttons-container');
+            console.log("Creating radius controls toggle button");
+            
+            // First look for the controlButtons container (newer UI layout)
+            let buttonContainer = document.getElementById('controlButtons');
+            
+            // If not found, look for the legacy container
+            if (!buttonContainer) {
+                buttonContainer = document.querySelector('.control-buttons-container');
+            }
+            
+            // If still not found, create a new container
             if (!buttonContainer) {
                 buttonContainer = document.createElement('div');
+                buttonContainer.id = 'controlButtons';
                 buttonContainer.className = 'control-buttons-container';
                 buttonContainer.style.position = 'absolute';
-                buttonContainer.style.bottom = '20px';
+                buttonContainer.style.top = '10px';
                 buttonContainer.style.right = '20px';
                 buttonContainer.style.display = 'flex';
-                buttonContainer.style.flexDirection = 'column';
+                buttonContainer.style.flexDirection = 'row';
                 buttonContainer.style.gap = '10px';
                 buttonContainer.style.zIndex = '100';
                 document.body.appendChild(buttonContainer);
+                console.log("Created new control buttons container");
             }
             
             // Create button
             const button = document.createElement('button');
+            button.id = 'radiusToggle';
             button.textContent = 'Radius';
             button.className = 'control-button';
-            button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
+            button.style.backgroundColor = this.options.isVisible ? '#4CAF50' : '#444444';
             button.style.color = '#fff';
             button.style.border = 'none';
             button.style.padding = '8px 16px';
@@ -424,19 +461,24 @@ export class RadiusControls {
             button.style.width = '120px';
             button.style.textAlign = 'center';
             button.style.transition = 'background-color 0.3s';
+            button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
             
             button.addEventListener('mouseover', () => {
-                button.style.backgroundColor = this.options.isVisible ? '#666' : '#444';
+                button.style.backgroundColor = this.options.isVisible ? '#4CAF50' : '#666666';
             });
             
             button.addEventListener('mouseout', () => {
-                button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
+                button.style.backgroundColor = this.options.isVisible ? '#4CAF50' : '#444444';
             });
             
-            button.addEventListener('click', () => this.toggleVisible());
+            button.addEventListener('click', () => {
+                console.log("Radius toggle button clicked");
+                this.toggleVisible();
+            });
             
             // Add the button to the container
             buttonContainer.appendChild(button);
+            console.log("Added radius toggle button to container");
             
             // Store button reference
             this.toggleButton = button;
@@ -455,11 +497,7 @@ export class RadiusControls {
         
         // Update button active state
         if (this.toggleButton) {
-            if (isVisible) {
-                this.toggleButton.classList.add('active');
-            } else {
-                this.toggleButton.classList.remove('active');
-            }
+            this.toggleButton.style.backgroundColor = isVisible ? '#4CAF50' : '#444444';
         }
         
         // Toggle radius lines visibility in the models
@@ -474,16 +512,20 @@ export class RadiusControls {
      * Toggle visibility of the radius controls panel
      */
     toggleVisible() {
-        const newVisibility = !this.options.isVisible;
+        console.log("Toggling radius controls visibility");
+        
+        const newVisibility = !this.isVisible();
+        console.log(`Setting radius controls visibility to: ${newVisibility}`);
         
         if (this.panel) {
             this.panel.style.display = newVisibility ? 'block' : 'none';
         }
         
         if (this.toggleButton) {
-            this.toggleButton.style.backgroundColor = newVisibility ? '#555' : '#333';
+            this.toggleButton.style.backgroundColor = newVisibility ? '#4CAF50' : '#444444';
         }
         
+        // Store the visibility state
         this.options.isVisible = newVisibility;
         
         // Toggle radius lines visibility in the models
@@ -492,6 +534,8 @@ export class RadiusControls {
                 model.setRadiusLinesVisible(newVisibility);
             }
         });
+        
+        console.log(`Radius controls visibility set to: ${this.isVisible()}`);
     }
     
     /**
