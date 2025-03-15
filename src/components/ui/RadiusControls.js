@@ -158,17 +158,69 @@ export class RadiusControls {
         valueDisplay.style.minWidth = '30px';
         valueDisplay.style.textAlign = 'right';
         
-        // Add event listener
+        // Create precise input field
+        const preciseInput = document.createElement('input');
+        preciseInput.type = 'number';
+        preciseInput.min = min;
+        preciseInput.max = max;
+        preciseInput.step = '0.01'; // Allow hundredths place
+        preciseInput.value = initial;
+        preciseInput.style.width = '80px';
+        preciseInput.style.padding = '2px 5px';
+        preciseInput.style.borderRadius = '3px';
+        preciseInput.style.border = '1px solid #555';
+        preciseInput.style.backgroundColor = '#333';
+        preciseInput.style.color = '#fff';
+        
+        // Add event listener for slider
         slider.addEventListener('input', (event) => {
             const value = parseInt(event.target.value);
             valueDisplay.textContent = value;
+            preciseInput.value = value; // Update the precise input when slider changes
+            onChange(value);
+        });
+        
+        // Add event listener for precise input
+        preciseInput.addEventListener('change', (event) => {
+            let value = parseFloat(event.target.value);
+            
+            // Enforce min/max bounds
+            if (value < min) value = min;
+            if (value > max) value = max;
+            
+            // Update the precise input to the bounded value
+            preciseInput.value = value;
+            
+            // Update slider and value display (slider can only handle integers)
+            slider.value = Math.round(value);
+            valueDisplay.textContent = Math.round(value);
+            
+            // Call the callback with the precise value
             onChange(value);
         });
         
         // Add elements to the row
         sliderRow.appendChild(slider);
         sliderRow.appendChild(valueDisplay);
+        
+        // Create a new row for the precise input
+        const preciseRow = document.createElement('div');
+        preciseRow.style.display = 'flex';
+        preciseRow.style.alignItems = 'center';
+        preciseRow.style.justifyContent = 'flex-end';
+        preciseRow.style.marginTop = '5px';
+        
+        const preciseLabel = document.createElement('span');
+        preciseLabel.textContent = 'Precise value:';
+        preciseLabel.style.marginRight = '10px';
+        preciseLabel.style.fontSize = '12px';
+        
+        preciseRow.appendChild(preciseLabel);
+        preciseRow.appendChild(preciseInput);
+        
+        // Add all rows to the container
         container.appendChild(sliderRow);
+        container.appendChild(preciseRow);
         
         return container;
     }
@@ -219,41 +271,37 @@ export class RadiusControls {
         // Calculate actual panel distance (subtract diameter of pipes)
         const panelDistance = pipeCentersDistance - (2 * pipeRadius);
         
-        // Display both values
+        // Display both values with 2 decimal places
         this.panelDistanceDisplay.innerHTML = 
-            `<div>Between pipe centers: ${pipeCentersDistance} units</div>
-             <div>Between panel edges: ${panelDistance} units</div>`;
+            `<div>Between pipe centers: ${pipeCentersDistance.toFixed(2)} units</div>
+             <div>Between panel edges: ${panelDistance.toFixed(2)} units</div>`;
     }
     
     /**
-     * Handle changes to the outer radius slider
-     * @param {number} value - The new value
+     * Handle outer radius change
+     * @param {number} value - New outer radius value
      */
     onOuterRadiusChange(value) {
-        // Round to integer
-        const newValue = Math.round(value);
-        console.log(`Outer radius changed to ${newValue}`);
-        this.currentOuterRadius = newValue;
+        // Store the current value
+        this.currentOuterRadius = parseFloat(value);
         
         // Update the model with new radius values
-        this.sevenCutsModel.updateRadiusSettings(newValue, this.currentSingleCutRadius);
+        this.sevenCutsModel.updateRadiusSettings(this.currentOuterRadius, this.currentSingleCutRadius);
     }
     
     /**
-     * Handle changes to the SingleCUT radius slider
-     * @param {number} value - The new value
+     * Handle SingleCUT radius change
+     * @param {number} value - New SingleCUT radius value
      */
     onSingleCutRadiusChange(value) {
-        // Round to integer
-        const newValue = Math.round(value);
-        console.log(`SingleCUT radius changed to ${newValue}`);
-        this.currentSingleCutRadius = newValue;
+        // Store the current value
+        this.currentSingleCutRadius = parseFloat(value);
         
         // Update the panel distance display
         this.updatePanelDistanceDisplay();
         
         // Update the model with new radius values
-        this.sevenCutsModel.updateRadiusSettings(this.currentOuterRadius, newValue);
+        this.sevenCutsModel.updateRadiusSettings(this.currentOuterRadius, this.currentSingleCutRadius);
     }
     
     /**
