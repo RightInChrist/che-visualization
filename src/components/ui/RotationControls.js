@@ -112,6 +112,9 @@ export class RotationControls {
         modelSection.dataset.modelIndex = modelIndex;
         modelSection.dataset.level = level;
         
+        // Log the configuration for debugging
+        console.log(`Creating rotation controls for ${config.name}:`, config);
+        
         // Apply indentation based on level
         if (level > 0) {
             modelSection.style.paddingLeft = (this.options.defaultIndentation * level) + 'px';
@@ -131,7 +134,7 @@ export class RotationControls {
         modelNameHeader.style.margin = '0 0 10px 0';
         modelSection.appendChild(modelNameHeader);
         
-        // Create X rotation control
+        // Create X rotation control if available
         if (config.rotation.x !== undefined) {
             const xRotationContainer = this.createSliderRow(
                 "X Rotation",
@@ -143,19 +146,31 @@ export class RotationControls {
             modelSection.appendChild(xRotationContainer);
         }
         
-        // Create Y rotation control
+        // Create Y rotation control if available
         if (config.rotation.y !== undefined) {
+            console.log(`Creating Y rotation slider for ${config.name} with value ${config.rotation.y.default}`);
             const yRotationContainer = this.createSliderRow(
                 "Y Rotation",
-                0,
-                360,
+                config.rotation.y.min,
+                config.rotation.y.max,
                 config.rotation.y.default,
+                (value) => this.onRotationChange(config.model, 'y', value)
+            );
+            modelSection.appendChild(yRotationContainer);
+        } else if (config.rotation.default !== undefined) {
+            // Fallback for models that only have default rotation defined
+            console.log(`Creating default Y rotation slider for ${config.name} with value ${config.rotation.default}`);
+            const yRotationContainer = this.createSliderRow(
+                "Y Rotation",
+                config.rotation.min,
+                config.rotation.max,
+                config.rotation.default,
                 (value) => this.onRotationChange(config.model, 'y', value)
             );
             modelSection.appendChild(yRotationContainer);
         }
         
-        // Create Z rotation control
+        // Create Z rotation control if available
         if (config.rotation.z !== undefined) {
             const zRotationContainer = this.createSliderRow(
                 "Z Rotation",
@@ -194,19 +209,26 @@ export class RotationControls {
      * @returns {HTMLElement} - The slider row container
      */
     createSliderRow(label, min, max, value, onValueChange) {
+        console.log(`Creating slider for ${label} with min=${min}, max=${max}, value=${value}`);
+        
         const container = document.createElement('div');
-        container.style.marginBottom = '10px';
+        container.style.marginBottom = '15px';
+        container.style.padding = '8px';
+        container.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
+        container.style.borderRadius = '4px';
         
         // Create label
         const labelElement = document.createElement('div');
         labelElement.textContent = label;
-        labelElement.style.marginBottom = '5px';
+        labelElement.style.marginBottom = '8px';
+        labelElement.style.fontWeight = 'bold';
         container.appendChild(labelElement);
         
         // Create slider row
         const sliderRow = document.createElement('div');
         sliderRow.style.display = 'flex';
         sliderRow.style.alignItems = 'center';
+        sliderRow.style.gap = '10px';
         
         // Create slider
         const slider = document.createElement('input');
@@ -215,25 +237,64 @@ export class RotationControls {
         slider.max = max;
         slider.value = value;
         slider.style.flex = '1';
-        slider.style.marginRight = '10px';
+        slider.style.height = '20px';
+        slider.style.accentColor = '#00aaff';
         
         // Create value display
         const valueDisplay = document.createElement('span');
-        valueDisplay.textContent = value;
-        valueDisplay.style.minWidth = '30px';
+        valueDisplay.textContent = `${value}°`;
+        valueDisplay.style.minWidth = '50px';
         valueDisplay.style.textAlign = 'right';
+        valueDisplay.style.fontWeight = 'bold';
+        valueDisplay.style.fontSize = '14px';
         
-        // Add event listener
+        // Create precise input field
+        const preciseInput = document.createElement('input');
+        preciseInput.type = 'number';
+        preciseInput.min = min;
+        preciseInput.max = max;
+        preciseInput.step = '1';
+        preciseInput.value = value;
+        preciseInput.style.width = '60px';
+        preciseInput.style.padding = '3px 5px';
+        preciseInput.style.marginLeft = '5px';
+        preciseInput.style.borderRadius = '3px';
+        preciseInput.style.border = '1px solid #555';
+        preciseInput.style.backgroundColor = '#333';
+        preciseInput.style.color = '#fff';
+        
+        // Add event listener for slider
         slider.addEventListener('input', () => {
-            const newValue = parseFloat(slider.value);
-            valueDisplay.textContent = newValue;
+            const newValue = parseInt(slider.value);
+            valueDisplay.textContent = `${newValue}°`;
+            preciseInput.value = newValue;
             if (onValueChange) {
                 onValueChange(newValue);
             }
         });
         
+        // Add event listener for precise input
+        preciseInput.addEventListener('change', () => {
+            let newValue = parseInt(preciseInput.value);
+            
+            // Enforce min/max bounds
+            if (newValue < min) newValue = min;
+            if (newValue > max) newValue = max;
+            
+            // Update values
+            preciseInput.value = newValue;
+            slider.value = newValue;
+            valueDisplay.textContent = `${newValue}°`;
+            
+            if (onValueChange) {
+                onValueChange(newValue);
+            }
+        });
+        
+        // Add elements to the row
         sliderRow.appendChild(slider);
         sliderRow.appendChild(valueDisplay);
+        sliderRow.appendChild(preciseInput);
         container.appendChild(sliderRow);
         
         return container;
@@ -244,26 +305,38 @@ export class RotationControls {
      */
     createHTMLToggleButton() {
         try {
-            // Create button container if it doesn't exist
-            let buttonContainer = document.querySelector('.control-buttons-container');
+            console.log("Creating rotation controls toggle button");
+            
+            // First look for the controlButtons container (newer UI layout)
+            let buttonContainer = document.getElementById('controlButtons');
+            
+            // If not found, look for the legacy container
+            if (!buttonContainer) {
+                buttonContainer = document.querySelector('.control-buttons-container');
+            }
+            
+            // If still not found, create a new container
             if (!buttonContainer) {
                 buttonContainer = document.createElement('div');
+                buttonContainer.id = 'controlButtons';
                 buttonContainer.className = 'control-buttons-container';
                 buttonContainer.style.position = 'absolute';
-                buttonContainer.style.bottom = '20px';
+                buttonContainer.style.top = '10px';
                 buttonContainer.style.right = '20px';
                 buttonContainer.style.display = 'flex';
-                buttonContainer.style.flexDirection = 'column';
+                buttonContainer.style.flexDirection = 'row';
                 buttonContainer.style.gap = '10px';
                 buttonContainer.style.zIndex = '100';
                 document.body.appendChild(buttonContainer);
+                console.log("Created new control buttons container");
             }
             
             // Create button
             const button = document.createElement('button');
+            button.id = 'rotationToggle';
             button.textContent = 'Rotation';
             button.className = 'control-button';
-            button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
+            button.style.backgroundColor = this.options.isVisible ? '#FF9800' : '#444444';
             button.style.color = '#fff';
             button.style.border = 'none';
             button.style.padding = '8px 16px';
@@ -273,19 +346,24 @@ export class RotationControls {
             button.style.width = '120px';
             button.style.textAlign = 'center';
             button.style.transition = 'background-color 0.3s';
+            button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
             
             button.addEventListener('mouseover', () => {
-                button.style.backgroundColor = this.options.isVisible ? '#666' : '#444';
+                button.style.backgroundColor = this.options.isVisible ? '#FF9800' : '#666666';
             });
             
             button.addEventListener('mouseout', () => {
-                button.style.backgroundColor = this.options.isVisible ? '#555' : '#333';
+                button.style.backgroundColor = this.options.isVisible ? '#FF9800' : '#444444';
             });
             
-            button.addEventListener('click', () => this.toggleVisible());
+            button.addEventListener('click', () => {
+                console.log("Rotation toggle button clicked");
+                this.toggleVisible();
+            });
             
             // Add the button to the container
             buttonContainer.appendChild(button);
+            console.log("Added rotation toggle button to container");
             
             // Store button reference
             this.toggleButton = button;
@@ -298,15 +376,23 @@ export class RotationControls {
      * Toggle visibility of the rotation controls panel
      */
     toggleVisible() {
+        console.log("Toggling rotation controls visibility");
+        
         const newVisibility = !this.isVisible();
+        console.log(`Setting rotation controls visibility to: ${newVisibility}`);
         
         if (this.panel) {
             this.panel.style.display = newVisibility ? 'block' : 'none';
         }
         
         if (this.toggleButton) {
-            this.toggleButton.style.backgroundColor = newVisibility ? '#555' : '#333';
+            this.toggleButton.style.backgroundColor = newVisibility ? '#FF9800' : '#444444';
         }
+        
+        // Store the visibility state
+        this.options.isVisible = newVisibility;
+        
+        console.log(`Rotation controls visibility set to: ${this.isVisible()}`);
     }
     
     /**

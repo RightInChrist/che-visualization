@@ -11,6 +11,14 @@ export class ModelConfigHelper {
     static getModelConfig(model) {
         if (!model) return null;
         
+        // Check if this is a model with simple Y-axis rotation (like LayerOneModel)
+        const isSimpleRotationModel = (
+            typeof model.updateRotation === 'function' &&
+            typeof model.getDefaultRotation === 'function' &&
+            typeof model.getMinRotation === 'function' &&
+            typeof model.getMaxRotation === 'function'
+        );
+        
         // Base configuration for the model
         const config = {
             name: model.constructor ? model.constructor.name : 'Unknown Model',
@@ -26,6 +34,14 @@ export class ModelConfigHelper {
                 max: this.getDefaultValue(model, 'getMaxSingleCutRadius', 30)
             },
             rotation: {
+                // For models with simple rotation (like LayerOneModel), only populate Y rotation
+                y: isSimpleRotationModel ? {
+                    default: this.getDefaultValue(model, 'getDefaultRotation', 0),
+                    min: this.getDefaultValue(model, 'getMinRotation', 0),
+                    max: this.getDefaultValue(model, 'getMaxRotation', 360)
+                } : undefined,
+                
+                // For backward compatibility, also store as rotation.default
                 default: this.getDefaultValue(model, 'getDefaultRotation', 0),
                 min: this.getDefaultValue(model, 'getMinRotation', 0),
                 max: this.getDefaultValue(model, 'getMaxRotation', 360)

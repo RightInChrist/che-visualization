@@ -181,10 +181,13 @@ class CHEVisualization {
                 scene, 
                 [this.layerOneRing, this.layerOneStar], 
                 {
-                    isVisible: false,
+                    isVisible: true,
                     modelNames: ["Layer One Ring", "Layer One Star"]
                 }
             );
+            
+            // Store the controls in class properties for later access
+            this.rotationControls = rotationControls;
             
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
