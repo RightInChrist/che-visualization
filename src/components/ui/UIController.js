@@ -48,8 +48,15 @@ export class UIController {
             this.cameraController.showCollisionRays = this.showDebug;
         }
         
-        // Update button text
-        this.debugToggle.textContent = this.showDebug ? 'Hide Debug Info' : 'Show Debug Info';
+        // Update button tooltip instead of changing button text
+        this.debugToggle.setAttribute('data-tooltip', this.showDebug ? 'Hide Debug Info' : 'Show Debug Info');
+        
+        // Add/remove active class to indicate state
+        if (this.showDebug) {
+            this.debugToggle.classList.add('active');
+        } else {
+            this.debugToggle.classList.remove('active');
+        }
         
         // Update camera info visibility
         this.cameraInfo.style.display = this.showDebug ? 'block' : 'none';

@@ -24,7 +24,7 @@ export class RadiusControls {
             singleCutRadiusMin: 50,  // Minimum radius for SingleCUT internal structure
             singleCutRadiusMax: 200, // Maximum radius for SingleCUT internal structure
             singleCutRadiusDefault: 150, // Default radius for SingleCUT internal structure
-            position: { x: 10, y: 10 }, // Position of the controls container
+            position: { x: 10, y: 140 }, // Position of the controls container, moved down to avoid overlap
             width: 350,              // Width of the controls container
             height: 150,             // Height of the controls container
             backgroundColor: "#222222", // Background color
@@ -32,7 +32,7 @@ export class RadiusControls {
             sliderBarColor: "#444444", // Slider bar color
             sliderThumbColor: "#00aaff", // Slider thumb color
             special2RadiousDefault: 200, // Default radius for SingleCUT #2
-            isVisible: true          // Whether the controls are initially visible
+            isVisible: false          // Initially hidden to avoid clutter
         };
         
         this.options = { ...defaultOptions, ...options };
@@ -271,6 +271,14 @@ export class RadiusControls {
         // Add click event
         button.addEventListener('click', () => {
             this.panel.isVisible = !this.panel.isVisible;
+            
+            // Update button active state
+            if (this.panel.isVisible) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+            
             console.log("Panel visibility toggled:", this.panel.isVisible);
         });
         
