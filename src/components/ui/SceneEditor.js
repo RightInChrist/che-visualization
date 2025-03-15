@@ -272,6 +272,11 @@ export class SceneEditor {
                 const elementIndex = parseInt(elementName.replace(/^(Pipe|Panel) #/, '')) - 1;
                 const elementType = elementName.startsWith('Pipe') ? 'pipe' : 'panel';
                 
+                // Special case: SingleCUT #1 is the center model and should never have permanently hidden elements
+                if (modelIndex === 1) {
+                    return false;
+                }
+                
                 // Get the Seven CUTs model
                 const sevenCutsModel = this.sceneObjects['Seven CUTs #1'];
                 if (sevenCutsModel && sevenCutsModel.model && 
