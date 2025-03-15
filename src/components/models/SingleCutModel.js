@@ -22,6 +22,7 @@ export class SingleCutModel extends BaseModel {
             radius: 21, // Distance from center to each pipe in hexagonal pattern (changed from 150 to 21)
             debug: false, // Enable/disable debug logging
             skipPanels: false, // New option to skip creating panels, for models that share panels across SingleCUTs
+            rotationAngle: 0, // Default rotation angle in degrees
         };
 
         // Call parent constructor with merged options
@@ -29,6 +30,11 @@ export class SingleCutModel extends BaseModel {
         
         // Create the models
         this.createModels();
+        
+        // Apply initial rotation if specified
+        if (this.options.rotationAngle !== 0) {
+            this.updateRotation(this.options.rotationAngle);
+        }
     }
     
     /**
@@ -229,5 +235,22 @@ export class SingleCutModel extends BaseModel {
         this.pipes.forEach(pipe => pipe.dispose());
         this.panels.forEach(panel => panel.dispose());
         super.dispose();
+    }
+    
+    /**
+     * Update rotation of this SingleCUT model
+     * @param {number} rotationAngleDegrees - Rotation angle in degrees
+     */
+    updateRotation(rotationAngleDegrees) {
+        // Convert to radians
+        const rotationAngle = (rotationAngleDegrees * Math.PI) / 180;
+        
+        // Update root node rotation around Y axis
+        this.rootNode.rotation.y = rotationAngle;
+        
+        // Store the current angle
+        this.options.rotationAngle = rotationAngleDegrees;
+        
+        this.debugLog(`Updated SingleCUT rotation to ${rotationAngleDegrees} degrees`);
     }
 } 
