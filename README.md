@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 3D Visualization App
 
-## Getting Started
+A 3D visualization tool for creating and composing 3D models. Built with Next.js, React Three Fiber, and Three.js.
 
-First, run the development server:
+## Development
 
 ```bash
+# Start the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Production Build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Build the static site
+npm run build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Start a local server to view the built site
+npm start
+```
 
-## Learn More
+## Features
 
-To learn more about Next.js, take a look at the following resources:
+- 3D model composition system
+- Multiple camera controllers (orbit, first-person, flight)
+- Click-to-interact system
+- Model visibility toggling
+- Static site deployment
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Interaction
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Click on the 3D canvas to interact
+2. Press ESC to exit interaction mode
+3. Use number keys to switch camera modes:
+   - 1: Orbit mode
+   - 2: First Person Walking mode
+   - 3: Flight mode

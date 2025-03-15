@@ -4,11 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "export": "DISABLE_ESLINT_PLUGIN=true next build",
-    "lint": "next lint",
-    "serve": "npx serve out"
+    "build": "DISABLE_ESLINT_PLUGIN=true next build",
+    "start": "npx serve out"
   },
   "dependencies": {
     "@react-three/drei": "^10.0.4",
