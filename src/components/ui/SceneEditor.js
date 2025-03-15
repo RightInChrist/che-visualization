@@ -169,15 +169,18 @@ export class SceneEditor {
             isPermanentlyHidden: isPermanentlyHidden
         };
         
-        // Check if this is a toggleable object
-        if (name === 'Ground #1' || 
-            name === 'Layer One Ring' || 
-            name === 'Central CUT' ||
-            name.startsWith('Single CUT #') ||
-            name.includes('Pipe #') || 
-            name.includes('Panel #')) {
-            
-            // For permanently hidden elements, disable checkbox and mark it
+        // Check if this is a toggleable object by checking its properties
+        // Ground objects, models with pipes/panels, pipes, and panels are toggleable
+        const isModel = object && (object.pipes || object.panels || 
+                                   (object.model && (object.model.singleCuts || object.model.pipes || object.model.panels)) ||
+                                   (object.constructor && object.constructor.name && 
+                                    (object.constructor.name.includes('Model') || object.constructor.name.includes('Ground'))));
+        
+        const isPipe = object && object.pipeMesh;
+        const isPanel = object && object.panelMesh;
+        const isToggable = isModel || isPipe || isPanel || name.includes('Pipe #') || name.includes('Panel #');
+        
+        if (isToggable) {
             if (isPermanentlyHidden) {
                 toggleCheckbox.disabled = true;
                 toggleCheckbox.checked = false;
@@ -196,8 +199,14 @@ export class SceneEditor {
                     // Toggle the object visibility
                     this.toggleObjectVisibility(objectPath, object, isChecked);
                     
-                    // If this is a parent object, update all child checkboxes
-                    if (name === 'Layer One Ring' || name === 'Central CUT' || name.startsWith('Single CUT #')) {
+                    // If this is a parent object with children, update all child checkboxes
+                    const hasChildModels = object && (
+                        (object.model && object.model.singleCuts) || // For composite models with child SingleCUTs
+                        (object.pipes || object.panels) || // For single models with pipes/panels
+                        (object.childModels && object.childModels.length > 0) // For any composite model
+                    );
+                    
+                    if (hasChildModels) {
                         this.updateNestedCheckboxes(objectPath, isChecked);
                     }
                 });
@@ -224,12 +233,15 @@ export class SceneEditor {
             childList.style.paddingLeft = '20px';
             childList.style.listStyle = 'none';
             
-            // Special handling for specific model types
-            if (name === 'Layer One Ring') {
-                this.addLayerOneRingChildren(childList, object);
-            } else if (name.startsWith('Single CUT #')) {
-                this.addSingleCutChildren(childList, object, name);
+            // Determine the appropriate way to add children based on object properties
+            if (object.model && object.model.singleCuts && object.model.singleCuts.length > 0) {
+                // For composite models with SingleCUTs (like LayerOneRing)
+                this.addCompositeModelChildren(childList, object, name);
+            } else if (object.pipes || object.panels) {
+                // For SingleCUT models with pipes and panels
+                this.addModelChildren(childList, object, name);
             } else if (object.children) {
+                // For generic objects with children
                 this.addChildrenObjects(childList, object.children);
             }
             
@@ -251,7 +263,7 @@ export class SceneEditor {
             return true;
         }
         
-        // Check if this is a pipe or panel in a Layer One Ring model
+        // Check if this is a pipe or panel in a composite model
         if (path.includes('/Pipe #') || path.includes('/Panel #')) {
             // Parse the path to extract model index, type and element index
             const parts = path.split('/');
@@ -264,11 +276,11 @@ export class SceneEditor {
                 const elementIndex = parseInt(elementName.replace(/^(Pipe|Panel) #/, '')) - 1;
                 const elementType = elementName.startsWith('Pipe') ? 'pipe' : 'panel';
                 
-                // Get the Layer One Ring model
-                const layerOneRing = this.sceneObjects['Layer One Ring'];
-                if (layerOneRing && layerOneRing.model && 
-                    typeof layerOneRing.model.isElementPermanentlyHidden === 'function') {
-                    return layerOneRing.model.isElementPermanentlyHidden(modelIndex, elementType, elementIndex);
+                // For any parent that contains singleCuts array, check if element is permanently hidden
+                const parent = path.includes('/') ? this.findParentObject(path) : null;
+                
+                if (parent && parent.model && typeof parent.model.isElementPermanentlyHidden === 'function') {
+                    return parent.model.isElementPermanentlyHidden(modelIndex, elementType, elementIndex);
                 }
             }
         }
@@ -277,46 +289,59 @@ export class SceneEditor {
     }
     
     /**
-     * Add children for the SingleCUT model
-     * @param {HTMLElement} parentElement - Parent element to add to
-     * @param {Object} cutModel - The SingleCUT model
-     * @param {string} parentName - Name of the parent SingleCUT
+     * Find the parent object for a given path
+     * @param {string} path - Path to find parent for
+     * @returns {Object} - The parent object or null
      */
-    addSingleCutChildren(parentElement, cutModel, parentName) {
-        const parentIndex = parentName ? parentName.replace('Single CUT #', '') : '';
+    findParentObject(path) {
+        if (!path.includes('/')) return null;
         
+        const parentPath = path.substring(0, path.lastIndexOf('/'));
+        return this.sceneObjects[parentPath] || 
+               Object.values(this.sceneObjects).find(obj => 
+                  obj.model && obj.model.singleCuts && obj.model.singleCuts.length > 0);
+    }
+    
+    /**
+     * Add children for any model with pipes and panels
+     * @param {HTMLElement} parentElement - Parent element to add to
+     * @param {Object} model - The model with pipes and panels
+     * @param {string} parentName - Name of the parent model
+     */
+    addModelChildren(parentElement, model, parentName) {
         // Add all pipes
-        if (cutModel.pipes && cutModel.pipes.length > 0) {
-            cutModel.pipes.forEach((pipe, index) => {
+        if (model.pipes && model.pipes.length > 0) {
+            model.pipes.forEach((pipe, index) => {
                 // Use qualified name that includes parent reference
                 const pipeName = parentName ? `${parentName}/Pipe #${index + 1}` : `Pipe #${index + 1}`;
-                const pipeItem = this.createObjectListItem(pipeName, pipe, cutModel);
+                const pipeItem = this.createObjectListItem(pipeName, pipe, model);
                 parentElement.appendChild(pipeItem);
             });
         }
         
         // Add panels
-        if (cutModel.panels && cutModel.panels.length > 0) {
-            cutModel.panels.forEach((panel, index) => {
+        if (model.panels && model.panels.length > 0) {
+            model.panels.forEach((panel, index) => {
                 // Use qualified name that includes parent reference
                 const panelName = parentName ? `${parentName}/Panel #${index + 1}` : `Panel #${index + 1}`;
-                const panelItem = this.createObjectListItem(panelName, panel, cutModel);
+                const panelItem = this.createObjectListItem(panelName, panel, model);
                 parentElement.appendChild(panelItem);
             });
         }
     }
     
     /**
-     * Add children for the Layer One Ring model
+     * Add children for a composite model with SingleCUTs
      * @param {HTMLElement} parentElement - Parent element to add to
-     * @param {Object} layerOneRingModel - The Layer One Ring model
+     * @param {Object} compositeModel - The composite model
+     * @param {string} parentName - Name of the parent model
      */
-    addLayerOneRingChildren(parentElement, layerOneRingModel) {
+    addCompositeModelChildren(parentElement, compositeModel, parentName) {
         // Add all SingleCUTs
-        if (layerOneRingModel.model && layerOneRingModel.model.singleCuts && layerOneRingModel.model.singleCuts.length > 0) {
-            layerOneRingModel.model.singleCuts.forEach((singleCut, index) => {
+        if (compositeModel.model && compositeModel.model.singleCuts && compositeModel.model.singleCuts.length > 0) {
+            compositeModel.model.singleCuts.forEach((singleCut, index) => {
                 const singleCutName = `Single CUT #${index + 1}`;
-                const singleCutItem = this.createObjectListItem(singleCutName, singleCut, layerOneRingModel);
+                const singleCutItem = this.createObjectListItem(singleCutName, singleCut, compositeModel);
                 parentElement.appendChild(singleCutItem);
             });
         }
@@ -563,16 +588,23 @@ export class SceneEditor {
     updateNestedCheckboxes(parentPath, isChecked) {
         console.log(`Updating nested checkboxes for ${parentPath} to ${isChecked}`);
         
-        // For Layer One Ring parent, collect all children paths
-        if (parentPath === 'Layer One Ring') {
+        // Find the parent object
+        const parentObj = this.checkboxElements[parentPath]?.object;
+        
+        if (!parentObj) return;
+        
+        // Check if parent has SingleCUTs (composite model like Layer One Ring)
+        const hasChildModels = parentObj.model && parentObj.model.singleCuts && parentObj.model.singleCuts.length > 0;
+        
+        // For composite models with SingleCUTs
+        if (hasChildModels) {
             for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
                 // Skip permanently hidden elements
                 if (checkboxInfo.isPermanentlyHidden) {
                     continue;
                 }
                 
-                // Match any path that starts with a SingleCUT number
-                // This will affect all SingleCUTs and their pipes/panels
+                // Match any path that starts with "Single CUT #" (indicates it's part of a composite model)
                 if (path.startsWith('Single CUT #')) {
                     console.log(`Setting child checkbox for ${path} to ${isChecked}`);
                     checkboxInfo.element.checked = isChecked;
@@ -582,33 +614,15 @@ export class SceneEditor {
                 }
             }
         }
-        // For SingleCUT parent, only update its pipes and panels
-        else if (parentPath.startsWith('Single CUT #')) {
+        // For SingleCUT model or other model with direct pipes/panels
+        else if (parentObj.pipes || parentObj.panels) {
             for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
                 // Skip permanently hidden elements
                 if (checkboxInfo.isPermanentlyHidden) {
                     continue;
                 }
                 
-                // Match only paths that are direct children (pipes/panels) of this SingleCUT
-                if (path.startsWith(parentPath + '/')) {
-                    console.log(`Setting child checkbox for ${path} to ${isChecked}`);
-                    checkboxInfo.element.checked = isChecked;
-                    
-                    // Also update the actual object visibility
-                    this.toggleObjectVisibility(path, checkboxInfo.object, isChecked);
-                }
-            }
-        }
-        // For Central CUT, update all its pipes and panels
-        else if (parentPath === 'Central CUT') {
-            for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
-                // Skip permanently hidden elements
-                if (checkboxInfo.isPermanentlyHidden) {
-                    continue;
-                }
-                
-                // Match only paths that are direct children (pipes/panels) of Central CUT
+                // Match only paths that are direct children (pipes/panels) of this parent
                 if (path.startsWith(parentPath + '/')) {
                     console.log(`Setting child checkbox for ${path} to ${isChecked}`);
                     checkboxInfo.element.checked = isChecked;
