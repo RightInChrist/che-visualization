@@ -70,7 +70,7 @@ class CHEVisualization {
                 rotationAngle: this.layerRotationAngle
             });
             
-            // Hide the Layer One Star model initially
+            // Hide the Layer One Star model initially (will be reflected in the SceneEditor)
             this.layerOneStar.setVisible(false);
             
             // Add shadows to all pipes in the scene
@@ -182,21 +182,6 @@ class CHEVisualization {
                     modelNames: ["Layer One Ring", "Layer One Star"]
                 }
             );
-            
-            // Add visibility toggle button for debugging LayerOneStar visibility
-            const toggleStarVisibilityBtn = document.createElement('button');
-            toggleStarVisibilityBtn.textContent = 'Toggle Layer One Star';
-            toggleStarVisibilityBtn.style.position = 'absolute';
-            toggleStarVisibilityBtn.style.top = '10px';
-            toggleStarVisibilityBtn.style.left = '10px';
-            toggleStarVisibilityBtn.style.padding = '5px';
-            toggleStarVisibilityBtn.style.zIndex = '100';
-            toggleStarVisibilityBtn.addEventListener('click', () => {
-                const isVisible = this.layerOneStar.isVisible();
-                console.log(`LayerOneStar was ${isVisible ? 'visible' : 'hidden'}, toggling to ${!isVisible ? 'visible' : 'hidden'}`);
-                this.layerOneStar.setVisible(!isVisible);
-            });
-            document.body.appendChild(toggleStarVisibilityBtn);
             
             // Create control panels container if it doesn't exist
             if (!document.getElementById('controlPanels')) {

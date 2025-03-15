@@ -539,35 +539,48 @@ export class SceneEditor {
     getObjectVisibility(object) {
         // For BaseModel or CompositeModel objects
         if (object.isVisible && typeof object.isVisible === 'function') {
-            return object.isVisible();
+            const visibility = object.isVisible();
+            console.log(`[SceneEditor] Object has isVisible() method: ${visibility}`);
+            return visibility;
         }
         
         // For model property containing BaseModel or CompositeModel
         if (object.model && object.model.isVisible && typeof object.model.isVisible === 'function') {
-            return object.model.isVisible();
+            const visibility = object.model.isVisible();
+            console.log(`[SceneEditor] Object.model has isVisible() method: ${visibility}`);
+            return visibility;
         }
         
         // For direct mesh access
         if (object.mesh && object.mesh.isVisible !== undefined) {
-            return object.mesh.isVisible;
+            const visibility = object.mesh.isVisible;
+            console.log(`[SceneEditor] Object has mesh with isVisible property: ${visibility}`);
+            return visibility;
         }
         
         // For PipeModel
         if (object.pipeMesh && object.pipeMesh.isVisible !== undefined) {
-            return object.pipeMesh.isVisible;
+            const visibility = object.pipeMesh.isVisible;
+            console.log(`[SceneEditor] Object has pipeMesh with isVisible property: ${visibility}`);
+            return visibility;
         }
         
         // For PanelModel
         if (object.panelMesh && object.panelMesh.isVisible !== undefined) {
-            return object.panelMesh.isVisible;
+            const visibility = object.panelMesh.isVisible;
+            console.log(`[SceneEditor] Object has panelMesh with isVisible property: ${visibility}`);
+            return visibility;
         }
         
         // For root node enabled state
         if (object.rootNode && object.rootNode.isEnabled !== undefined) {
-            return object.rootNode.isEnabled();
+            const enabled = object.rootNode.isEnabled();
+            console.log(`[SceneEditor] Object has rootNode with isEnabled method: ${enabled}`);
+            return enabled;
         }
         
         // If we can't determine visibility, default to true
+        console.log(`[SceneEditor] Unable to determine visibility, defaulting to true`);
         return true;
     }
     
@@ -578,78 +591,112 @@ export class SceneEditor {
      * @param {string} path - Optional path to the object for checking permanent hidden status
      */
     setObjectVisibility(object, isVisible, path = '') {
-        if (!object) return;
-        
-        // Skip if this is a permanently hidden element
-        if (path && this.isElementPermanentlyHidden(path, object)) {
-            console.log(`Skipping permanently hidden element: ${path}`);
+        if (!object) {
+            console.log(`[SceneEditor] Object is null or undefined for path: ${path}`);
             return;
         }
         
-        // For panel debugging
-        if (object.panelMesh) {
-            console.log('Panel object found:', object);
-            console.log('Before setting visibility:', object.panelMesh.isVisible);
+        // Skip if this is a permanently hidden element
+        if (path && this.isElementPermanentlyHidden(path, object)) {
+            console.log(`[SceneEditor] Skipping permanently hidden element: ${path}`);
+            return;
+        }
+        
+        console.log(`[SceneEditor] Setting visibility for ${path} to ${isVisible ? 'visible' : 'hidden'}`);
+        
+        // For composite objects with model property
+        if (object.model && typeof object.model.setVisible === 'function') {
+            console.log(`[SceneEditor] Setting visibility via object.model.setVisible for ${path}`);
+            object.model.setVisible(isVisible);
+            
+            // Verify visibility was set correctly
+            if (typeof object.model.isVisible === 'function') {
+                console.log(`[SceneEditor] After setting, object.model.isVisible(): ${object.model.isVisible()}`);
+            }
+            
+            return; // Return early as we've handled this object
         }
         
         // Set visibility on this object
         if (typeof object.setVisible === 'function') {
             // Use the object's setVisible method (BaseModel/CompositeModel)
-            console.log(`Using setVisible method for ${object.constructor.name || 'object'}`, isVisible);
+            console.log(`[SceneEditor] Using setVisible method for ${object.constructor ? object.constructor.name : 'object'}`, isVisible);
             object.setVisible(isVisible);
+            
+            // Verify visibility was set correctly
+            if (typeof object.isVisible === 'function') {
+                console.log(`[SceneEditor] After setting, object.isVisible(): ${object.isVisible()}`);
+            }
         } else if (object.rootNode && object.rootNode.setEnabled) {
             // Set enabled state on the root node
-            console.log('Setting root node enabled state to', isVisible);
+            console.log(`[SceneEditor] Setting root node enabled state to ${isVisible}`);
             object.rootNode.setEnabled(isVisible);
+            
+            // Verify enabled state was set correctly
+            if (object.rootNode.isEnabled) {
+                console.log(`[SceneEditor] After setting, rootNode.isEnabled(): ${object.rootNode.isEnabled()}`);
+            }
         } else if (object.mesh && object.mesh.isVisible !== undefined) {
             // Set visibility on the mesh
-            console.log('Setting mesh visibility to', isVisible);
-            object.mesh.isVisible = isVisible; 
+            console.log(`[SceneEditor] Setting mesh visibility to ${isVisible}`);
+            object.mesh.isVisible = isVisible;
+            
+            // Verify visibility was set correctly
+            console.log(`[SceneEditor] After setting, mesh.isVisible: ${object.mesh.isVisible}`);
         } else if (object.pipeMesh && object.pipeMesh.isVisible !== undefined) {
             // Set visibility on pipe mesh
-            console.log('Setting pipe mesh visibility to', isVisible);
+            console.log(`[SceneEditor] Setting pipe mesh visibility to ${isVisible}`);
             object.pipeMesh.isVisible = isVisible;
+            
+            // Verify visibility was set correctly
+            console.log(`[SceneEditor] After setting, pipeMesh.isVisible: ${object.pipeMesh.isVisible}`);
         } else if (object.panelMesh && object.panelMesh.isVisible !== undefined) {
             // Set visibility on panel mesh
-            console.log('Setting panel mesh visibility to', isVisible);
+            console.log(`[SceneEditor] Setting panel mesh visibility to ${isVisible}`);
             object.panelMesh.isVisible = isVisible;
             
             // Ensure the parent node is also visible/invisible
             if (object.rootNode) {
-                console.log('Setting panel root node enabled state to', isVisible);
+                console.log(`[SceneEditor] Setting panel root node enabled state to ${isVisible}`);
                 object.rootNode.setEnabled(isVisible);
             }
             
             // Force the panel mesh to update its visibility
             object.panelMesh.refreshBoundingInfo();
-        }
-        
-        // For panel debugging
-        if (object.panelMesh) {
-            console.log('After setting visibility:', object.panelMesh.isVisible);
+            
+            // Verify visibility was set correctly
+            console.log(`[SceneEditor] After setting, panelMesh.isVisible: ${object.panelMesh.isVisible}`);
+        } else {
+            console.log(`[SceneEditor] No visibility method found for object at path: ${path}`);
+            console.log(`[SceneEditor] Object:`, object);
         }
         
         // Process children based on object type
+        console.log(`[SceneEditor] Processing children of ${path}`);
         
-        // 1. Handle LayerOneRing case
+        // 1. Handle LayerOneRing/LayerOneStarModel case
         if (object.model && object.model.singleCuts) {
             // Process all SingleCut models
+            console.log(`[SceneEditor] Processing ${object.model.singleCuts.length} singleCuts for ${path}`);
             object.model.singleCuts.forEach((singleCut, index) => {
                 // Build the path for the SingleCUT
-                const singleCutPath = `Single CUT #${index + 1}`;
+                const singleCutPath = path ? `${path}/Single CUT #${index + 1}` : `Single CUT #${index + 1}`;
                 this.setObjectVisibility(singleCut, isVisible, singleCutPath);
             });
         }
         
         // 2. Handle CompositeModel child models
         if (object.childModels && Array.isArray(object.childModels)) {
-            object.childModels.forEach(childModel => {
-                this.setObjectVisibility(childModel, isVisible);
+            console.log(`[SceneEditor] Processing ${object.childModels.length} childModels for ${path}`);
+            object.childModels.forEach((childModel, index) => {
+                const childPath = path ? `${path}/ChildModel #${index + 1}` : `ChildModel #${index + 1}`;
+                this.setObjectVisibility(childModel, isVisible, childPath);
             });
         }
         
         // 3. Handle SingleCutModel pipes and panels
         if (object.pipes && Array.isArray(object.pipes)) {
+            console.log(`[SceneEditor] Processing ${object.pipes.length} pipes for ${path}`);
             object.pipes.forEach((pipe, index) => {
                 // Build the path for the pipe
                 const pipePath = path ? `${path}/Pipe #${index + 1}` : `Pipe #${index + 1}`;
@@ -658,6 +705,7 @@ export class SceneEditor {
         }
         
         if (object.panels && Array.isArray(object.panels)) {
+            console.log(`[SceneEditor] Processing ${object.panels.length} panels for ${path}`);
             object.panels.forEach((panel, index) => {
                 // Build the path for the panel
                 const panelPath = path ? `${path}/Panel #${index + 1}` : `Panel #${index + 1}`;
@@ -667,73 +715,56 @@ export class SceneEditor {
         
         // 4. Handle generic children object
         if (object.children && typeof object.children === 'object') {
-            Object.values(object.children).forEach(child => {
-                this.setObjectVisibility(child, isVisible);
+            const childCount = Object.keys(object.children).length;
+            console.log(`[SceneEditor] Processing ${childCount} generic children for ${path}`);
+            Object.entries(object.children).forEach(([key, child]) => {
+                const childPath = path ? `${path}/${key}` : key;
+                this.setObjectVisibility(child, isVisible, childPath);
             });
         }
     }
     
     /**
-     * Toggle the visibility of an object
-     * @param {string} path - Path of the object
+     * Toggle visibility of an object by path
+     * @param {string} path - Path to the object
      * @param {Object} object - The object to toggle
      * @param {boolean} isVisible - Whether the object should be visible
      */
     toggleObjectVisibility(path, object, isVisible) {
-        // Prevent multiple rapid toggles
-        if (this.isTogglingVisibility) return;
-        this.isTogglingVisibility = true;
+        console.log(`[SceneEditor] Toggling visibility of "${path}" to ${isVisible ? 'visible' : 'hidden'}`);
         
-        try {
-            // Log for debugging
-            console.log(`Toggling ${path} visibility to ${isVisible}`);
+        // Handle the special case for 'Layer One Star' explicitly
+        if (path === 'Layer One Star' || path.startsWith('Layer One Star/')) {
+            console.log(`[SceneEditor] Special handling for Layer One Star object: `, object);
             
-            // Store the desired state for this object
-            if (!this.desiredVisibilityState) {
-                this.desiredVisibilityState = {};
+            // Log more details about the object
+            if (object.model) {
+                console.log(`[SceneEditor] Layer One Star model type: ${object.model.constructor.name}`);
+                console.log(`[SceneEditor] Initial visibility state: ${object.model.isVisible()}`);
             }
-            this.desiredVisibilityState[path] = isVisible;
+        }
+        
+        // Set visibility on object
+        this.setObjectVisibility(object, isVisible, path);
+        
+        // Update the checkbox state
+        if (this.checkboxElements[path]) {
+            this.checkboxElements[path].element.checked = isVisible;
+        }
+        
+        // Now check the visibility state to verify it was set correctly
+        if (path === 'Layer One Star' || path.startsWith('Layer One Star/')) {
+            let currentVisibility = this.getObjectVisibility(object);
+            console.log(`[SceneEditor] After toggle, Layer One Star visibility: ${currentVisibility}`);
             
-            // Special handling for panel paths
-            const isPanelPath = path.includes('/Panel #');
-            if (isPanelPath) {
-                console.log('Panel path detected:', path);
-                console.log('Panel object:', object);
-            }
-            
-            // Use recursive function to set visibility on the object and all its children
-            this.setObjectVisibility(object, isVisible, path);
-            
-            // Force scene to update
-            this.scene.render();
-            
-            // For panels, do an extra check to ensure visibility was updated
-            if (isPanelPath && object.panelMesh) {
-                console.log('Additional check for panel visibility:');
-                console.log('Current panel mesh visibility:', object.panelMesh.isVisible);
-                
-                // Force visibility again directly
-                object.panelMesh.isVisible = isVisible;
-                if (object.rootNode) {
-                    object.rootNode.setEnabled(isVisible);
+            // Also check the visibility of the model property if it exists
+            if (object.model) {
+                console.log(`[SceneEditor] After toggle, model.isVisible(): ${object.model.isVisible()}`);
+                // Check if the rootNode is enabled
+                if (object.model.rootNode) {
+                    console.log(`[SceneEditor] After toggle, model.rootNode.isEnabled(): ${object.model.rootNode.isEnabled()}`);
                 }
-                
-                // Force another render
-                this.scene.render();
             }
-            
-            // Update nested checkboxes to match the visibility state
-            this.updateNestedCheckboxes(path, isVisible);
-            
-            // Ensure the checkbox stays in the correct state 
-            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
-                this.checkboxElements[path].element.checked = isVisible;
-            }
-        } finally {
-            // Clear the flag after a short delay to prevent rapid toggling
-            setTimeout(() => {
-                this.isTogglingVisibility = false;
-            }, 50);
         }
     }
     
