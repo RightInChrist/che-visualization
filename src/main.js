@@ -13,6 +13,7 @@ import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
 import { RadiusControls } from './components/ui/RadiusControls';
 import { RotationControls } from './components/ui/RotationControls';
+import { DebugInfoView } from './components/ui/DebugInfoView';
 
 /**
  * Main application entry point
@@ -186,8 +187,14 @@ class CHEVisualization {
                 }
             );
             
+            // Create debug info view (positioned at the top of control panels)
+            const debugInfoView = new DebugInfoView({
+                isVisible: false
+            });
+            
             // Store the controls in class properties for later access
             this.rotationControls = rotationControls;
+            this.debugInfoView = debugInfoView;
             
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
@@ -199,6 +206,11 @@ class CHEVisualization {
                 // Update scene editor if needed
                 if (this.sceneEditor) {
                     this.sceneEditor.update();
+                }
+                
+                // Update debug info if needed
+                if (this.debugInfoView) {
+                    this.debugInfoView.update();
                 }
             });
             
