@@ -155,11 +155,22 @@ export class SceneEditor {
         this.checkboxElements[name] = toggleCheckbox;
         
         // Check if this is a toggleable object
-        if (name === 'Ground #1' || name === 'Single CUT #1' || name.startsWith('Pipe #') || name.startsWith('Panel #')) {
+        if (name === 'Ground #1' || 
+            name === 'Seven CUTs #1' || 
+            name.startsWith('Single CUT #') ||
+            name.startsWith('Pipe #') || 
+            name.startsWith('Panel #')) {
             // Determine the initial checked state
             if (name === 'Ground #1') {
                 toggleCheckbox.checked = object.mesh && object.mesh.isVisible;
-            } else if (name === 'Single CUT #1') {
+            } else if (name === 'Seven CUTs #1') {
+                // Check if any SingleCUT is visible
+                toggleCheckbox.checked = object.model && object.model.singleCuts && 
+                                        object.model.singleCuts.length > 0 && 
+                                        object.model.singleCuts[0].pipes && 
+                                        object.model.singleCuts[0].pipes[0].pipeMesh && 
+                                        object.model.singleCuts[0].pipes[0].pipeMesh.isVisible;
+            } else if (name.startsWith('Single CUT #')) {
                 // Check if the pipes are visible
                 toggleCheckbox.checked = object.pipes && object.pipes.length > 0 && 
                                          object.pipes[0].pipeMesh && 
@@ -175,7 +186,9 @@ export class SceneEditor {
                 this.toggleObjectVisibility(name, object, e.target.checked);
                 
                 // If this is a parent object, update all child checkboxes
-                if (name === 'Single CUT #1') {
+                if (name === 'Seven CUTs #1') {
+                    this.updateNestedCheckboxes(name, e.target.checked);
+                } else if (name.startsWith('Single CUT #')) {
                     this.updateNestedCheckboxes(name, e.target.checked);
                 }
             });
@@ -202,7 +215,9 @@ export class SceneEditor {
             childList.style.paddingLeft = '20px';
             childList.id = `children-${name.replace(/[\s#]/g, '-')}`;
             
-            if (name === 'Single CUT #1') {
+            if (name === 'Seven CUTs #1') {
+                this.addSevenCutsChildren(childList, object);
+            } else if (name.startsWith('Single CUT #')) {
                 this.addSingleCutChildren(childList, object);
             } else if (object.children) {
                 this.addChildrenObjects(childList, object.children);
@@ -212,6 +227,24 @@ export class SceneEditor {
         }
         
         return objectItem;
+    }
+    
+    /**
+     * Add children for the SevenCuts model
+     * @param {HTMLElement} parentElement - Parent element to add to
+     * @param {Object} sevenCutsModel - The Seven CUTs model
+     */
+    addSevenCutsChildren(parentElement, sevenCutsModel) {
+        // Add each SingleCUT as a child
+        if (sevenCutsModel.model && sevenCutsModel.model.singleCuts) {
+            sevenCutsModel.model.singleCuts.forEach((singleCut, index) => {
+                const singleCutItem = this.createObjectListItem(`Single CUT #${index + 1}`, singleCut);
+                parentElement.appendChild(singleCutItem);
+            });
+        } else if (sevenCutsModel.children) {
+            // If children are already provided in the object structure
+            this.addChildrenObjects(parentElement, sevenCutsModel.children);
+        }
     }
     
     /**
@@ -258,7 +291,8 @@ export class SceneEditor {
         return (
             (object.pipes && object.pipes.length > 0) ||
             (object.panels && object.panels.length > 0) || 
-            (object.children && Object.keys(object.children).length > 0)
+            (object.children && Object.keys(object.children).length > 0) ||
+            (object.model && object.model.singleCuts && object.model.singleCuts.length > 0)
         );
     }
     
@@ -268,8 +302,20 @@ export class SceneEditor {
      * @param {boolean} isChecked - Whether the checkboxes should be checked
      */
     updateNestedCheckboxes(parentName, isChecked) {
-        if (parentName === 'Single CUT #1') {
-            const singleCUT = this.sceneObjects['Single CUT #1'];
+        if (parentName === 'Seven CUTs #1') {
+            const sevenCuts = this.sceneObjects['Seven CUTs #1'];
+            
+            // Update all SingleCUT checkboxes
+            if (sevenCuts) {
+                sevenCuts.model.singleCuts.forEach((singleCut, index) => {
+                    const singleCutName = `Single CUT #${index + 1}`;
+                    if (this.checkboxElements[singleCutName]) {
+                        this.checkboxElements[singleCutName].checked = isChecked;
+                    }
+                });
+            }
+        } else if (parentName.startsWith('Single CUT #')) {
+            const singleCUT = this.sceneObjects[parentName];
             
             // Update all pipe and panel visibility directly
             if (singleCUT) {
@@ -336,47 +382,36 @@ export class SceneEditor {
         this.isUpdating = true;
         
         try {
-            // Update SingleCUT checkbox and its children
-            if (this.sceneObjects['Single CUT #1'] && this.checkboxElements['Single CUT #1']) {
-                const singleCutModel = this.sceneObjects['Single CUT #1'];
+            // Update Seven CUTs checkbox and its children
+            if (this.sceneObjects['Seven CUTs #1'] && this.checkboxElements['Seven CUTs #1']) {
+                const sevenCuts = this.sceneObjects['Seven CUTs #1'];
                 
                 // Check custom property first, then mesh visibility
-                let isVisible = singleCutModel._isVisible;
+                let isVisible = sevenCuts._isVisible;
                 if (isVisible === undefined) {
-                    isVisible = singleCutModel.pipes && 
-                                singleCutModel.pipes.length > 0 && 
-                                singleCutModel.pipes[0].pipeMesh && 
-                                singleCutModel.pipes[0].pipeMesh.isVisible;
+                    isVisible = sevenCuts.model && sevenCuts.model.singleCuts && 
+                                sevenCuts.model.singleCuts.length > 0 && 
+                                sevenCuts.model.singleCuts[0].pipes && 
+                                sevenCuts.model.singleCuts[0].pipes[0].pipeMesh && 
+                                sevenCuts.model.singleCuts[0].pipes[0].pipeMesh.isVisible;
                 }
                                 
-                this.checkboxElements['Single CUT #1'].checked = isVisible;
+                this.checkboxElements['Seven CUTs #1'].checked = isVisible;
                 
-                // Update pipe checkboxes
-                if (singleCutModel.pipes) {
-                    singleCutModel.pipes.forEach((pipe, index) => {
-                        const pipeName = `Pipe #${index + 1}`;
-                        if (this.checkboxElements[pipeName]) {
+                // Update SingleCUT checkboxes
+                if (sevenCuts.model && sevenCuts.model.singleCuts) {
+                    sevenCuts.model.singleCuts.forEach((singleCut, index) => {
+                        const singleCutName = `Single CUT #${index + 1}`;
+                        if (this.checkboxElements[singleCutName]) {
                             // Check custom property first, then mesh visibility
-                            let pipeVisible = pipe._isVisible;
-                            if (pipeVisible === undefined) {
-                                pipeVisible = pipe.pipeMesh && pipe.pipeMesh.isVisible;
+                            let singleCutVisible = singleCut._isVisible;
+                            if (singleCutVisible === undefined) {
+                                singleCutVisible = singleCut.pipes && 
+                                                    singleCut.pipes.length > 0 && 
+                                                    singleCut.pipes[0].pipeMesh && 
+                                                    singleCut.pipes[0].pipeMesh.isVisible;
                             }
-                            this.checkboxElements[pipeName].checked = pipeVisible;
-                        }
-                    });
-                }
-                
-                // Update panel checkboxes
-                if (singleCutModel.panels) {
-                    singleCutModel.panels.forEach((panel, index) => {
-                        const panelName = `Panel #${index + 1}`;
-                        if (this.checkboxElements[panelName]) {
-                            // Check custom property first, then mesh visibility
-                            let panelVisible = panel._isVisible;
-                            if (panelVisible === undefined) {
-                                panelVisible = panel.panelMesh && panel.panelMesh.isVisible;
-                            }
-                            this.checkboxElements[panelName].checked = panelVisible;
+                            this.checkboxElements[singleCutName].checked = singleCutVisible;
                         }
                     });
                 }
@@ -413,8 +448,60 @@ export class SceneEditor {
             if (object.mesh) {
                 object.mesh.isVisible = isVisible;
             }
-        } else if (name === 'Single CUT #1') {
-            // Toggle all pipes and panels in the SingleCUT model
+        } else if (name === 'Seven CUTs #1') {
+            // Toggle all SingleCUTs in the Seven CUTs model
+            if (object.model && object.model.singleCuts) {
+                object.model.singleCuts.forEach(singleCut => {
+                    if (singleCut.rootNode) {
+                        singleCut.rootNode.setEnabled(isVisible);
+                    }
+                    
+                    if (singleCut.pipes) {
+                        singleCut.pipes.forEach(pipe => {
+                            if (pipe.pipeMesh) {
+                                // Set visibility on both root node and pipe mesh
+                                if (pipe.rootNode) {
+                                    pipe.rootNode.setEnabled(isVisible);
+                                }
+                                pipe.pipeMesh.isVisible = isVisible;
+                            }
+                            if (pipe.markers) {
+                                pipe.markers.forEach(marker => {
+                                    marker.isVisible = isVisible;
+                                });
+                            }
+                        });
+                    }
+                    
+                    if (singleCut.panels) {
+                        singleCut.panels.forEach(panel => {
+                            // Try different properties that might exist on panels
+                            if (panel.panelMesh) {
+                                // Set visibility on both root node and panel mesh
+                                if (panel.rootNode) {
+                                    panel.rootNode.setEnabled(isVisible);
+                                }
+                                panel.panelMesh.isVisible = isVisible;
+                            } else if (typeof panel.setVisible === 'function') {
+                                // Use setVisible if available
+                                panel.setVisible(isVisible);
+                            }
+                        });
+                    }
+                });
+            }
+            
+            // Store the state in a custom property to ensure it's remembered
+            object._isVisible = isVisible;
+            
+            // Force scene to update
+            this.scene.render();
+        } else if (name.startsWith('Single CUT #')) {
+            // Toggle individual SingleCUT
+            if (object.rootNode) {
+                object.rootNode.setEnabled(isVisible);
+            }
+            
             if (object.pipes) {
                 object.pipes.forEach(pipe => {
                     if (pipe.pipeMesh) {
@@ -423,8 +510,8 @@ export class SceneEditor {
                             pipe.rootNode.setEnabled(isVisible);
                         }
                         pipe.pipeMesh.isVisible = isVisible;
-                        console.log(`Setting pipe visibility to ${isVisible}, result: ${pipe.pipeMesh.isVisible}, root enabled: ${pipe.rootNode ? pipe.rootNode.isEnabled() : 'N/A'}`);
                     }
+                    
                     if (pipe.markers) {
                         pipe.markers.forEach(marker => {
                             marker.isVisible = isVisible;
@@ -442,16 +529,14 @@ export class SceneEditor {
                             panel.rootNode.setEnabled(isVisible);
                         }
                         panel.panelMesh.isVisible = isVisible;
-                        console.log(`Setting panel visibility to ${isVisible}, result: ${panel.panelMesh.isVisible}, root enabled: ${panel.rootNode ? panel.rootNode.isEnabled() : 'N/A'}`);
                     } else if (typeof panel.setVisible === 'function') {
                         // Use setVisible if available
                         panel.setVisible(isVisible);
-                        console.log(`Using setVisible method for panel - ${isVisible}`);
                     }
                 });
             }
             
-            // Store the state in a custom property to ensure it's remembered
+            // Store the state in a custom property
             object._isVisible = isVisible;
             
             // Force scene to update

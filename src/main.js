@@ -2,7 +2,7 @@ import { Vector3 } from '@babylonjs/core';
 import { initializeEngine } from './core/engine';
 import { createScene } from './core/scene';
 import { GroundModel } from './components/models/GroundModel';
-import { SingleCutModel } from './components/models/SingleCutModel';
+import { SevenCutsModel } from './components/models/SevenCutsModel';
 import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
@@ -41,36 +41,47 @@ class CHEVisualization {
             // Create ground
             this.ground = new GroundModel(scene, 5000);
             
-            // Create CHE model
-            this.cheModel = new SingleCutModel(scene, new Vector3(0, 0, 0), {
-                pipesCount: 6,
-                radius: 150
+            // Create Seven CUTs model
+            this.cheModel = new SevenCutsModel(scene, new Vector3(0, 0, 0), {
+                outerRadius: 500,
+                singleCutRadius: 150
             });
             
-            // Add shadows to models
-            this.cheModel.pipes.forEach(pipe => {
+            // Add shadows to all pipes and panels from all SingleCUTs
+            const allPipes = this.cheModel.getAllPipes();
+            allPipes.forEach(pipe => {
                 shadowGenerator.addShadowCaster(pipe.pipeMesh);
             });
             
-            this.cheModel.panels.forEach(panel => {
-                shadowGenerator.addShadowCaster(panel.panelMesh);
-            });
+            // Add all SingleCUT pipes to the collision detection
+            const pipeMeshes = allPipes.map(pipe => pipe.pipeMesh);
             
             // Create camera controller
             this.cameraController = new CameraController(
                 scene, 
                 this.canvas, 
                 this.ground.mesh, 
-                this.cheModel.pipes.map(pipe => pipe.pipeMesh)
+                pipeMeshes
             );
             
             // Create UI controller
             this.uiController = new UIController(this.cameraController);
             
+            // Create a nested structure for the scene editor
+            const singleCutsObjects = {};
+            
+            // Add each SingleCUT model to the scene editor
+            this.cheModel.singleCuts.forEach((singleCut, index) => {
+                singleCutsObjects[`Single CUT #${index + 1}`] = singleCut;
+            });
+            
             // Organize scene objects for the scene editor
             const sceneObjects = {
                 'Ground #1': this.ground,
-                'Single CUT #1': this.cheModel,
+                'Seven CUTs #1': {
+                    model: this.cheModel,
+                    children: singleCutsObjects
+                },
                 'Camera Controller': {
                     children: {
                         'Orbit Camera': this.cameraController.orbitCamera,
