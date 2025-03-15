@@ -209,17 +209,26 @@ export class RotationControls {
         }
         
         // Recursively create sections for children if enabled
+        // BUT skip child SingleCutModel controls if parent has singleCutRotation
         if (this.options.recursive && config.children && config.children.length > 0) {
-            const childrenContainer = document.createElement('div');
-            childrenContainer.className = 'children-container';
-            childrenContainer.style.marginTop = '15px';
+            // If parent has singleCutRotation control, filter out SingleCutModel children
+            const childrenToShow = config.singleCutRotation 
+                ? config.children.filter(child => child.name !== 'SingleCutModel')
+                : config.children;
             
-            config.children.forEach((childConfig, childIndex) => {
-                const childSection = this.createModelSection(childConfig, childIndex, level + 1);
-                childrenContainer.appendChild(childSection);
-            });
-            
-            modelSection.appendChild(childrenContainer);
+            // Only create container if we have children to show
+            if (childrenToShow.length > 0) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.className = 'children-container';
+                childrenContainer.style.marginTop = '15px';
+                
+                childrenToShow.forEach((childConfig, childIndex) => {
+                    const childSection = this.createModelSection(childConfig, childIndex, level + 1);
+                    childrenContainer.appendChild(childSection);
+                });
+                
+                modelSection.appendChild(childrenContainer);
+            }
         }
         
         return modelSection;
