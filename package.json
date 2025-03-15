@@ -18,9 +18,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@babylonjs/core": "^6.11.2",
-    "@babylonjs/gui": "^6.11.2",
-    "@babylonjs/loaders": "^6.11.2"
+    "@babylonjs/core": "^5.47.0",
+    "@babylonjs/gui": "^5.47.0",
+    "@babylonjs/loaders": "^5.47.0"
   },
   "devDependencies": {
     "vite": "^5.0.0"

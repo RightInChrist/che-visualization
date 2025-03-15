@@ -1,4 +1,4 @@
-import { Engine, WebGPUEngine } from '@babylonjs/core/Engines/engine';
+import { Engine } from '@babylonjs/core/Engines/engine';
 
 /**
  * Initializes the Babylon.js engine
@@ -6,27 +6,14 @@ import { Engine, WebGPUEngine } from '@babylonjs/core/Engines/engine';
  * @returns {Promise<Engine>} - The initialized Babylon.js engine
  */
 export const initializeEngine = async (canvas) => {
-    // Check if WebGPU is available, otherwise fallback to WebGL
-    let engine;
-    
-    try {
-        if (WebGPUEngine.IsSupported) {
-            engine = new WebGPUEngine(canvas);
-            await engine.initAsync();
-            console.log("Using WebGPU engine");
-        } else {
-            engine = new Engine(canvas, true, { 
-                preserveDrawingBuffer: true,
-                stencil: true,
-                disableWebGL2Support: false,
-                powerPreference: "high-performance"
-            });
-            console.log("Using WebGL engine");
-        }
-    } catch (e) {
-        console.warn("WebGPU not supported, falling back to WebGL", e);
-        engine = new Engine(canvas, true);
-    }
+    // Create WebGL engine
+    const engine = new Engine(canvas, true, { 
+        preserveDrawingBuffer: true,
+        stencil: true,
+        disableWebGL2Support: false,
+        powerPreference: "high-performance"
+    });
+    console.log("Using WebGL engine");
     
     // Handle window resize
     window.addEventListener('resize', () => {
