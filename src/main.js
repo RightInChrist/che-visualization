@@ -189,7 +189,8 @@ class CHEVisualization {
             
             // Create debug info view (positioned at the top of control panels)
             const debugInfoView = new DebugInfoView({
-                isVisible: false
+                isVisible: false,
+                cameraController: this.cameraController
             });
             
             // Store the controls in class properties for later access

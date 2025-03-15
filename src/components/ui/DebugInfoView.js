@@ -13,10 +13,14 @@ export class DebugInfoView {
             maxLogEntries: 50,       // Maximum log entries to keep
             textColor: "#ffffff",    // Text color
             backgroundColor: "rgba(0, 0, 0, 0.7)", // Background color
-            position: "top"          // Position in the control panels stack
+            position: "top",         // Position in the control panels stack
+            cameraController: null   // Reference to the camera controller
         };
         
         this.options = { ...defaultOptions, ...options };
+        
+        // Store reference to camera controller if provided
+        this.cameraController = this.options.cameraController;
         
         // Initialize logs array
         this.logs = [];
@@ -28,6 +32,15 @@ export class DebugInfoView {
         this.setupConsoleInterception();
         
         console.log("DebugInfoView initialized");
+    }
+    
+    /**
+     * Set the camera controller reference
+     * @param {Object} cameraController - Reference to the camera controller
+     */
+    setCameraController(cameraController) {
+        this.cameraController = cameraController;
+        console.log("Camera controller set in DebugInfoView");
     }
     
     /**
@@ -274,10 +287,11 @@ export class DebugInfoView {
                 const camera = scene.activeCamera;
                 const pos = camera.position;
                 
-                cameraInfo.innerHTML = `
+                // Basic camera information
+                let cameraHTML = `
                     <div style="margin-bottom: 5px;">
                         <strong>Position:</strong> 
-                        <span>X: ${pos.x.toFixed(2)}, Y: ${pos.y.toFixed(2)}, Z: ${pos.z.toFixed(2)}</span>
+                        <span>X: ${pos.x.toFixed(1)}, Y: ${pos.y.toFixed(1)}, Z: ${pos.z.toFixed(1)}</span>
                     </div>
                     <div style="margin-bottom: 5px;">
                         <strong>Type:</strong> 
@@ -285,9 +299,65 @@ export class DebugInfoView {
                     </div>
                     <div style="margin-bottom: 5px;">
                         <strong>FOV:</strong> 
-                        <span>${(camera.fov * 180 / Math.PI).toFixed(2)}°</span>
+                        <span>${(camera.fov * 180 / Math.PI).toFixed(1)}°</span>
                     </div>
                 `;
+                
+                // Add camera controller specific information if available
+                if (this.cameraController) {
+                    const height = pos.y;
+                    const maxPipeHeight = this.cameraController.maxPipeHeight || 1000; // Default if not defined
+                    const heightPercent = (height / maxPipeHeight) * 100;
+                    
+                    cameraHTML += `
+                        <div style="margin-bottom: 5px;">
+                            <strong>Camera Mode:</strong> 
+                            <span>${this.cameraController.currentMode || "Unknown"}</span>
+                        </div>
+                        <div style="margin-bottom: 5px;">
+                            <strong>Height:</strong> 
+                            <span>${height.toFixed(1)}m (${heightPercent.toFixed(1)}%)</span>
+                        </div>
+                        <div style="margin-bottom: 5px;">
+                            <strong>Min Ground Height:</strong> 
+                            <span>${this.cameraController.minHeightAboveGround || 0}m</span>
+                        </div>
+                        <div style="margin-bottom: 5px;">
+                            <strong>Collision Distance:</strong> 
+                            <span>${this.cameraController.collisionDistance || 0}m</span>
+                        </div>
+                        <div style="margin-bottom: 5px;">
+                            <strong>Show Collision Rays:</strong> 
+                            <span>${this.cameraController.showCollisionRays ? "Yes" : "No"}</span>
+                        </div>
+                    `;
+                    
+                    // Add toggle button for collision rays
+                    const toggleRaysButton = document.createElement('button');
+                    toggleRaysButton.textContent = this.cameraController.showCollisionRays ? 
+                        "Hide Collision Rays" : "Show Collision Rays";
+                    toggleRaysButton.style.padding = '4px 8px';
+                    toggleRaysButton.style.margin = '5px 0';
+                    toggleRaysButton.style.backgroundColor = '#555';
+                    toggleRaysButton.style.color = '#fff';
+                    toggleRaysButton.style.border = 'none';
+                    toggleRaysButton.style.borderRadius = '3px';
+                    toggleRaysButton.style.cursor = 'pointer';
+                    
+                    toggleRaysButton.addEventListener('click', () => {
+                        if (this.cameraController) {
+                            this.cameraController.showCollisionRays = !this.cameraController.showCollisionRays;
+                            toggleRaysButton.textContent = this.cameraController.showCollisionRays ? 
+                                "Hide Collision Rays" : "Show Collision Rays";
+                        }
+                    });
+                    
+                    cameraInfo.innerHTML = cameraHTML;
+                    cameraInfo.appendChild(toggleRaysButton);
+                } else {
+                    cameraInfo.innerHTML = cameraHTML;
+                    cameraInfo.innerHTML += `<div style="color: #FFCC00;">Camera controller not available for additional details</div>`;
+                }
             } else {
                 cameraInfo.innerHTML = `<div style="color: #ffaa55;">No active camera found</div>`;
             }
@@ -300,7 +370,7 @@ export class DebugInfoView {
         refreshNote.style.fontStyle = 'italic';
         refreshNote.style.color = '#aaa';
         refreshNote.style.marginTop = '15px';
-        refreshNote.textContent = 'Click the tab again to refresh camera information';
+        refreshNote.textContent = 'Camera information updates automatically';
         
         cameraInfo.appendChild(refreshNote);
         this.tabContents.camera.appendChild(cameraInfo);
@@ -564,6 +634,12 @@ export class DebugInfoView {
                       Math.round(window.BABYLON.Engine.Instances[0].getFps()) : '--';
             
             this.updateStats({ fps });
+            
+            // Update camera tab content if it's visible
+            if (this.tabContents && this.tabContents.camera && 
+                this.tabContents.camera.style.display === 'block') {
+                this.updateCameraInfo();
+            }
         } catch (e) {
             // Silently fail if we can't get FPS
         }
