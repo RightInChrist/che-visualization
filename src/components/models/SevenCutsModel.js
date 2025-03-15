@@ -1,4 +1,4 @@
-import { Vector3, Color3, MeshBuilder, StandardMaterial, Axis, Space } from '@babylonjs/core';
+import { Vector3, Color3, MeshBuilder, StandardMaterial, Axis, Space, Mesh } from '@babylonjs/core';
 import { SingleCutModel } from './SingleCutModel';
 import { CompositeModel } from './CompositeModel';
 
@@ -164,7 +164,7 @@ export class SevenCutsModel extends CompositeModel {
         const standardCircle = MeshBuilder.CreateDisc("standardRadiusLine", {
             radius: this.options.outerRadius,
             tessellation: 64,
-            sideOrientation: BABYLON.Mesh.DOUBLESIDE
+            sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
         standardCircle.material = standardRadiusMaterial;
         standardCircle.position.y = heightOffset;
@@ -176,7 +176,7 @@ export class SevenCutsModel extends CompositeModel {
         const specialCircle = MeshBuilder.CreateDisc("specialRadiusLine", {
             radius: 200, // Special radius for SingleCUT #2
             tessellation: 64,
-            sideOrientation: BABYLON.Mesh.DOUBLESIDE
+            sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
         specialCircle.material = specialRadiusMaterial;
         specialCircle.position.y = heightOffset * 2; // Slightly above the standard circle
@@ -188,7 +188,7 @@ export class SevenCutsModel extends CompositeModel {
         const internalCircle = MeshBuilder.CreateDisc("internalRadiusLine", {
             radius: this.options.singleCutRadius,
             tessellation: 64,
-            sideOrientation: BABYLON.Mesh.DOUBLESIDE
+            sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
         internalCircle.material = internalRadiusMaterial;
         internalCircle.position.y = heightOffset * 3; // Slightly above the other circles
