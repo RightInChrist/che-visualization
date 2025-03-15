@@ -3,6 +3,17 @@ import { Model3D, ModelStore, PrimitiveModel, CompositeModel } from '@/types/mod
 
 // Define initial primitive models
 const initialModels: Model3D[] = [
+  // Green ground model
+  {
+    id: 'green-ground',
+    name: 'Green Ground',
+    visible: true,
+    type: 'primitive',
+    parameters: {
+      size: 2000, // 2000x2000 meter ground
+    }
+  } as PrimitiveModel,
+  
   // Big pipe model
   {
     id: 'big-pipe',
@@ -24,33 +35,93 @@ const initialModels: Model3D[] = [
     type: 'primitive',
     parameters: {
       height: 1000, // 1000 meters tall
-      width: 30,    // 30 meters wide
+      width: 31,    // 31 meters wide (adjusted for hexagon)
       thickness: 0.1, // 0.1 meters (1 decimeter) thick
     }
   } as PrimitiveModel,
   
-  // Single cut composite model
+  // Single cut composite model (hexagon arrangement)
   {
     id: 'single-cut',
     name: 'Single Cut',
     visible: true,
     type: 'composite',
     references: [
-      // 6 pipes
-      { modelId: 'big-pipe', position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-pipe', position: [10, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-pipe', position: [20, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-pipe', position: [30, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-pipe', position: [40, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-pipe', position: [50, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      // 6 pipes at the vertices of a hexagon
+      { 
+        modelId: 'big-pipe', 
+        position: [15.5, 0, -26.84], // 15.5 = half-width of panel, 26.84 = 31*sin(60°)
+        rotation: [0, 0, 0], 
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-pipe', 
+        position: [31, 0, 0], 
+        rotation: [0, 0, 0], 
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-pipe', 
+        position: [15.5, 0, 26.84], 
+        rotation: [0, 0, 0], 
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-pipe', 
+        position: [-15.5, 0, 26.84], 
+        rotation: [0, 0, 0], 
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-pipe', 
+        position: [-31, 0, 0], 
+        rotation: [0, 0, 0], 
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-pipe', 
+        position: [-15.5, 0, -26.84], 
+        rotation: [0, 0, 0], 
+        scale: [1, 1, 1] 
+      },
       
-      // 6 panels
-      { modelId: 'big-panel', position: [0, 0, 10], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-panel', position: [0, 0, 20], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-panel', position: [0, 0, 30], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-panel', position: [0, 0, 40], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-panel', position: [0, 0, 50], rotation: [0, 0, 0], scale: [1, 1, 1] },
-      { modelId: 'big-panel', position: [0, 0, 60], rotation: [0, 0, 0], scale: [1, 1, 1] },
+      // 6 panels connecting the pipes
+      { 
+        modelId: 'big-panel', 
+        position: [23.25, 0, -13.42], // Positioned between pipes
+        rotation: [0, -Math.PI/6, 0], // 30 degrees 
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-panel', 
+        position: [23.25, 0, 13.42], 
+        rotation: [0, Math.PI/6, 0], // 30 degrees
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-panel', 
+        position: [0, 0, 26.84], 
+        rotation: [0, Math.PI/2, 0], // 90 degrees
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-panel', 
+        position: [-23.25, 0, 13.42], 
+        rotation: [0, 5*Math.PI/6, 0], // 150 degrees
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-panel', 
+        position: [-23.25, 0, -13.42], 
+        rotation: [0, 7*Math.PI/6, 0], // 210 degrees
+        scale: [1, 1, 1] 
+      },
+      { 
+        modelId: 'big-panel', 
+        position: [0, 0, -26.84], 
+        rotation: [0, 3*Math.PI/2, 0], // 270 degrees
+        scale: [1, 1, 1] 
+      },
     ]
   } as CompositeModel,
 ];
