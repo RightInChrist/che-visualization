@@ -7,7 +7,7 @@ import PipeModel from './models/PipeModel';
 import PanelModel from './models/PanelModel';
 import GroundModel from './models/GroundModel';
 import CompositeModel from './models/CompositeModel';
-import CameraController, { KeyName } from './controllers/CameraController';
+import CameraController, { KeyName, globalKeyStates } from './controllers/CameraController';
 import { Stats, Environment, Loader } from '@react-three/drei';
 import { PrimitiveModel, CompositeModel as CompositeModelType } from '@/types/models';
 import { Vector3, Object3D, WebGLRenderer, Mesh, Material } from 'three';
@@ -262,6 +262,85 @@ function SimpleCameraTracker({ onPositionChange }: { onPositionChange: (position
   return null;
 }
 
+// Interface for tracked input events - re-adding for the DOM overlay
+interface InputEvent {
+  type: 'keydown' | 'keyup' | 'mousedown' | 'mouseup' | 'mousemove' | 'wheel';
+  key?: string;
+  button?: number;
+  x?: number;
+  y?: number;
+  deltaY?: number;
+  timestamp: number;
+}
+
+// Format active keys for display
+function formatActiveKeys(keyStates: Record<KeyName, boolean>): string {
+  const activeKeys: string[] = [];
+  
+  if (keyStates.w || keyStates.W) activeKeys.push('W');
+  if (keyStates.a || keyStates.A) activeKeys.push('A');
+  if (keyStates.s || keyStates.S) activeKeys.push('S');
+  if (keyStates.d || keyStates.D) activeKeys.push('D');
+  
+  if (keyStates.ArrowUp) activeKeys.push('↑');
+  if (keyStates.ArrowDown) activeKeys.push('↓');
+  if (keyStates.ArrowLeft) activeKeys.push('←');
+  if (keyStates.ArrowRight) activeKeys.push('→');
+  
+  if (keyStates[' ']) activeKeys.push('Space');
+  if (keyStates.Shift) activeKeys.push('Shift');
+  
+  return activeKeys.length > 0 ? activeKeys.join(' + ') : 'None';
+}
+
+// Format a single input event for display
+function formatInputEvent(event: InputEvent): string {
+  const timeString = new Date(event.timestamp).toISOString().substr(11, 8);
+  
+  switch (event.type) {
+    case 'keydown':
+      const keyDisplay = event.key === ' ' ? 'Space' : event.key;
+      return `${timeString} 🔽 Key: ${keyDisplay}`;
+    
+    case 'keyup':
+      const keyUpDisplay = event.key === ' ' ? 'Space' : event.key;
+      return `${timeString} 🔼 Key: ${keyUpDisplay}`;
+    
+    case 'mousedown':
+      const buttonNames = ['Left', 'Middle', 'Right'];
+      const buttonName = buttonNames[event.button || 0] || `Button ${event.button}`;
+      return `${timeString} 🖱️🔽 ${buttonName} at (${event.x?.toFixed(0)}, ${event.y?.toFixed(0)})`;
+    
+    case 'mouseup':
+      const upButtonNames = ['Left', 'Middle', 'Right'];
+      const upButtonName = upButtonNames[event.button || 0] || `Button ${event.button}`;
+      return `${timeString} 🖱️🔼 ${upButtonName} at (${event.x?.toFixed(0)}, ${event.y?.toFixed(0)})`;
+    
+    case 'mousemove':
+      return `${timeString} 🖱️ Move to (${event.x?.toFixed(0)}, ${event.y?.toFixed(0)})`;
+    
+    case 'wheel':
+      const direction = event.deltaY && event.deltaY > 0 ? 'down' : 'up';
+      return `${timeString} 🖱️🔄 Scroll ${direction}`;
+    
+    default:
+      return `${timeString} Unknown event`;
+  }
+}
+
+// Function to get color for different event types
+function getEventColor(eventType: string): string {
+  switch (eventType) {
+    case 'keydown': return 'text-green-400';
+    case 'keyup': return 'text-red-400';
+    case 'mousedown': return 'text-blue-400';
+    case 'mouseup': return 'text-purple-400';
+    case 'mousemove': return 'text-gray-400';
+    case 'wheel': return 'text-yellow-400';
+    default: return 'text-white';
+  }
+}
+
 interface Scene3DProps {
   controllerType?: 'orbit' | 'firstPerson' | 'flight';
 }
@@ -272,9 +351,85 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const groundRef = useRef<Object3D>(null);
   
-  // Simplified key state handling
+  // Re-add input tracking for the overlay display
+  const [activeKeys, setActiveKeys] = useState<Record<KeyName, boolean>>({
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+    ' ': false,
+    'Shift': false,
+    'w': false,
+    'a': false,
+    's': false,
+    'd': false,
+    'W': false,
+    'A': false,
+    'S': false,
+    'D': false,
+    'F1': false
+  });
+  
+  // Track input events for the overlay
+  const [inputEventLog, setInputEventLog] = useState<InputEvent[]>([]);
+  const [showDebugOverlay, setShowDebugOverlay] = useState(true);
+  
+  // Modified key state handler to update our overlay state
   const handleKeyStateChange = useCallback((newKeyStates: Record<KeyName, boolean>) => {
-    // We don't need to store all key states - just respond to them
+    setActiveKeys({...newKeyStates});
+    
+    // Toggle debug overlay with F1 key
+    if (newKeyStates['F1'] && !activeKeys['F1']) {
+      setShowDebugOverlay(prev => !prev);
+    }
+  }, [activeKeys]);
+  
+  // Track input events outside WebGL for the overlay
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const addInputEventToLog = (event: Omit<InputEvent, 'timestamp'>) => {
+      setInputEventLog(prev => {
+        const newEvent = {
+          ...event,
+          timestamp: Date.now()
+        };
+        return [newEvent, ...prev].slice(0, 20);
+      });
+    };
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      addInputEventToLog({
+        type: 'keydown',
+        key: e.key
+      });
+    };
+    
+    const handleKeyUp = (e: KeyboardEvent) => {
+      addInputEventToLog({
+        type: 'keyup',
+        key: e.key
+      });
+    };
+    
+    const handleMouseDown = (e: MouseEvent) => {
+      addInputEventToLog({
+        type: 'mousedown',
+        button: e.button,
+        x: e.clientX,
+        y: e.clientY
+      });
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('mousedown', handleMouseDown);
+    
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('mousedown', handleMouseDown);
+    };
   }, []);
   
   // Make sure store is initialized
@@ -327,6 +482,41 @@ export default function Scene3D({ controllerType = 'orbit' }: Scene3DProps) {
       
       {/* Loading indicator */}
       <Loader />
+      
+      {/* Camera controls help overlay */}
+      <div className="absolute bottom-4 left-4 bg-black bg-opacity-50 text-white py-1 px-2 rounded text-sm">
+        <p>Camera: [1] Orbit | [F1] Toggle Debug Info</p>
+      </div>
+      
+      {/* Debug info overlay - outside the WebGL context */}
+      {showDebugOverlay && (
+        <div className="absolute top-2 right-2 bg-black bg-opacity-60 text-white py-2 px-3 rounded text-sm" style={{ maxWidth: '300px', maxHeight: '80vh', overflowY: 'auto', zIndex: 1000 }}>
+          <div className="mb-1">
+            <strong>Camera:</strong> [{cameraPosition.x.toFixed(1)}, {cameraPosition.y.toFixed(1)}, {cameraPosition.z.toFixed(1)}]
+          </div>
+          <div className="mb-1">
+            <strong>Controller:</strong> {activeController}
+          </div>
+          <div className="mb-1">
+            <strong>Active Keys:</strong> <span className="font-mono">{formatActiveKeys(activeKeys)}</span>
+          </div>
+          
+          <div className="mt-3 mb-1 border-t border-gray-600 pt-1">
+            <strong>Input Events:</strong>
+          </div>
+          <div className="text-xs font-mono" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {inputEventLog.length === 0 ? (
+              <p className="text-gray-400">No input events yet</p>
+            ) : (
+              inputEventLog.map((event, index) => (
+                <div key={index} className={getEventColor(event.type)}>
+                  {formatInputEvent(event)}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

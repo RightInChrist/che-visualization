@@ -17,7 +17,7 @@ interface WindowWithController extends Window {
 
 // Define valid keys for type safety
 export type KeyName = 'ArrowUp' | 'ArrowDown' | 'ArrowLeft' | 'ArrowRight' | ' ' | 'Shift' | 
-               'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D';
+               'w' | 'a' | 's' | 'd' | 'W' | 'A' | 'S' | 'D' | 'F1';
 
 // Export keyStates object for external use
 export const globalKeyStates: MutableRefObject<Record<KeyName, boolean>> = {
@@ -35,7 +35,8 @@ export const globalKeyStates: MutableRefObject<Record<KeyName, boolean>> = {
     'W': false,     // Capital WASD keys
     'A': false,
     'S': false,
-    'D': false
+    'D': false,
+    'F1': false
   }
 };
 
@@ -63,7 +64,8 @@ export function CameraController({
     'W': false,     // Capital WASD keys
     'A': false,
     'S': false,
-    'D': false
+    'D': false,
+    'F1': false
   });
   
   // Movement speed and limits
