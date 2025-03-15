@@ -20,6 +20,9 @@ export class SceneEditor {
 
         // Store checkbox elements for updating
         this.checkboxElements = {};
+
+        // Flag to prevent update loops
+        this.isUpdating = false;
     }
     
     /**
@@ -281,41 +284,48 @@ export class SceneEditor {
      * Update all checkbox states based on actual object visibility
      */
     updateCheckboxStates() {
-        // Update SingleCUT checkbox and its children
-        if (this.sceneObjects['Single CUT #1'] && this.checkboxElements['Single CUT #1']) {
-            const singleCutModel = this.sceneObjects['Single CUT #1'];
-            const isVisible = singleCutModel.pipes && 
-                              singleCutModel.pipes.length > 0 && 
-                              singleCutModel.pipes[0].pipeMesh && 
-                              singleCutModel.pipes[0].pipeMesh.isVisible;
-                              
-            this.checkboxElements['Single CUT #1'].checked = isVisible;
-            
-            // Update pipe checkboxes
-            if (singleCutModel.pipes) {
-                singleCutModel.pipes.forEach((pipe, index) => {
-                    const pipeName = `Pipe #${index + 1}`;
-                    if (this.checkboxElements[pipeName]) {
-                        this.checkboxElements[pipeName].checked = pipe.pipeMesh && pipe.pipeMesh.isVisible;
-                    }
-                });
-            }
-            
-            // Update panel checkboxes
-            if (singleCutModel.panels) {
-                singleCutModel.panels.forEach((panel, index) => {
-                    const panelName = `Panel #${index + 1}`;
-                    if (this.checkboxElements[panelName]) {
-                        this.checkboxElements[panelName].checked = panel.panelMesh && panel.panelMesh.isVisible;
-                    }
-                });
-            }
-        }
+        if (this.isUpdating) return;
+        this.isUpdating = true;
         
-        // Update Ground checkbox
-        if (this.sceneObjects['Ground #1'] && this.checkboxElements['Ground #1']) {
-            const ground = this.sceneObjects['Ground #1'];
-            this.checkboxElements['Ground #1'].checked = ground.mesh && ground.mesh.isVisible;
+        try {
+            // Update SingleCUT checkbox and its children
+            if (this.sceneObjects['Single CUT #1'] && this.checkboxElements['Single CUT #1']) {
+                const singleCutModel = this.sceneObjects['Single CUT #1'];
+                const isVisible = singleCutModel.pipes && 
+                                singleCutModel.pipes.length > 0 && 
+                                singleCutModel.pipes[0].pipeMesh && 
+                                singleCutModel.pipes[0].pipeMesh.isVisible;
+                                
+                this.checkboxElements['Single CUT #1'].checked = isVisible;
+                
+                // Update pipe checkboxes
+                if (singleCutModel.pipes) {
+                    singleCutModel.pipes.forEach((pipe, index) => {
+                        const pipeName = `Pipe #${index + 1}`;
+                        if (this.checkboxElements[pipeName]) {
+                            this.checkboxElements[pipeName].checked = pipe.pipeMesh && pipe.pipeMesh.isVisible;
+                        }
+                    });
+                }
+                
+                // Update panel checkboxes
+                if (singleCutModel.panels) {
+                    singleCutModel.panels.forEach((panel, index) => {
+                        const panelName = `Panel #${index + 1}`;
+                        if (this.checkboxElements[panelName]) {
+                            this.checkboxElements[panelName].checked = panel.panelMesh && panel.panelMesh.isVisible;
+                        }
+                    });
+                }
+            }
+            
+            // Update Ground checkbox
+            if (this.sceneObjects['Ground #1'] && this.checkboxElements['Ground #1']) {
+                const ground = this.sceneObjects['Ground #1'];
+                this.checkboxElements['Ground #1'].checked = ground.mesh && ground.mesh.isVisible;
+            }
+        } finally {
+            this.isUpdating = false;
         }
     }
     
@@ -358,23 +368,47 @@ export class SceneEditor {
                     }
                 });
             }
+            
+            // Force scene to update
+            this.scene.render();
         } else if (name.startsWith('Pipe #')) {
+            // Extract the pipe index from the name
+            const pipeIndex = parseInt(name.replace('Pipe #', '')) - 1;
+            
             // Toggle individual pipe
             if (object.pipeMesh) {
                 object.pipeMesh.isVisible = isVisible;
                 console.log(`Setting individual pipe visibility to ${isVisible}, result: ${object.pipeMesh.isVisible}`);
+                
+                // Explicitly force mesh to update
+                object.pipeMesh.refreshBoundingInfo();
+                object.pipeMesh._markSubMeshesAsAllDirty();
             }
+            
             if (object.markers) {
                 object.markers.forEach(marker => {
                     marker.isVisible = isVisible;
                 });
             }
+            
+            // Force scene to update
+            this.scene.render();
         } else if (name.startsWith('Panel #')) {
+            // Extract the panel index from the name
+            const panelIndex = parseInt(name.replace('Panel #', '')) - 1;
+            
             // Toggle individual panel
             if (object.panelMesh) {
                 object.panelMesh.isVisible = isVisible;
                 console.log(`Setting individual panel visibility to ${isVisible}, result: ${object.panelMesh.isVisible}`);
+                
+                // Explicitly force mesh to update
+                object.panelMesh.refreshBoundingInfo();
+                object.panelMesh._markSubMeshesAsAllDirty();
             }
+            
+            // Force scene to update
+            this.scene.render();
         }
         
         // Update the UI to reflect changes

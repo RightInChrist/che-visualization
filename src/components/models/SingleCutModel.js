@@ -1,6 +1,7 @@
 import { Vector3, TransformNode, Color3 } from '@babylonjs/core';
 import { PipeModel } from './PipeModel';
 import { PanelModel } from './PanelModel';
+import * as BABYLON from '@babylonjs/core';
 
 /**
  * Creates a Single CUT model (Convective Heat Engine) with pipes and panels arranged in a hexagonal pattern
@@ -20,7 +21,7 @@ export class SingleCutModel {
             panelHeight: 1000, // meters
             panelDepth: 2, // meters
             panelColor: new Color3(0.2, 0.6, 0.8),
-            hexRadius: 150, // Distance from center to each pipe in hexagonal pattern
+            radius: 150, // Distance from center to each pipe in hexagonal pattern
             ...options
         };
         
@@ -33,27 +34,80 @@ export class SingleCutModel {
     }
     
     /**
-     * Creates pipes and panels in a hexagonal pattern (without center pipe)
+     * Calculate panel position and rotation for connecting pipes
+     * @param {Vector3} pipePos - Current pipe position
+     * @param {Vector3} nextPipePos - Next pipe position
+     * @returns {Object} - Position, rotation, and width for the panel
+     */
+    calculatePanelTransform(pipePos, nextPipePos) {
+        // Calculate midpoint between pipes for panel position
+        const position = pipePos.add(nextPipePos).scale(0.5);
+        
+        // Calculate direction vector from current pipe to next pipe
+        const direction = nextPipePos.subtract(pipePos).normalize();
+        
+        // Calculate rotation to face perpendicular to the direction between pipes
+        const angle = Math.atan2(direction.z, direction.x);
+        
+        // Add 90 degrees (PI/2) to make panels connect properly to the pipes
+        const rotation = new BABYLON.Vector3(0, angle + Math.PI/2, 0);
+        
+        // Calculate distance between pipes for panel width
+        const distance = BABYLON.Vector3.Distance(pipePos, nextPipePos);
+        
+        // Adjust panel width to account for pipe radius on both ends
+        // Subtract twice the pipe radius from the distance to make panels connect perfectly
+        const pipeRadius = this.options.pipeRadius || 0.5;
+        const width = distance - (2 * pipeRadius);
+        
+        return { position, rotation, width };
+    }
+    
+    /**
+     * Create a panel mesh at the specified position and rotation
+     * @param {BABYLON.Vector3} position - Position of the panel
+     * @param {BABYLON.Vector3} rotation - Rotation of the panel
+     * @param {number} width - Width of the panel
+     * @returns {BABYLON.Mesh} - The created panel mesh
+     */
+    createPanel(position, rotation, width) {
+        const panel = new PanelModel(this.scene, position, {
+            height: this.options.panelHeight,
+            width: width,
+            depth: this.options.panelDepth,
+            color: this.options.panelColor
+        });
+        
+        // Apply rotation
+        panel.rootNode.rotation = rotation;
+        
+        // Set parent to the root node
+        panel.rootNode.parent = this.rootNode;
+        
+        return panel.panelMesh;
+    }
+    
+    /**
+     * Create the model with pipes and panels
      */
     createModels() {
         this.pipes = [];
         this.panels = [];
         
-        // Create pipes and panels in a hexagonal pattern
-        // No center pipe - only create the hexagon vertices
-        const angleStep = (2 * Math.PI) / 6; // 60 degrees in radians
-        
-        // Store pipe positions for panel placement
+        // Create an array to store pipe positions for panel connections
         const pipePositions = [];
+        
+        // Create pipes at hexagon vertices
+        for (let i = 0; i < this.options.pipesCount; i++) {
+            const angle = (i * 2 * Math.PI) / this.options.pipesCount;
+            const x = this.options.radius * Math.cos(angle);
+            const z = this.options.radius * Math.sin(angle);
             
-        // Create pipes first
-        for (let i = 0; i < 6; i++) {
-            const angle = i * angleStep;
-            const x = Math.sin(angle) * this.options.hexRadius;
-            const z = Math.cos(angle) * this.options.hexRadius;
+            // Create pipe at current position
+            const position = new BABYLON.Vector3(x, 0, z);
+            pipePositions.push(position); // Store position for panel creation
             
-            // Create pipe at hexagon vertex
-            const pipe = new PipeModel(this.scene, new Vector3(x, 0, z), {
+            const pipe = new PipeModel(this.scene, position, {
                 height: this.options.pipeHeight,
                 radius: this.options.pipeRadius,
                 color: this.options.pipeColor
@@ -61,40 +115,28 @@ export class SingleCutModel {
             
             pipe.rootNode.parent = this.rootNode;
             this.pipes.push(pipe);
-            
-            // Store the position for later use with panels
-            pipePositions.push(new Vector3(x, 0, z));
         }
         
-        // Now create panels between pipes
-        for (let i = 0; i < 6; i++) {
-            const currentPipePos = pipePositions[i];
-            const nextPipePos = pipePositions[(i + 1) % 6];
+        // Create panels connecting pipes
+        for (let i = 0; i < this.options.pipesCount; i++) {
+            const nextIndex = (i + 1) % this.options.pipesCount;
             
-            // Calculate vector from current pipe to next pipe
-            const pipeToNextPipe = nextPipePos.subtract(currentPipePos).normalize();
+            // Get the transform for the panel (position, rotation, width)
+            const transform = this.calculatePanelTransform(
+                pipePositions[i], 
+                pipePositions[nextIndex]
+            );
             
-            // Calculate panel position (midpoint between pipes)
-            const panelPos = currentPipePos.add(nextPipePos).scale(0.5);
+            // Create panel with calculated transform
+            const panel = {
+                panelMesh: this.createPanel(transform.position, transform.rotation, transform.width)
+            };
             
-            // Calculate panel rotation to face correctly between pipes
-            // We want the panel's width to be perpendicular to the line between pipes
-            const panelRotationY = Math.atan2(pipeToNextPipe.x, pipeToNextPipe.z);
-            
-            // Create panel
-            const panel = new PanelModel(this.scene, new Vector3(panelPos.x, 0, panelPos.z), {
-                height: this.options.panelHeight,
-                width: this.options.panelWidth,
-                depth: this.options.panelDepth,
-                color: this.options.panelColor
-            });
-            
-            // Rotate panel to face correctly
-            panel.rootNode.rotation.y = panelRotationY;
-            
-            panel.rootNode.parent = this.rootNode;
             this.panels.push(panel);
         }
+        
+        // Set LOD
+        this.setupLOD();
     }
     
     /**
