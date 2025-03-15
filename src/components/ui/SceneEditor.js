@@ -350,9 +350,11 @@ export class SceneEditor {
                 object.pipes.forEach(pipe => {
                     if (pipe.pipeMesh) {
                         // Set visibility on both root node and pipe mesh
-                        pipe.rootNode.setEnabled(isVisible);
+                        if (pipe.rootNode) {
+                            pipe.rootNode.setEnabled(isVisible);
+                        }
                         pipe.pipeMesh.isVisible = isVisible;
-                        console.log(`Setting pipe visibility to ${isVisible}, result: ${pipe.pipeMesh.isVisible}, root enabled: ${pipe.rootNode.isEnabled()}`);
+                        console.log(`Setting pipe visibility to ${isVisible}, result: ${pipe.pipeMesh.isVisible}, root enabled: ${pipe.rootNode ? pipe.rootNode.isEnabled() : 'N/A'}`);
                     }
                     if (pipe.markers) {
                         pipe.markers.forEach(marker => {
@@ -366,9 +368,11 @@ export class SceneEditor {
                 object.panels.forEach(panel => {
                     if (panel.panelMesh) {
                         // Set visibility on both root node and panel mesh
-                        panel.rootNode.setEnabled(isVisible);
+                        if (panel.rootNode) {
+                            panel.rootNode.setEnabled(isVisible);
+                        }
                         panel.panelMesh.isVisible = isVisible;
-                        console.log(`Setting panel visibility to ${isVisible}, result: ${panel.panelMesh.isVisible}, root enabled: ${panel.rootNode.isEnabled()}`);
+                        console.log(`Setting panel visibility to ${isVisible}, result: ${panel.panelMesh.isVisible}, root enabled: ${panel.rootNode ? panel.rootNode.isEnabled() : 'N/A'}`);
                     }
                 });
             }
@@ -382,9 +386,11 @@ export class SceneEditor {
             // Toggle individual pipe
             if (object.pipeMesh) {
                 // Set visibility on both root node and pipe mesh
-                object.rootNode.setEnabled(isVisible);
+                if (object.rootNode) {
+                    object.rootNode.setEnabled(isVisible);
+                }
                 object.pipeMesh.isVisible = isVisible;
-                console.log(`Setting individual pipe visibility to ${isVisible}, result: ${object.pipeMesh.isVisible}, root enabled: ${object.rootNode.isEnabled()}`);
+                console.log(`Setting individual pipe visibility to ${isVisible}, result: ${object.pipeMesh.isVisible}, root enabled: ${object.rootNode ? object.rootNode.isEnabled() : 'N/A'}`);
                 
                 // Explicitly force mesh to update
                 object.pipeMesh.refreshBoundingInfo();
@@ -405,9 +411,11 @@ export class SceneEditor {
             // Toggle individual panel
             if (object.panelMesh) {
                 // Set visibility on both root node and panel mesh
-                object.rootNode.setEnabled(isVisible);
+                if (object.rootNode) {
+                    object.rootNode.setEnabled(isVisible);
+                }
                 object.panelMesh.isVisible = isVisible;
-                console.log(`Setting individual panel visibility to ${isVisible}, result: ${object.panelMesh.isVisible}, root enabled: ${object.rootNode.isEnabled()}`);
+                console.log(`Setting individual panel visibility to ${isVisible}, result: ${object.panelMesh.isVisible}, root enabled: ${object.rootNode ? object.rootNode.isEnabled() : 'N/A'}`);
                 
                 // Explicitly force mesh to update
                 object.panelMesh.refreshBoundingInfo();
