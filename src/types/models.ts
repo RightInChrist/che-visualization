@@ -41,17 +41,26 @@ export interface ModelStore {
   
   // Instances (occurrences)
   instances: ModelInstance[];
-  getInstanceById: (instanceId: string) => ModelInstance | undefined;
+  ensureInstancesInitialized: () => boolean;
+  getInstanceById: (instanceId: string) => ModelInstance | null | undefined;
   getInstancesByModelId: (modelId: string) => ModelInstance[];
   addInstance: (instance: ModelInstance) => void;
   toggleInstanceVisibility: (instanceId: string) => void;
+  toggleModelInstancesVisibility: (modelId: string) => void;
   
   // Composite instance creation helper
   createCompositeInstance: (
     modelId: string, 
-    name: string,
+    name?: string,
     position?: [number, number, number],
     rotation?: [number, number, number],
     scale?: [number, number, number]
-  ) => string; // Returns instanceId
+  ) => string | null; // Returns instanceId or null if creation failed
+  
+  // Scene hierarchy
+  getSceneHierarchy: () => Record<string, {
+    name: string;
+    rootInstanceIds: string[];
+    childInstanceIds: string[];
+  }>;
 } 

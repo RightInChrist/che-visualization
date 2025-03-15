@@ -1,13 +1,14 @@
 import React, { useState, useRef, useEffect, MutableRefObject } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, FlyControls, FirstPersonControls, PointerLockControls, Grid } from '@react-three/drei';
-import { Vector3 } from 'three';
+import { OrbitControls, Grid } from '@react-three/drei';
+import { Vector3, Raycaster, Object3D } from 'three';
 
 type ControllerType = 'orbit' | 'firstPerson' | 'flight';
 
 interface CameraControllerProps {
   defaultController?: ControllerType;
   onKeyStateChange?: (keyStates: Record<KeyName, boolean>) => void;
+  groundRef?: React.RefObject<Object3D>;
 }
 
 interface WindowWithController extends Window {
@@ -38,16 +39,16 @@ export const globalKeyStates: MutableRefObject<Record<KeyName, boolean>> = {
   }
 };
 
-export function CameraController({ defaultController = 'orbit', onKeyStateChange }: CameraControllerProps) {
+export function CameraController({ 
+  defaultController = 'orbit', 
+  onKeyStateChange,
+  groundRef 
+}: CameraControllerProps) {
   const [activeController, setActiveController] = useState<ControllerType>(defaultController);
   const orbitRef = useRef(null);
-  const flyRef = useRef(null);
-  const firstPersonRef = useRef(null);
-  const pointerLockRef = useRef(null);
   const { camera, scene } = useThree();
-  const [isLocked, setIsLocked] = useState(false);
   
-  // Track key states
+  // Movement tracking
   const keyStates = useRef<Record<KeyName, boolean>>({
     ArrowUp: false,
     ArrowDown: false,
@@ -65,63 +66,44 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
     'D': false
   });
   
-  // Movement speed with keys (adjust as needed)
+  // Movement speed and limits
   const MOVE_SPEED = 2;
   const VERTICAL_SPEED = 2;
-  
-  // Minimum height from ground to maintain (prevents going below ground)
   const MIN_HEIGHT = 1;
+  const groundY = useRef(0);
 
-  // Make controller change accessible from outside via window object for UI controls
+  // Make controller change accessible from outside via window object
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const customWindow = window as WindowWithController;
       customWindow.setController = (type: ControllerType) => {
         if (['orbit', 'firstPerson', 'flight'].includes(type)) {
           setActiveController(type);
-          
-          // If switching to a mode that requires pointer lock
-          if ((type === 'firstPerson' || type === 'flight') && pointerLockRef.current) {
-            // Small timeout to ensure component is ready
-            setTimeout(() => {
-              if (pointerLockRef.current) {
-                // @ts-ignore - PointerLockControls has a lock method
-                pointerLockRef.current.lock();
-              }
-            }, 100);
-          }
         }
       };
     }
   }, []);
-
-  // Handle lock change
-  const handleLockChange = (isLocked: boolean) => {
-    setIsLocked(isLocked);
-  };
   
-  // Set up keyboard controls that work across all controller types
+  // Set up keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       
-      // Handle WASD keys explicitly
+      // Handle WASD keys
       if (['w', 'a', 's', 'd'].includes(key)) {
         e.preventDefault();
-        // Safely set the key state
         if (key in keyStates.current) {
           keyStates.current[key as KeyName] = true;
           globalKeyStates.current[key as KeyName] = true;
         }
         
-        // Also set uppercase version for case-insensitive handling
+        // Also set uppercase version
         const upperKey = key.toUpperCase() as KeyName;
         if (upperKey in keyStates.current) {
           keyStates.current[upperKey] = true;
           globalKeyStates.current[upperKey] = true;
         }
         
-        // Notify parent component about key state change
         if (onKeyStateChange) {
           onKeyStateChange({...keyStates.current});
         }
@@ -131,15 +113,12 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
       // Handle arrow keys and space
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) {
         e.preventDefault();
-        
-        // For arrow keys, we need to use the original key since they're stored with capital letters
         const storeKey = key === ' ' ? ' ' as KeyName : e.key as KeyName;
         if (storeKey in keyStates.current) {
           keyStates.current[storeKey] = true;
           globalKeyStates.current[storeKey] = true;
         }
         
-        // Notify parent component about key state change
         if (onKeyStateChange) {
           onKeyStateChange({...keyStates.current});
         }
@@ -150,35 +129,29 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
         keyStates.current['Shift'] = true;
         globalKeyStates.current['Shift'] = true;
         
-        // Notify parent component about key state change
         if (onKeyStateChange) {
           onKeyStateChange({...keyStates.current});
         }
       }
-      
-      // Debug - log key states on keydown
-      console.log('Key Down:', e.key);
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       
-      // Handle WASD keys explicitly
+      // Handle WASD keys
       if (['w', 'a', 's', 'd'].includes(key)) {
-        // Safely set the key state
         if (key in keyStates.current) {
           keyStates.current[key as KeyName] = false;
           globalKeyStates.current[key as KeyName] = false;
         }
         
-        // Also set uppercase version for case-insensitive handling
+        // Also update uppercase version
         const upperKey = key.toUpperCase() as KeyName;
         if (upperKey in keyStates.current) {
           keyStates.current[upperKey] = false;
           globalKeyStates.current[upperKey] = false;
         }
         
-        // Notify parent component about key state change
         if (onKeyStateChange) {
           onKeyStateChange({...keyStates.current});
         }
@@ -187,14 +160,12 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
       
       // Handle arrow keys and space
       if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(key)) {
-        // For arrow keys, we need to use the original key since they're stored with capital letters
         const storeKey = key === ' ' ? ' ' as KeyName : e.key as KeyName;
         if (storeKey in keyStates.current) {
           keyStates.current[storeKey] = false;
           globalKeyStates.current[storeKey] = false;
         }
         
-        // Notify parent component about key state change
         if (onKeyStateChange) {
           onKeyStateChange({...keyStates.current});
         }
@@ -205,14 +176,10 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
         keyStates.current['Shift'] = false;
         globalKeyStates.current['Shift'] = false;
         
-        // Notify parent component about key state change
         if (onKeyStateChange) {
           onKeyStateChange({...keyStates.current});
         }
       }
-      
-      // Debug - log key states on keyup
-      console.log('Key Up:', e.key);
     };
     
     window.addEventListener('keydown', handleKeyDown);
@@ -224,30 +191,38 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
     };
   }, [onKeyStateChange]);
   
-  // Update global key states ref in useFrame to ensure it stays synced
-  useFrame(() => {
-    // Sync global key states with local key states
-    Object.assign(globalKeyStates.current, keyStates.current);
-  });
+  // Find the ground height
+  useEffect(() => {
+    // Find the groundPlane in the scene if not provided
+    if (!groundRef?.current) {
+      scene.traverse((object) => {
+        if (object.name === 'GroundPlane' || object.name?.includes('ground')) {
+          groundY.current = object.position.y;
+        }
+      });
+    } else {
+      groundY.current = groundRef.current.position.y;
+    }
+  }, [scene, groundRef]);
   
-  // Camera movement with keyboard
+  // Camera movement with keyboard and ground following
   useFrame(() => {
-    // Always apply keyboard movement, regardless of controller type
+    // Keep global keyStates in sync
+    Object.assign(globalKeyStates.current, keyStates.current);
+    
+    // Calculate movement direction
     const moveDirection = new Vector3(0, 0, 0);
     
-    // Get camera's forward direction (z-axis)
-    const forward = new Vector3(0, 0, -1);
-    forward.applyQuaternion(camera.quaternion);
-    forward.y = 0; // Keep horizontal movement horizontal
+    // Get camera forward and right vectors
+    const forward = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+    forward.y = 0;
     forward.normalize();
     
-    // Get camera's right direction (x-axis)
-    const right = new Vector3(1, 0, 0);
-    right.applyQuaternion(camera.quaternion);
-    right.y = 0; // Keep horizontal movement horizontal
+    const right = new Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+    right.y = 0;
     right.normalize();
     
-    // Apply movement based on arrow keys AND WASD
+    // Apply movement based on key states
     if (keyStates.current.ArrowUp || keyStates.current.w || keyStates.current.W) {
       moveDirection.add(forward.clone().multiplyScalar(MOVE_SPEED));
     }
@@ -261,94 +236,72 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
       moveDirection.add(right.clone().multiplyScalar(-MOVE_SPEED));
     }
     
-    // Apply vertical movement based on space and shift keys
+    // Apply vertical movement
     let verticalMovement = 0;
     if (keyStates.current[' ']) {
-      verticalMovement += VERTICAL_SPEED; // Move up with spacebar
+      verticalMovement += VERTICAL_SPEED;
     }
     if (keyStates.current['Shift']) {
-      verticalMovement -= VERTICAL_SPEED; // Move down with shift
+      verticalMovement -= VERTICAL_SPEED;
     }
     
-    // Check for minimum height constraint
-    if (camera.position.y + verticalMovement < MIN_HEIGHT && verticalMovement < 0) {
-      // If would go below minimum height, set to exactly minimum height
-      verticalMovement = MIN_HEIGHT - camera.position.y;
+    // Apply minimum height constraint
+    if (camera.position.y + verticalMovement < MIN_HEIGHT + groundY.current && verticalMovement < 0) {
+      verticalMovement = (MIN_HEIGHT + groundY.current) - camera.position.y;
     }
     
     moveDirection.y += verticalMovement;
     
-    // Apply the movement to the camera position
+    // Apply movement to camera
     if (moveDirection.length() > 0) {
       camera.position.add(moveDirection);
       
-      // Special handling for orbit controls to maintain proper view of the scene
+      // Update orbit controls target
       if (activeController === 'orbit' && orbitRef.current) {
         // @ts-ignore - OrbitControls has a target property
         const target = orbitRef.current.target;
         
-        // For orbit camera, we want to:
-        // 1. Always update X and Z to follow the camera horizontally
-        // 2. For Y, we want to adjust it based on camera height to maintain a reasonable viewing angle
+        // Always follow camera horizontally
         target.x += moveDirection.x;
         target.z += moveDirection.z;
         
-        // Dynamic target height adjustment that maintains better connection to ground:
-        // - At lower camera heights, keep target near ground
-        // - At medium heights, gradually raise target to look more downward
-        // - At high elevations, adjust target height to maintain context
-        const cameraHeight = camera.position.y;
-        
-        // More aggressive scaling to prevent disconnection effects at higher elevations
+        // Simple target height adjustment based on camera height
+        const cameraHeight = camera.position.y - groundY.current;
         let targetHeight;
+        
         if (cameraHeight < 50) {
-          // Near ground: target stays low
-          targetHeight = 0;
+          // Near ground
+          targetHeight = groundY.current;
         } else if (cameraHeight < 200) {
-          // Medium height: gradually raise target (10% of camera height)
-          targetHeight = (cameraHeight - 50) * 0.1;
+          // Medium height
+          targetHeight = groundY.current + cameraHeight * 0.1;
         } else {
-          // High elevation: target follows camera more closely (30% of height above 200)
-          targetHeight = 15 + (cameraHeight - 200) * 0.3;
+          // High elevation
+          targetHeight = groundY.current + cameraHeight * 0.2;
         }
         
-        // Smoothly interpolate the target height toward the desired value
-        // Use faster interpolation at higher elevations for more responsive adjustment
-        const interpolationSpeed = cameraHeight > 500 ? 0.2 : 0.1;
-        target.y += (targetHeight - target.y) * interpolationSpeed;
+        // Smooth interpolation
+        target.y += (targetHeight - target.y) * 0.1;
       }
     }
   });
 
   return (
-    <>
-      {/* Reference grid system with multiple layers for better spatial awareness */}
+    <React.Fragment>
+      {/* Grid for spatial awareness */}
       <Grid 
         infiniteGrid 
         cellSize={5} 
-        cellThickness={0.5} 
+        cellThickness={0.5}
         cellColor="#444444" 
         sectionSize={25}
         sectionThickness={1}
         sectionColor="#888888"
-        fadeDistance={100}
+        fadeDistance={80}
         fadeStrength={1}
       />
       
-      {/* Additional larger grid that remains visible at higher elevations */}
-      <Grid 
-        infiniteGrid 
-        cellSize={100} 
-        cellThickness={1}
-        cellColor="#555555" 
-        sectionSize={500}
-        sectionThickness={2}
-        sectionColor="#999999"
-        fadeDistance={5000}
-        fadeStrength={0.5}
-      />
-      
-      {/* Orbit controls - standard camera rotation around a target */}
+      {/* Orbit controls */}
       {activeController === 'orbit' && (
         <OrbitControls
           ref={orbitRef}
@@ -357,30 +310,12 @@ export function CameraController({ defaultController = 'orbit', onKeyStateChange
           enableZoom={true}
           enableRotate={true}
           minDistance={1}
-          maxDistance={10000}  /* Increased to allow higher elevations */
-          minPolarAngle={0.1} // Prevent going exactly overhead
-          maxPolarAngle={Math.PI - 0.1} // Prevent going exactly underneath
+          maxDistance={5000}
+          minPolarAngle={0.1}
+          maxPolarAngle={Math.PI - 0.1}
         />
       )}
-      
-      {/* First person controls - mouse movement only for looking */}
-      {activeController === 'firstPerson' && (
-        <PointerLockControls 
-          ref={pointerLockRef}
-          onLock={() => handleLockChange(true)}
-          onUnlock={() => handleLockChange(false)}
-        />
-      )}
-      
-      {/* Flight controls - more free movement in all directions */}
-      {activeController === 'flight' && (
-        <PointerLockControls 
-          ref={pointerLockRef}
-          onLock={() => handleLockChange(true)}
-          onUnlock={() => handleLockChange(false)}
-        />
-      )}
-    </>
+    </React.Fragment>
   );
 }
 
