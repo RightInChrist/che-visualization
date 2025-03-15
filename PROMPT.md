@@ -1,11 +1,11 @@
 # 3D Convective Heat Engine Visualization Project Prompt
 
 ## Project Overview
-I need to create a 3D visualization of a Convective Heat Engine (CHE) that includes 1000-meter-tall pipes and panels arranged in a hexagonal pattern. The visualization should run smoothly in a static site environment while providing intuitive camera controls for exploring the 3D space.
+I need to create a 3D visualization of a Convective Heat Engine (CHE) that includes 1000-meter-tall pipes and panels arranged in hexagonal patterns. The visualization should run smoothly in a static site environment while providing intuitive camera controls for exploring the 3D space.
 
 ## Current Implementation Issues
 Our current implementation uses Three.js with React Three Fiber in a Next.js project, but we've encountered several issues:
-- Difficulty with proper camera controls, especially in first-person mode
+- Difficulty with proper camera controls
 - WebGL context loss when rendering complex overlays
 - Challenges with positioning and scaling 1000m tall structures
 - Static site deployment compatibility issues
@@ -26,7 +26,7 @@ Our current implementation uses Three.js with React Three Fiber in a Next.js pro
   2. First-person mode: WASD + mouse look with proper collision detection
   3. Flight mode: Similar to first-person but with vertical movement using space/shift
 - Maintain a minimum height above ground
-- Ensure camera target properly follows ground when moving vertically
+- A ground model should appear to stay connected to the bottom of the pipe and panel models.
 - Smooth camera transitions between modes
 
 ### UI & Debugging
@@ -45,10 +45,8 @@ Our current implementation uses Three.js with React Three Fiber in a Next.js pro
 
 Please implement this project using:
 
-1. **Game Engine**: Choose ONE of:
+1. **Game Engine**:
    - Babylon.js (recommended for its powerful camera system and static site compatibility)
-   - PlayCanvas (if small size and performance are priorities)
-   - Three.js with custom camera controls (if you prefer to enhance the existing approach)
 
 2. **Build System**:
    - Use Vite or Parcel for fast builds and minimal configuration
@@ -70,7 +68,7 @@ Please implement this project using:
    │   ├── scene.js      # Scene management
    │   └── loader.js     # Asset loading
    ├── store/            # State management
-   │   └── modelStore.js # Model definitions and instances
+   │   └── modelStore.js # Model instances
    ├── utils/            # Helper functions
    └── main.js           # Application entry point
    ```
