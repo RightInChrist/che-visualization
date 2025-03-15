@@ -3,18 +3,18 @@ import '@babylonjs/gui';
 import { AdvancedDynamicTexture, Rectangle, Grid, TextBlock, Slider, Button, Control } from '@babylonjs/gui';
 
 /**
- * Creates slider controls for adjusting the radius parameters of the Seven CUTs model
+ * Creates slider controls for adjusting the radius parameters of the Layer One Ring model
  */
 export class RadiusControls {
     /**
      * Create a new RadiusControls instance
      * @param {BABYLON.Scene} scene - The scene
-     * @param {Object} sevenCutsModel - The Seven CUTs model to control
+     * @param {Object} layerOneRingModel - The Layer One Ring model to control
      * @param {Object} options - Additional options
      */
-    constructor(scene, sevenCutsModel, options = {}) {
+    constructor(scene, layerOneRingModel, options = {}) {
         this.scene = scene;
-        this.sevenCutsModel = sevenCutsModel;
+        this.layerOneRingModel = layerOneRingModel;
         
         // Default options
         const defaultOptions = {
@@ -46,8 +46,8 @@ export class RadiusControls {
         this.createUI();
         
         // Set initial radius lines visibility to match panel visibility
-        if (this.sevenCutsModel && typeof this.sevenCutsModel.setRadiusLinesVisible === 'function') {
-            this.sevenCutsModel.setRadiusLinesVisible(this.options.isVisible);
+        if (this.layerOneRingModel && typeof this.layerOneRingModel.setRadiusLinesVisible === 'function') {
+            this.layerOneRingModel.setRadiusLinesVisible(this.options.isVisible);
         }
         
         console.log("RadiusControls initialized");
@@ -85,7 +85,7 @@ export class RadiusControls {
             
             // Create outer radius control
             const outerRadiusContainer = this.createSliderRow(
-                "Seven CUTs Radius",
+                "Layer One Ring Radius",
                 this.options.outerRadiusMin,
                 this.options.outerRadiusMax,
                 this.currentOuterRadius,
@@ -258,11 +258,11 @@ export class RadiusControls {
      */
     updatePanelDistanceDisplay() {
         // Get pipe radius from the model (default is 5 if not accessible)
-        const pipeRadius = (this.sevenCutsModel && 
-                          this.sevenCutsModel.singleCuts && 
-                          this.sevenCutsModel.singleCuts[0] && 
-                          this.sevenCutsModel.singleCuts[0].options) 
-                          ? this.sevenCutsModel.singleCuts[0].options.pipeRadius || 5 
+        const pipeRadius = (this.layerOneRingModel && 
+                          this.layerOneRingModel.singleCuts && 
+                          this.layerOneRingModel.singleCuts[0] && 
+                          this.layerOneRingModel.singleCuts[0].options) 
+                          ? this.layerOneRingModel.singleCuts[0].options.pipeRadius || 5 
                           : 5;
         
         // Calculate distance between pipe centers
@@ -278,30 +278,33 @@ export class RadiusControls {
     }
     
     /**
-     * Handle outer radius change
-     * @param {number} value - New outer radius value
+     * Handle changes to outer radius
      */
     onOuterRadiusChange(value) {
-        // Store the current value
-        this.currentOuterRadius = parseFloat(value);
+        this.currentOuterRadius = value;
         
-        // Update the model with new radius values
-        this.sevenCutsModel.updateRadiusSettings(this.currentOuterRadius, this.currentSingleCutRadius);
-    }
-    
-    /**
-     * Handle SingleCUT radius change
-     * @param {number} value - New SingleCUT radius value
-     */
-    onSingleCutRadiusChange(value) {
-        // Store the current value
-        this.currentSingleCutRadius = parseFloat(value);
+        // Update the model
+        if (this.layerOneRingModel && typeof this.layerOneRingModel.updateRadiusSettings === 'function') {
+            this.layerOneRingModel.updateRadiusSettings(value, this.currentSingleCutRadius);
+        }
         
         // Update the panel distance display
         this.updatePanelDistanceDisplay();
+    }
+    
+    /**
+     * Handle changes to SingleCUT radius
+     */
+    onSingleCutRadiusChange(value) {
+        this.currentSingleCutRadius = value;
         
-        // Update the model with new radius values
-        this.sevenCutsModel.updateRadiusSettings(this.currentOuterRadius, this.currentSingleCutRadius);
+        // Update the model
+        if (this.layerOneRingModel && typeof this.layerOneRingModel.updateRadiusSettings === 'function') {
+            this.layerOneRingModel.updateRadiusSettings(this.currentOuterRadius, value);
+        }
+        
+        // Update the panel distance display
+        this.updatePanelDistanceDisplay();
     }
     
     /**
@@ -331,8 +334,8 @@ export class RadiusControls {
             this.panel.style.display = isVisible ? 'none' : 'block';
             
             // Toggle radius lines visibility in the model
-            if (this.sevenCutsModel && typeof this.sevenCutsModel.setRadiusLinesVisible === 'function') {
-                this.sevenCutsModel.setRadiusLinesVisible(!isVisible);
+            if (this.layerOneRingModel && typeof this.layerOneRingModel.setRadiusLinesVisible === 'function') {
+                this.layerOneRingModel.setRadiusLinesVisible(!isVisible);
             }
             
             // Update button active state if available
@@ -371,8 +374,8 @@ export class RadiusControls {
             this.panel.style.display = newVisible ? 'block' : 'none';
             
             // Toggle radius lines visibility in the model
-            if (this.sevenCutsModel && typeof this.sevenCutsModel.setRadiusLinesVisible === 'function') {
-                this.sevenCutsModel.setRadiusLinesVisible(newVisible);
+            if (this.layerOneRingModel && typeof this.layerOneRingModel.setRadiusLinesVisible === 'function') {
+                this.layerOneRingModel.setRadiusLinesVisible(newVisible);
             }
             
             // Update button active state

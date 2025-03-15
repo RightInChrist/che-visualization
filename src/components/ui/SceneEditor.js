@@ -171,7 +171,8 @@ export class SceneEditor {
         
         // Check if this is a toggleable object
         if (name === 'Ground #1' || 
-            name === 'Seven CUTs #1' || 
+            name === 'Layer One Ring' || 
+            name === 'Central CUT' ||
             name.startsWith('Single CUT #') ||
             name.includes('Pipe #') || 
             name.includes('Panel #')) {
@@ -196,45 +197,36 @@ export class SceneEditor {
                     this.toggleObjectVisibility(objectPath, object, isChecked);
                     
                     // If this is a parent object, update all child checkboxes
-                    if (name === 'Seven CUTs #1' || name.startsWith('Single CUT #')) {
+                    if (name === 'Layer One Ring' || name === 'Central CUT' || name.startsWith('Single CUT #')) {
                         this.updateNestedCheckboxes(objectPath, isChecked);
                     }
                 });
             }
         } else {
-            // Non-toggleable objects
-            toggleCheckbox.disabled = true;
-            toggleCheckbox.checked = true;
+            // For non-toggleable objects, hide checkbox
+            toggleCheckbox.style.display = 'none';
         }
         
         objectContainer.appendChild(toggleCheckbox);
         
-        // Create object label
+        // Create label for the object
         const objectLabel = document.createElement('span');
-        objectLabel.textContent = displayName; // Use the short display name
+        objectLabel.textContent = displayName;
         objectLabel.style.marginLeft = '5px';
-        
-        // Add 'hidden' class to the label for permanently hidden elements
-        if (isPermanentlyHidden) {
-            objectLabel.classList.add('hidden');
-            objectLabel.style.color = '#888';
-            objectLabel.style.textDecoration = 'line-through';
-            objectLabel.title = 'This element is permanently hidden due to overlap';
-        }
-        
         objectContainer.appendChild(objectLabel);
         
+        // Add the object container to the list item
         objectItem.appendChild(objectContainer);
         
-        // Create child list for objects with children
+        // Add child items container if this object has children
         if (this.hasChildren(object)) {
             const childList = document.createElement('ul');
-            childList.style.listStyleType = 'none';
             childList.style.paddingLeft = '20px';
-            childList.id = `children-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
+            childList.style.listStyle = 'none';
             
-            if (name === 'Seven CUTs #1') {
-                this.addSevenCutsChildren(childList, object);
+            // Special handling for specific model types
+            if (name === 'Layer One Ring') {
+                this.addLayerOneRingChildren(childList, object);
             } else if (name.startsWith('Single CUT #')) {
                 this.addSingleCutChildren(childList, object, name);
             } else if (object.children) {
@@ -259,7 +251,7 @@ export class SceneEditor {
             return true;
         }
         
-        // Check if this is a pipe or panel in a Seven CUTs model
+        // Check if this is a pipe or panel in a Layer One Ring model
         if (path.includes('/Pipe #') || path.includes('/Panel #')) {
             // Parse the path to extract model index, type and element index
             const parts = path.split('/');
@@ -268,20 +260,15 @@ export class SceneEditor {
                 const elementName = parts[1];   // e.g., "Pipe #3" or "Panel #4"
                 
                 // Extract indices
-                const modelIndex = parseInt(singleCutName.replace('Single CUT #', ''));
+                const modelIndex = parseInt(singleCutName.replace('Single CUT #', '')) - 1; // Convert to 0-based index
                 const elementIndex = parseInt(elementName.replace(/^(Pipe|Panel) #/, '')) - 1;
                 const elementType = elementName.startsWith('Pipe') ? 'pipe' : 'panel';
                 
-                // Special case: SingleCUT #1 is the center model and should never have permanently hidden elements
-                if (modelIndex === 1) {
-                    return false;
-                }
-                
-                // Get the Seven CUTs model
-                const sevenCutsModel = this.sceneObjects['Seven CUTs #1'];
-                if (sevenCutsModel && sevenCutsModel.model && 
-                    typeof sevenCutsModel.model.isElementPermanentlyHidden === 'function') {
-                    return sevenCutsModel.model.isElementPermanentlyHidden(modelIndex, elementType, elementIndex);
+                // Get the Layer One Ring model
+                const layerOneRing = this.sceneObjects['Layer One Ring'];
+                if (layerOneRing && layerOneRing.model && 
+                    typeof layerOneRing.model.isElementPermanentlyHidden === 'function') {
+                    return layerOneRing.model.isElementPermanentlyHidden(modelIndex, elementType, elementIndex);
                 }
             }
         }
@@ -320,16 +307,16 @@ export class SceneEditor {
     }
     
     /**
-     * Add children for the SevenCUTs model
+     * Add children for the Layer One Ring model
      * @param {HTMLElement} parentElement - Parent element to add to
-     * @param {Object} sevenCutsModel - The Seven CUTs model
+     * @param {Object} layerOneRingModel - The Layer One Ring model
      */
-    addSevenCutsChildren(parentElement, sevenCutsModel) {
+    addLayerOneRingChildren(parentElement, layerOneRingModel) {
         // Add all SingleCUTs
-        if (sevenCutsModel.model && sevenCutsModel.model.singleCuts && sevenCutsModel.model.singleCuts.length > 0) {
-            sevenCutsModel.model.singleCuts.forEach((singleCut, index) => {
+        if (layerOneRingModel.model && layerOneRingModel.model.singleCuts && layerOneRingModel.model.singleCuts.length > 0) {
+            layerOneRingModel.model.singleCuts.forEach((singleCut, index) => {
                 const singleCutName = `Single CUT #${index + 1}`;
-                const singleCutItem = this.createObjectListItem(singleCutName, singleCut, sevenCutsModel);
+                const singleCutItem = this.createObjectListItem(singleCutName, singleCut, layerOneRingModel);
                 parentElement.appendChild(singleCutItem);
             });
         }
@@ -462,7 +449,7 @@ export class SceneEditor {
         
         // Process children based on object type
         
-        // 1. Handle SevenCutsModel case
+        // 1. Handle LayerOneRing case
         if (object.model && object.model.singleCuts) {
             // Process all SingleCut models
             object.model.singleCuts.forEach((singleCut, index) => {
@@ -569,99 +556,65 @@ export class SceneEditor {
     }
     
     /**
-     * Update all nested checkboxes under a parent
+     * Update all child checkboxes when a parent checkbox is toggled
      * @param {string} parentPath - Path of the parent object
-     * @param {boolean} isChecked - Whether the checkboxes should be checked
+     * @param {boolean} isChecked - Whether the parent checkbox is checked
      */
     updateNestedCheckboxes(parentPath, isChecked) {
-        // Log for debugging
-        console.log(`Updating nested checkboxes under ${parentPath} to ${isChecked}`);
+        console.log(`Updating nested checkboxes for ${parentPath} to ${isChecked}`);
         
-        // Store the desired state for the parent to ensure it stays correct
-        if (!this.desiredVisibilityState) {
-            this.desiredVisibilityState = {};
-        }
-        this.desiredVisibilityState[parentPath] = isChecked;
-        
-        // Update parent checkbox first
-        if (this.checkboxElements[parentPath] && this.checkboxElements[parentPath].element &&
-            !this.checkboxElements[parentPath].isPermanentlyHidden) {
-            this.checkboxElements[parentPath].element.checked = isChecked;
-        }
-        
-        // Create sets to track which paths need to be checked/unchecked
-        const pathsToCheck = new Set();
-        const pathsToUncheck = new Set();
-        
-        // For Seven CUTs parent, collect all children paths
-        if (parentPath === 'Seven CUTs #1') {
+        // For Layer One Ring parent, collect all children paths
+        if (parentPath === 'Layer One Ring') {
             for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
                 // Skip permanently hidden elements
                 if (checkboxInfo.isPermanentlyHidden) {
                     continue;
                 }
                 
-                if ((path.startsWith('Single CUT #') || path.includes('/Pipe #') || path.includes('/Panel #'))) {
-                    if (isChecked) {
-                        pathsToCheck.add(path);
-                    } else {
-                        pathsToUncheck.add(path);
-                    }
-                    // Store the desired state for each child
-                    this.desiredVisibilityState[path] = isChecked;
+                // Match any path that starts with a SingleCUT number
+                // This will affect all SingleCUTs and their pipes/panels
+                if (path.startsWith('Single CUT #')) {
+                    console.log(`Setting child checkbox for ${path} to ${isChecked}`);
+                    checkboxInfo.element.checked = isChecked;
+                    
+                    // Also update the actual object visibility
+                    this.toggleObjectVisibility(path, checkboxInfo.object, isChecked);
                 }
             }
-        } else {
-            // For regular parent-child relationships
+        }
+        // For SingleCUT parent, only update its pipes and panels
+        else if (parentPath.startsWith('Single CUT #')) {
             for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
                 // Skip permanently hidden elements
                 if (checkboxInfo.isPermanentlyHidden) {
                     continue;
                 }
                 
-                if (path !== parentPath && path.startsWith(parentPath + '/')) {
-                    if (isChecked) {
-                        pathsToCheck.add(path);
-                    } else {
-                        pathsToUncheck.add(path);
-                    }
-                    // Store the desired state for each child
-                    this.desiredVisibilityState[path] = isChecked;
+                // Match only paths that are direct children (pipes/panels) of this SingleCUT
+                if (path.startsWith(parentPath + '/')) {
+                    console.log(`Setting child checkbox for ${path} to ${isChecked}`);
+                    checkboxInfo.element.checked = isChecked;
+                    
+                    // Also update the actual object visibility
+                    this.toggleObjectVisibility(path, checkboxInfo.object, isChecked);
                 }
             }
         }
-        
-        // Now update all the checkboxes at once
-        for (const path of pathsToCheck) {
-            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
-                this.checkboxElements[path].element.checked = true;
-            }
-        }
-        
-        for (const path of pathsToUncheck) {
-            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
-                this.checkboxElements[path].element.checked = false;
-            }
-        }
-        
-        // Schedule another check to ensure the state is correct after a short delay
-        setTimeout(() => {
-            this.enforceDesiredVisibilityState();
-        }, 100);
-    }
-    
-    /**
-     * Enforce the desired visibility state for all checkboxes
-     * This ensures that even if other code changes checkbox states, they return to our desired state
-     */
-    enforceDesiredVisibilityState() {
-        if (!this.desiredVisibilityState) return;
-        
-        for (const [path, isVisible] of Object.entries(this.desiredVisibilityState)) {
-            if (this.checkboxElements[path] && this.checkboxElements[path].element) {
-                if (this.checkboxElements[path].element.checked !== isVisible) {
-                    console.log(`Enforcing state for ${path} to ${isVisible}`);
-                    this.checkboxElements[path].element.checked = isVisible;
+        // For Central CUT, update all its pipes and panels
+        else if (parentPath === 'Central CUT') {
+            for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
+                // Skip permanently hidden elements
+                if (checkboxInfo.isPermanentlyHidden) {
+                    continue;
+                }
+                
+                // Match only paths that are direct children (pipes/panels) of Central CUT
+                if (path.startsWith(parentPath + '/')) {
+                    console.log(`Setting child checkbox for ${path} to ${isChecked}`);
+                    checkboxInfo.element.checked = isChecked;
+                    
+                    // Also update the actual object visibility
+                    this.toggleObjectVisibility(path, checkboxInfo.object, isChecked);
                 }
             }
         }
