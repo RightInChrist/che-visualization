@@ -6,13 +6,16 @@ import {
     Vector3,
     DynamicTexture
 } from '@babylonjs/core';
+import { BaseModel } from './BaseModel';
 
 /**
  * Creates a ground plane for the scene
  */
-export class GroundModel {
-    constructor(scene, size = 5000) {
-        this.scene = scene;
+export class GroundModel extends BaseModel {
+    constructor(scene, size = 5000, position = new Vector3(0, 0, 0), options = {}) {
+        // Call parent constructor
+        super(scene, position, { ...options, name: 'ground' });
+        
         this.size = size;
         this.mesh = null;
         
@@ -23,6 +26,8 @@ export class GroundModel {
      * Creates the ground mesh with grid texture
      */
     createGround() {
+        this.debugLog('Creating ground mesh');
+        
         // Create ground mesh
         this.mesh = MeshBuilder.CreateGround('ground', {
             width: this.size,
@@ -32,6 +37,9 @@ export class GroundModel {
         
         // Position at y=0 (important for height measurements)
         this.mesh.position = new Vector3(0, 0, 0);
+        
+        // Parent to root node
+        this.mesh.parent = this.rootNode;
         
         // Create grid material
         const groundMaterial = new StandardMaterial('groundMaterial', this.scene);
@@ -107,5 +115,31 @@ export class GroundModel {
         
         // Add collisions
         this.mesh.checkCollisions = true;
+        
+        this.debugLog('Ground mesh created successfully');
+    }
+    
+    /**
+     * Override base setVisible method to handle mesh visibility
+     * @param {boolean} isVisible - Whether the ground should be visible
+     */
+    setVisible(isVisible) {
+        super.setVisible(isVisible);
+        
+        if (this.mesh) {
+            this.mesh.isVisible = isVisible;
+        }
+    }
+    
+    /**
+     * Override base dispose method to also dispose the mesh
+     */
+    dispose() {
+        if (this.mesh) {
+            this.mesh.dispose();
+            this.mesh = null;
+        }
+        
+        super.dispose();
     }
 } 
