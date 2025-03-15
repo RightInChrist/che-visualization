@@ -362,22 +362,45 @@ export class RadiusControls {
         
         // Calculate the panel distance for this model
         let panelDistance = 0;
+        let calculationMethod = "unknown";
+        
+        // Debug the model type
+        const modelType = model.constructor ? model.constructor.name : "unknown";
+        console.log(`Calculating panel distance for model type: ${modelType}`);
         
         // Method 1: Check if model has a calculatePanelDistance method
         if (model && typeof model.calculatePanelDistance === 'function') {
             panelDistance = model.calculatePanelDistance();
+            calculationMethod = "model.calculatePanelDistance()";
+            console.log(`Using model's calculatePanelDistance method: ${panelDistance}`);
         }
         // Method 2: Use child models' calculatePanelDistance if they exist
         else if (model && typeof model.getChildren === 'function' && model.getChildren().length > 0) {
             const childModel = model.getChildren()[0]; // Get first child
             if (childModel && typeof childModel.calculatePanelDistance === 'function') {
                 panelDistance = childModel.calculatePanelDistance();
+                calculationMethod = "childModel.calculatePanelDistance()";
+                console.log(`Using child model's calculatePanelDistance method: ${panelDistance}`);
             }
         }
         // Method 3: Fallback calculation for any model with outerRadius
         else if (model && model.options && model.options.outerRadius !== undefined) {
             // Use the standard formula for hexagons: distance = radius * √3
             panelDistance = model.options.outerRadius * Math.sqrt(3);
+            calculationMethod = "outerRadius * Math.sqrt(3)";
+            console.log(`Using formula calculation: ${model.options.outerRadius} * √3 = ${panelDistance}`);
+        }
+        
+        // For debugging - log model properties
+        if (modelType === "LayerOneStarModel") {
+            console.log("LayerOneStarModel properties:", {
+                "Has calculatePanelDistance": typeof model.calculatePanelDistance === 'function',
+                "Has getChildren": typeof model.getChildren === 'function',
+                "Children count": model.getChildren ? model.getChildren().length : "N/A",
+                "Has options": model.options ? "Yes" : "No",
+                "outerRadius": model.options ? model.options.outerRadius : "N/A",
+                "calculationMethod": calculationMethod
+            });
         }
         
         // Find and update the display element
@@ -385,6 +408,8 @@ export class RadiusControls {
         const displayElement = document.getElementById(`panel-distance-${modelId}`);
         if (displayElement) {
             displayElement.textContent = `${Math.round(panelDistance)} meters`;
+        } else {
+            console.warn(`Panel distance display element not found for model ${modelId}`);
         }
     }
     

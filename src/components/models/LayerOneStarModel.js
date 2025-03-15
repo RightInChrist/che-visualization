@@ -418,12 +418,13 @@ export class LayerOneStarModel extends CompositeModel {
      * @returns {number} - Distance in meters
      */
     calculatePanelDistance() {
-        if (this.childModels && this.childModels.length > 0) {
-            return this.childModels[0].calculatePanelDistance();
-        }
+        // Direct calculation is more reliable than depending on child models which might not be fully initialized
         // For a star-shaped hexagonal pattern, the distance between opposite panels
         // is outerRadius * √3, not outerRadius * 2 (which would be the distance between opposite corners)
         const distanceBetweenPanels = this.options.outerRadius * Math.sqrt(3);
+        
+        console.log(`LayerOneStarModel calculatePanelDistance: ${this.options.outerRadius} * √3 = ${distanceBetweenPanels}`);
+        
         return distanceBetweenPanels;
     }
     

@@ -537,55 +537,64 @@ export class SceneEditor {
      * @returns {boolean} - Whether the object is visible
      */
     getObjectVisibility(object) {
+        // Set this to true only when debugging SceneEditor visibility issues
+        const DEBUG_VISIBILITY = false;
+        
+        const log = (message) => {
+            if (DEBUG_VISIBILITY) {
+                console.log(message);
+            }
+        };
+        
         if (!object) {
-            console.log(`[SceneEditor] Object is null or undefined`);
+            log(`[SceneEditor] Object is null or undefined`);
             return false;
         }
 
         // Priority 1: Check if the object is a model with an isVisible method
         if (typeof object.isVisible === 'function') {
             const visibility = object.isVisible();
-            console.log(`[SceneEditor] Object has isVisible() method: ${visibility}`);
+            log(`[SceneEditor] Object has isVisible() method: ${visibility}`);
             return visibility;
         }
         
         // Priority 2: Check if the object has a model property with an isVisible method
         if (object.model && typeof object.model.isVisible === 'function') {
             const visibility = object.model.isVisible();
-            console.log(`[SceneEditor] Object.model has isVisible() method: ${visibility}`);
+            log(`[SceneEditor] Object.model has isVisible() method: ${visibility}`);
             return visibility;
         }
         
         // Priority 3: Check if the object has a rootNode with an isEnabled method
         if (object.rootNode && typeof object.rootNode.isEnabled === 'function') {
             const enabled = object.rootNode.isEnabled();
-            console.log(`[SceneEditor] Object has rootNode with isEnabled method: ${enabled}`);
+            log(`[SceneEditor] Object has rootNode with isEnabled method: ${enabled}`);
             return enabled;
         }
         
         // Priority 4: For direct mesh access
         if (object.mesh && typeof object.mesh.isVisible === 'boolean') {
             const visibility = object.mesh.isVisible;
-            console.log(`[SceneEditor] Object has mesh with isVisible property: ${visibility}`);
+            log(`[SceneEditor] Object has mesh with isVisible property: ${visibility}`);
             return visibility;
         }
         
         // Priority 5: For PipeModel
         if (object.pipeMesh && typeof object.pipeMesh.isVisible === 'boolean') {
             const visibility = object.pipeMesh.isVisible;
-            console.log(`[SceneEditor] Object has pipeMesh with isVisible property: ${visibility}`);
+            log(`[SceneEditor] Object has pipeMesh with isVisible property: ${visibility}`);
             return visibility;
         }
         
         // Priority 6: For PanelModel
         if (object.panelMesh && typeof object.panelMesh.isVisible === 'boolean') {
             const visibility = object.panelMesh.isVisible;
-            console.log(`[SceneEditor] Object has panelMesh with isVisible property: ${visibility}`);
+            log(`[SceneEditor] Object has panelMesh with isVisible property: ${visibility}`);
             return visibility;
         }
         
         // If we can't determine visibility, default to true
-        console.log(`[SceneEditor] Unable to determine visibility, defaulting to true`);
+        log(`[SceneEditor] Unable to determine visibility, defaulting to true`);
         return true;
     }
     
