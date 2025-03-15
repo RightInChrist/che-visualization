@@ -5,6 +5,7 @@ import { GroundModel } from './components/models/GroundModel';
 import { SingleCutModel } from './components/models/SingleCutModel';
 import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
+import { SceneEditor } from './components/ui/SceneEditor';
 
 /**
  * Main application entry point
@@ -66,10 +67,30 @@ class CHEVisualization {
             // Create UI controller
             this.uiController = new UIController(this.cameraController);
             
+            // Organize scene objects for the scene editor
+            const sceneObjects = {
+                'Ground #1': this.ground,
+                'Single CUT #1': this.cheModel,
+                'Camera Controller': this.cameraController,
+                'Lights': {
+                    'Hemispheric Light': scene.getLightByName('hemisphericLight'),
+                    'Directional Light': scene.getLightByName('directionalLight')
+                },
+                'Axes': axesViewer
+            };
+            
+            // Create scene editor
+            this.sceneEditor = new SceneEditor(scene, sceneObjects);
+            
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
                 const cameraPosition = this.scene.activeCamera.position;
                 this.cheModel.updateLOD(cameraPosition);
+                
+                // Update scene editor if needed
+                if (this.sceneEditor) {
+                    this.sceneEditor.update();
+                }
             });
             
             // Start the render loop
