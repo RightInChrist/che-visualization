@@ -323,16 +323,9 @@ export class SevenCutsModel extends CompositeModel {
         // Convert angle to pipe index (finding closest pipe to this angle)
         // Each pipe is at 60° (π/3 radians) intervals
         const normalizedAngle = inverseAngle < 0 ? inverseAngle + 2 * Math.PI : inverseAngle;
+        const pipeIndex = Math.round(normalizedAngle / (Math.PI / 3)) % 6;
         
-        // Calculate the center-facing pipe index
-        const centerFacingPipeIndex = Math.round(normalizedAngle / (Math.PI / 3)) % 6;
-        
-        // Shift by 1 counter-clockwise (subtract 1 and handle wrap-around)
-        const counterClockwisePipeIndex = (centerFacingPipeIndex - 1 + 6) % 6;
-        
-        this.debugLog(`SingleCUT #${modelIndex+2}: Center-facing pipe would be ${centerFacingPipeIndex}, shifting to counter-clockwise pipe ${counterClockwisePipeIndex}`);
-        
-        return counterClockwisePipeIndex;
+        return pipeIndex;
     }
     
     /**
