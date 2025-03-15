@@ -200,9 +200,24 @@ export class RadiusControls {
      * Update the panel distance display with current value
      */
     updatePanelDistanceDisplay() {
-        // Calculate distance (approximately 2 * radius)
-        const distance = 2 * this.currentSingleCutRadius;
-        this.panelDistanceDisplay.textContent = `${distance} units`;
+        // Get pipe radius from the model (default is 5 if not accessible)
+        const pipeRadius = (this.sevenCutsModel && 
+                          this.sevenCutsModel.singleCuts && 
+                          this.sevenCutsModel.singleCuts[0] && 
+                          this.sevenCutsModel.singleCuts[0].options) 
+                          ? this.sevenCutsModel.singleCuts[0].options.pipeRadius || 5 
+                          : 5;
+        
+        // Calculate distance between pipe centers
+        const pipeCentersDistance = 2 * this.currentSingleCutRadius;
+        
+        // Calculate actual panel distance (subtract diameter of pipes)
+        const panelDistance = pipeCentersDistance - (2 * pipeRadius);
+        
+        // Display both values
+        this.panelDistanceDisplay.innerHTML = 
+            `<div>Between pipe centers: ${pipeCentersDistance} units</div>
+             <div>Between panel edges: ${panelDistance} units</div>`;
     }
     
     /**
