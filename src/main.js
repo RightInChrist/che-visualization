@@ -6,6 +6,7 @@ import { SevenCutsModel } from './components/models/SevenCutsModel';
 import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
+import { RadiusControls } from './components/ui/RadiusControls';
 
 /**
  * Main application entry point
@@ -100,6 +101,12 @@ class CHEVisualization {
             
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, sceneObjects);
+            
+            // Create the radius controls
+            const radiusControls = new RadiusControls(scene, this.cheModel, {
+                position: { x: 10, y: 10 },
+                isVisible: true
+            });
             
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {

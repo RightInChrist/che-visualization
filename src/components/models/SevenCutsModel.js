@@ -1,4 +1,4 @@
-import { Vector3, Color3 } from '@babylonjs/core';
+import { Vector3, Color3, MeshBuilder, StandardMaterial, Axis, Space } from '@babylonjs/core';
 import { SingleCutModel } from './SingleCutModel';
 import { CompositeModel } from './CompositeModel';
 
@@ -12,14 +12,23 @@ export class SevenCutsModel extends CompositeModel {
         const defaultOptions = {
             outerRadius: 250, // Distance from center to outer SingleCUTs (reduced from 500 to create overlap)
             singleCutRadius: 150, // Radius for each individual SingleCUT
-            debug: false, // Enable/disable debug logging
+            debug: false, // Enable/disable debug logging,
+            showRadiusLines: true, // Whether to show radius lines on the ground
         };
 
         // Call parent constructor
         super(scene, position, { ...defaultOptions, ...options });
         
+        // Store references to radius visualization elements
+        this.radiusLines = [];
+        
         // Create the models
         this.createModels();
+        
+        // Draw radius lines if enabled
+        if (this.options.showRadiusLines) {
+            this.drawRadiusLines();
+        }
     }
     
     /**
@@ -46,11 +55,6 @@ export class SevenCutsModel extends CompositeModel {
             // Calculate the radius for this SingleCUT
             // Make SingleCUT #2 (i=0) closer to the center to connect properly
             let radius = this.options.outerRadius;
-            if (i === 0) {
-                // Position SingleCUT #2 closer to center
-                radius = 200; // Adjusted radius for better connection with the center
-                this.debugLog(`Using reduced radius (${radius}) for SingleCUT #2 to connect with center`);
-            }
             
             const x = radius * Math.cos(angle);
             const z = radius * Math.sin(angle);
@@ -121,6 +125,159 @@ export class SevenCutsModel extends CompositeModel {
         }
         
         this.debugLog('Seven CUTs model creation complete');
+    }
+    
+    /**
+     * Draw lines on the ground to visualize the radius measurements
+     */
+    drawRadiusLines() {
+        this.debugLog('Drawing radius lines on ground');
+        
+        // Clean up existing lines
+        this.clearRadiusLines();
+        
+        // Height offset to place slightly above ground
+        const heightOffset = 0.1;
+        
+        // Create material for standard radius
+        const standardRadiusMaterial = new StandardMaterial("standardRadiusMaterial", this.scene);
+        standardRadiusMaterial.diffuseColor = new Color3(0.7, 0.7, 0);
+        standardRadiusMaterial.alpha = 0.8;
+        
+        // Create material for SingleCUT #2 radius
+        const specialRadiusMaterial = new StandardMaterial("specialRadiusMaterial", this.scene);
+        specialRadiusMaterial.diffuseColor = new Color3(0, 0.7, 0.7);
+        specialRadiusMaterial.alpha = 0.8;
+        
+        // Create material for SingleCUT internal radius
+        const internalRadiusMaterial = new StandardMaterial("internalRadiusMaterial", this.scene);
+        internalRadiusMaterial.diffuseColor = new Color3(0.7, 0, 0.7);
+        internalRadiusMaterial.alpha = 0.8;
+        
+        // Create circle for the standard radius (250 units)
+        const standardCircle = MeshBuilder.CreateTorus("standardRadiusLine", {
+            diameter: this.options.outerRadius * 2,
+            thickness: 2,
+            tessellation: 64
+        }, this.scene);
+        standardCircle.material = standardRadiusMaterial;
+        standardCircle.position.y = heightOffset;
+        standardCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
+        standardCircle.parent = this.rootNode;
+        this.radiusLines.push(standardCircle);
+        
+        // Create circle for SingleCUT #2 special radius (200 units)
+        const specialCircle = MeshBuilder.CreateTorus("specialRadiusLine", {
+            diameter: 400, // 200 * 2
+            thickness: 2,
+            tessellation: 64
+        }, this.scene);
+        specialCircle.material = specialRadiusMaterial;
+        specialCircle.position.y = heightOffset;
+        specialCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
+        specialCircle.parent = this.rootNode;
+        this.radiusLines.push(specialCircle);
+        
+        // Create circle for SingleCUT internal radius
+        const internalCircle = MeshBuilder.CreateTorus("internalRadiusLine", {
+            diameter: this.options.singleCutRadius * 2,
+            thickness: 2,
+            tessellation: 64
+        }, this.scene);
+        internalCircle.material = internalRadiusMaterial;
+        internalCircle.position.y = heightOffset;
+        internalCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
+        internalCircle.parent = this.rootNode;
+        this.radiusLines.push(internalCircle);
+        
+        // Create radius lines from center to each SingleCUT
+        for (let i = 0; i < 6; i++) {
+            const angle = (i * 2 * Math.PI) / 6;
+            
+            // Calculate the radius for this SingleCUT
+            let radius = this.options.outerRadius;
+            if (i === 0) {
+                radius = 200; // Special case for SingleCUT #2
+            }
+            
+            const x = radius * Math.cos(angle);
+            const z = radius * Math.sin(angle);
+            
+            // Create a line from center to the SingleCUT position
+            const line = MeshBuilder.CreateLines("radiusLine_" + i, {
+                points: [
+                    new Vector3(0, heightOffset, 0),
+                    new Vector3(x, heightOffset, z)
+                ]
+            }, this.scene);
+            
+            // Set the line color based on whether it's the special case
+            if (i === 0) {
+                line.color = new Color3(0, 0.7, 0.7); // Cyan for special case
+            } else {
+                line.color = new Color3(0.7, 0.7, 0); // Yellow for standard cases
+            }
+            
+            line.parent = this.rootNode;
+            this.radiusLines.push(line);
+        }
+        
+        this.debugLog('Radius lines created');
+    }
+    
+    /**
+     * Clear all radius visualization elements
+     */
+    clearRadiusLines() {
+        if (this.radiusLines && this.radiusLines.length > 0) {
+            this.radiusLines.forEach(line => {
+                if (line) {
+                    line.dispose();
+                }
+            });
+            this.radiusLines = [];
+        }
+    }
+    
+    /**
+     * Update the model with new radius settings
+     * @param {number} outerRadius - New radius for outer SingleCUTs
+     * @param {number} singleCutRadius - New radius for each SingleCUT's internal structure
+     */
+    updateRadiusSettings(outerRadius, singleCutRadius) {
+        this.debugLog(`Updating radius settings - outer: ${outerRadius}, singleCut: ${singleCutRadius}`);
+        
+        // Store the new settings
+        this.options.outerRadius = outerRadius;
+        this.options.singleCutRadius = singleCutRadius;
+        
+        // First dispose of all existing children
+        this.disposeChildren();
+        this.clearRadiusLines();
+        
+        // Recreate all models with new settings
+        this.createModels();
+        
+        // Redraw radius lines
+        if (this.options.showRadiusLines) {
+            this.drawRadiusLines();
+        }
+        
+        this.debugLog('Radius settings updated and models recreated');
+    }
+    
+    /**
+     * Dispose all child models
+     */
+    disposeChildren() {
+        if (this.childModels && this.childModels.length > 0) {
+            this.childModels.forEach(child => {
+                if (child && typeof child.dispose === 'function') {
+                    child.dispose();
+                }
+            });
+            this.childModels = [];
+        }
     }
     
     /**
