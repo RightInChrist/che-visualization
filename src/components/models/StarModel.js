@@ -97,6 +97,50 @@ export class StarModel extends CompositeModel {
     }
     
     /**
+     * Gets the rotation object for this model
+     * @returns {Object} - Rotation object with angle, min, max and default properties
+     */
+    getRotation() {
+        // Initialize a rotation object if it doesn't exist
+        if (!this._rotation) {
+            this._rotation = {
+                angle: this.options.rotationAngle || 0,    // Current rotation angle
+                min: 0,                                    // Minimum rotation angle
+                max: 360,                                  // Maximum rotation angle
+                default: this.options.rotationAngle || 0   // Default rotation angle
+            };
+            
+            // Define a setter for the angle property that applies rotation when changed
+            Object.defineProperty(this._rotation, 'angle', {
+                get: () => this.options.rotationAngle || 0,
+                set: (value) => {
+                    // Update the stored angle
+                    this.options.rotationAngle = value;
+                    
+                    // Apply rotation to the model if it has a root node
+                    if (this.rootNode) {
+                        this.rootNode.rotation.y = (value * Math.PI) / 180;
+                    }
+                }
+            });
+        }
+        
+        return this._rotation;
+    }
+    
+    /**
+     * Gets the rotation information for child models (centralCut)
+     * For use with rotation controls UI
+     * @returns {Array} - Array of rotation objects
+     */
+    getChildrenRotations() {
+        if (this.centralCut && typeof this.centralCut.getRotation === 'function') {
+            return [this.centralCut.getRotation()];
+        }
+        return null;
+    }
+    
+    /**
      * Model initialization method called after scene setup
      * Ensures the model and its children are properly initialized
      */
