@@ -32,7 +32,7 @@ export class GroundModel extends BaseModel {
         this.mesh = MeshBuilder.CreateGround('ground', {
             width: this.size,
             height: this.size,
-            subdivisions: 32
+            subdivisions: 64 // Increased subdivisions for better shadow detail
         }, this.scene);
         
         // Position at y=0 (important for height measurements)
@@ -41,29 +41,44 @@ export class GroundModel extends BaseModel {
         // Parent to root node
         this.mesh.parent = this.rootNode;
         
-        // Create grid material
+        // Create enhanced ground material
         const groundMaterial = new StandardMaterial('groundMaterial', this.scene);
-        groundMaterial.diffuseColor = new Color3(0.2, 0.5, 0.2);
-        groundMaterial.specularColor = new Color3(0.1, 0.1, 0.1);
+        groundMaterial.diffuseColor = new Color3(0.25, 0.55, 0.25); // Slightly greener base color
+        groundMaterial.specularColor = new Color3(0.05, 0.05, 0.05); // Minimal specular for ground
+        groundMaterial.specularPower = 128; // Sharper but subtle highlights
+        groundMaterial.ambientColor = new Color3(0.2, 0.3, 0.2); // Green-tinted ambient
         
-        // Create a procedural grid texture instead of loading from URL
-        const textureSize = 1024;
+        // Create a procedural grid texture with improved quality
+        const textureSize = 2048; // Increased texture resolution
         const gridTexture = new DynamicTexture('gridTexture', textureSize, this.scene, true);
         const textureContext = gridTexture.getContext();
         
-        // Set background color
-        textureContext.fillStyle = "#366936";
+        // Create a subtle gradient background
+        const gradient = textureContext.createLinearGradient(0, 0, textureSize, textureSize);
+        gradient.addColorStop(0, "#3a7a3a"); // Darker green at edges
+        gradient.addColorStop(0.5, "#4a8a4a"); // Lighter green in center
+        gradient.addColorStop(1, "#3a7a3a"); // Darker green at edges
+        textureContext.fillStyle = gradient;
         textureContext.fillRect(0, 0, textureSize, textureSize);
         
-        // Draw grid lines
+        // Draw grid lines with better visibility
         textureContext.lineWidth = 2;
-        textureContext.strokeStyle = "#488A48";
+        textureContext.strokeStyle = "#5a9a5a"; // Lighter green for regular grid
         
         // Draw major grid lines
         textureContext.lineWidth = 4;
         const majorGridSize = textureSize / 10;
         for (let i = 0; i <= 10; i++) {
             const pos = i * majorGridSize;
+            
+            // Use a different color for the center lines
+            if (i === 5) {
+                textureContext.strokeStyle = "#7ab07a"; // Highlight center lines
+                textureContext.lineWidth = 6;
+            } else {
+                textureContext.strokeStyle = "#5a9a5a";
+                textureContext.lineWidth = 4;
+            }
             
             // Horizontal lines
             textureContext.beginPath();
@@ -80,6 +95,7 @@ export class GroundModel extends BaseModel {
         
         // Draw minor grid lines
         textureContext.lineWidth = 1;
+        textureContext.strokeStyle = "#4a8a4a"; // Subtle minor grid lines
         const minorGridSize = majorGridSize / 10;
         for (let i = 0; i <= 100; i++) {
             if (i % 10 === 0) continue; // Skip major lines
@@ -107,10 +123,27 @@ export class GroundModel extends BaseModel {
         gridTexture.vScale = this.size / 100;
         groundMaterial.diffuseTexture = gridTexture;
         
+        // Add bump map for subtle terrain effect
+        const bumpTexture = new DynamicTexture('bumpTexture', 512, this.scene, true);
+        const bumpContext = bumpTexture.getContext();
+        
+        // Create a random noise pattern
+        for (let x = 0; x < 512; x++) {
+            for (let y = 0; y < 512; y++) {
+                const value = 220 + Math.random() * 20; // Subtle noise
+                bumpContext.fillStyle = `rgb(${value},${value},${value})`;
+                bumpContext.fillRect(x, y, 1, 1);
+            }
+        }
+        
+        bumpTexture.update();
+        groundMaterial.bumpTexture = bumpTexture;
+        groundMaterial.bumpTexture.level = 0.1; // Subtle bump effect
+        
         // Apply material to mesh
         this.mesh.material = groundMaterial;
         
-        // Enable receiving shadows
+        // Enable receiving shadows with better settings
         this.mesh.receiveShadows = true;
         
         // Add collisions

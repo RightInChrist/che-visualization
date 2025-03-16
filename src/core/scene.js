@@ -1,4 +1,4 @@
-import { Scene, Color3, Color4, Vector3, HemisphericLight, DirectionalLight, ShadowGenerator } from '@babylonjs/core';
+import { Scene, Color3, Color4, Vector3, HemisphericLight, DirectionalLight, ShadowGenerator, CascadedShadowGenerator, PointLight, SpotLight } from '@babylonjs/core';
 import { AxesViewer } from '@babylonjs/core/Debug/axesViewer';
 
 /**
@@ -16,20 +16,39 @@ export const createScene = (engine) => {
     // Enable physics - in Babylon 5.x, we need to use a different approach
     // For simplicity, we'll skip physics for now as it's not critical for the visualization
     
-    // Add lights
+    // Add ambient light for general illumination
     const hemisphericLight = new HemisphericLight('hemisphericLight', new Vector3(0, 1, 0), scene);
-    hemisphericLight.intensity = 0.7;
+    hemisphericLight.intensity = 0.5; // Reduced intensity for better contrast
     hemisphericLight.diffuse = new Color3(1, 1, 1);
-    hemisphericLight.groundColor = new Color3(0.5, 0.5, 0.5);
+    hemisphericLight.groundColor = new Color3(0.3, 0.3, 0.4); // Cooler ground reflection
+    hemisphericLight.specular = new Color3(0.2, 0.2, 0.2); // Lower specular intensity
     
-    const directionalLight = new DirectionalLight('directionalLight', new Vector3(0.5, -1, 1), scene);
+    // Main directional light (sun)
+    const directionalLight = new DirectionalLight('directionalLight', new Vector3(0.5, -1, 0.6), scene);
     directionalLight.intensity = 0.8;
-    directionalLight.diffuse = new Color3(1, 1, 0.8);
+    directionalLight.diffuse = new Color3(1, 0.95, 0.8); // Warmer sunlight color
+    directionalLight.specular = new Color3(0.9, 0.9, 0.9); // Bright specular highlights
     
-    // Create shadow generator
-    const shadowGenerator = new ShadowGenerator(1024, directionalLight);
-    shadowGenerator.useBlurExponentialShadowMap = true;
-    shadowGenerator.blurKernel = 32;
+    // Add a supplementary spotlight to create visual interest
+    const spotLight = new SpotLight('spotLight', new Vector3(100, 100, -200), new Vector3(-0.5, -0.5, 1), Math.PI/4, 8, scene);
+    spotLight.intensity = 0.3;
+    spotLight.diffuse = new Color3(0.9, 0.95, 1); // Slightly blue-tinted fill light
+    spotLight.specular = new Color3(0.8, 0.8, 1);
+    
+    // Create enhanced shadow generator
+    // For better quality shadows, use CascadedShadowGenerator instead of standard ShadowGenerator
+    const shadowGenerator = new CascadedShadowGenerator(1024, directionalLight);
+    shadowGenerator.usePercentageCloserFiltering = true; // Enables PCF which gives softer shadow edges
+    shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
+    shadowGenerator.numCascades = 4; // More cascades for better shadow detail at different distances
+    shadowGenerator.lambda = 0.8; // Controls the split between cascades
+    shadowGenerator.cascadeBlendPercentage = 0.1; // Smooth transition between cascades
+    shadowGenerator.depthClamp = true; // Improve shadow quality
+    shadowGenerator.shadowMaxZ = 5000; // Extended shadow range
+    
+    // Set better defaults for the scene
+    scene.ambientColor = new Color3(0.1, 0.1, 0.15); // Subtle ambient color
+    scene.clearColor = new Color4(0.5, 0.75, 0.95, 1.0); // Lighter sky blue
     
     // Create axes viewer (for debugging)
     const axesViewer = new AxesViewer(scene, 10);

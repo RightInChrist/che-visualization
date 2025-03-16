@@ -39,21 +39,33 @@ export class PipeModel extends BaseModel {
         const pipeMesh = MeshBuilder.CreateCylinder('pipe', {
             height: this.options.height,
             diameter: this.options.radius * 2,
-            tessellation: 24
+            tessellation: 36 // Increased tessellation for smoother look
         }, this.scene);
         
         // Position cylinder so bottom is at y=0
         pipeMesh.position.y = this.options.height / 2;
         
-        // Create material
+        // Create material with improved properties
         const pipeMaterial = new StandardMaterial('pipeMaterial', this.scene);
         pipeMaterial.diffuseColor = this.options.color;
-        pipeMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
+        pipeMaterial.ambientColor = this.options.color.scale(0.5); // Add ambient color
+        pipeMaterial.specularColor = new Color3(0.5, 0.5, 0.5); // Enhanced specular
+        pipeMaterial.specularPower = 64; // Sharper specular highlights
+        pipeMaterial.roughness = 0.3; // Less rough for a more metallic look
+        
+        // Add subtle metal-like texture using fresnel parameters
+        pipeMaterial.useReflectionFresnelFromSpecular = true;
+        pipeMaterial.reflectionFresnelParameters = {
+            leftColor: this.options.color.scale(0.8),
+            rightColor: Color3.White(),
+            bias: 0.1,
+            power: 2
+        };
         
         // Apply material
         pipeMesh.material = pipeMaterial;
         
-        // Enable shadows
+        // Enhance shadow settings
         pipeMesh.receiveShadows = true;
         pipeMesh.castShadow = true;
         
