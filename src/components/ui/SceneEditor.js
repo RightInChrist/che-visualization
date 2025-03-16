@@ -363,34 +363,36 @@ export class SceneEditor {
         objectLabel.style.marginLeft = '5px';
         objectLabel.className = 'object-label';
         
-        // Make the label also toggle collapse if the object has children
-        if (hasChildElements) {
-            objectLabel.addEventListener('click', () => {
-                const collapseBtn = objectContainer.querySelector('.collapse-btn');
-                if (collapseBtn) {
-                    collapseBtn.click();
-                }
-            });
-        }
-        
-        // Add debug logging when clicking on model labels
-        if (object && (object.constructor && 
+        // Check if this is a model that should show logs on click
+        const isLoggableModel = object && (object.constructor && 
             (object.constructor.name.includes('Model') || 
-             object.constructor.name.includes('SingleCut')))) {
-            
+             object.constructor.name.includes('SingleCut')));
+        
+        // Model labels should have special styling and logging behavior
+        if (isLoggableModel) {
             objectLabel.style.cursor = 'pointer';
             objectLabel.style.textDecoration = 'underline dotted';
             objectLabel.style.color = '#4CAF50';
             
+            // For models, prioritize logging over collapse/expand
             objectLabel.addEventListener('click', (e) => {
-                // Stop propagation to prevent collapse toggle if applicable
                 e.stopPropagation();
+                e.preventDefault();
                 
                 // Log model info
                 if (typeof this.logModelInfo === 'function') {
                     this.logModelInfo(object);
                 } else {
                     console.log("Model Debug Info:", object);
+                }
+            });
+        } 
+        // For non-model objects with children, make the label toggle collapse
+        else if (hasChildElements) {
+            objectLabel.addEventListener('click', () => {
+                const collapseBtn = objectContainer.querySelector('.collapse-btn');
+                if (collapseBtn) {
+                    collapseBtn.click();
                 }
             });
         }
