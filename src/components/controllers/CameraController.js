@@ -43,7 +43,7 @@ export class CameraController {
         this.transitionDuration = 1000; // ms
         this.isTransitioning = false;
         this.keys = { w: false, a: false, s: false, d: false, space: false, shift: false };
-        this.maxPipeHeight = 1000; // height of pipes in meters
+        this.maxPipeHeight = 1500; // height of pipes in meters
         
         // Debug settings
         this.showCollisionRays = false;
@@ -249,37 +249,37 @@ export class CameraController {
         }
         
         // Get camera position
-        const camera = this.currentCamera;
+            const camera = this.currentCamera;
         const currentPosition = camera.position.clone();
         
         // Movement direction
         let direction = Vector3.Zero();
         
         // Forward/backward movement in camera direction
-        if (this.keys.w) {
+            if (this.keys.w) {
             const forward = this.currentCamera.getDirection(Vector3.Forward());
             direction.addInPlace(forward);
-        }
-        if (this.keys.s) {
+            }
+            if (this.keys.s) {
             const backward = this.currentCamera.getDirection(Vector3.Backward());
             direction.addInPlace(backward);
-        }
-        
+            }
+            
         // Left/right movement perpendicular to camera direction
-        if (this.keys.a) {
+            if (this.keys.a) {
             const left = this.currentCamera.getDirection(Vector3.Left());
             direction.addInPlace(left);
-        }
-        if (this.keys.d) {
+            }
+            if (this.keys.d) {
             const right = this.currentCamera.getDirection(Vector3.Right());
             direction.addInPlace(right);
-        }
-        
+            }
+            
         // Up/down movement
-        if (this.keys.space) {
+                if (this.keys.space) {
             direction.addInPlace(Vector3.Up());
-        }
-        if (this.keys.shift) {
+                }
+                if (this.keys.shift) {
             direction.addInPlace(Vector3.Down());
         }
         
@@ -351,24 +351,24 @@ export class CameraController {
      * @param {boolean} hit - Whether the ray hit something
      */
     visualizeCollisionRay(ray, hit) {
-        // Clean up old rays
-        this.collisionRayHelpers.forEach(helper => helper.dispose());
-        this.collisionRayHelpers = [];
-        
-        // Create new ray visualization
-        const rayHelper = new MeshBuilder.CreateLines('rayHelper', {
+            // Clean up old rays
+            this.collisionRayHelpers.forEach(helper => helper.dispose());
+            this.collisionRayHelpers = [];
+            
+            // Create new ray visualization
+            const rayHelper = new MeshBuilder.CreateLines('rayHelper', {
             points: [
                 ray.origin, 
                 ray.origin.add(ray.direction.scale(ray.length))
             ],
-            updatable: false
-        }, this.scene);
-        
-        const material = new StandardMaterial('rayMaterial', this.scene);
+                updatable: false
+            }, this.scene);
+            
+            const material = new StandardMaterial('rayMaterial', this.scene);
         material.emissiveColor = hit ? Color3.Red() : Color3.Green();
-        rayHelper.material = material;
-        
-        this.collisionRayHelpers.push(rayHelper);
+            rayHelper.material = material;
+            
+            this.collisionRayHelpers.push(rayHelper);
     }
     
     /**
@@ -513,5 +513,13 @@ export class CameraController {
         };
         
         animateTransition();
+    }
+    
+    /**
+     * Gets the name of the current camera mode
+     * @returns {string} The name of the current camera mode
+     */
+    getCurrentCameraName() {
+        return this.currentMode;
     }
 } 

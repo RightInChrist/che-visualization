@@ -82,7 +82,9 @@ class CHEVisualization {
                     app: this,
                     controlClasses: {
                         DebugInfoView: DebugInfoView
-                    }
+                    },
+                    // Only show debug toggle, no other controls
+                    showOnlyDebugToggle: true
                 }
             );
             
@@ -153,7 +155,7 @@ class CHEVisualization {
             },
             // Force a complete recalculation and update of child positions
             forceUpdatePositions: () => {
-                console.log("Forcing complete recalculation of all positions...");
+                    console.log("Forcing complete recalculation of all positions...");
                 
                 // Update Ring Model positions
                 if (this.ringModel && typeof this.ringModel.updateRadiusSettings === 'function') {

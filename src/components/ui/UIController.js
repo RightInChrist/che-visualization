@@ -31,6 +31,12 @@ export class UIController {
      * Initializes UI elements and event listeners
      */
     initUI() {
+        // If showOnlyDebugToggle is true, only create debug info view
+        if (this.options.showOnlyDebugToggle) {
+            // Skip creating other UI elements
+            return;
+        }
+        
         // Create the camera toggle button
         this.createCameraToggleButton();
         
@@ -52,6 +58,26 @@ export class UIController {
      * Creates containers for UI elements
      */
     createContainers() {
+        // Only create the toggle buttons container if showOnlyDebugToggle is true
+        if (this.options.showOnlyDebugToggle) {
+            if (!document.getElementById('toggleButtons')) {
+                const toggleButtons = document.createElement('div');
+                toggleButtons.id = 'toggleButtons';
+                toggleButtons.style.position = 'absolute';
+                toggleButtons.style.bottom = '20px';
+                toggleButtons.style.right = '20px';
+                toggleButtons.style.display = 'flex';
+                toggleButtons.style.flexDirection = 'row';
+                toggleButtons.style.gap = '10px';
+                toggleButtons.style.zIndex = '100';
+                document.body.appendChild(toggleButtons);
+                this.toggleButtonsContainer = toggleButtons;
+            } else {
+                this.toggleButtonsContainer = document.getElementById('toggleButtons');
+            }
+            return;
+        }
+        
         // Create control panels container if it doesn't exist
         if (!document.getElementById('controlPanels')) {
             const controlPanels = document.createElement('div');
@@ -91,12 +117,14 @@ export class UIController {
      * Creates model-specific controls (radius and rotation)
      */
     createModelControls() {
+        // Skip if only debug toggle should be shown
+        if (this.options.showOnlyDebugToggle) return;
+        
         const { DebugInfoView } = this.options.controlClasses || {};
         
         // Create debug info view if the class is available
         if (DebugInfoView && this.options.showDebugInfo) {
             this.debugInfoView = new DebugInfoView(
-                this.options.scene,
                 this.models,
                 {
                     app: this.options.app
@@ -124,6 +152,9 @@ export class UIController {
      * Creates the controls info panel
      */
     createControlsInfoPanel() {
+        // Skip if only debug toggle should be shown
+        if (this.options.showOnlyDebugToggle) return;
+        
         // Find the control panels container
         const controlPanels = this.controlPanelsContainer || document.getElementById('controlPanels');
         if (!controlPanels) {
