@@ -250,13 +250,32 @@ export class HexagonModel extends CompositeModel {
     }
     
     /**
-     * Updates the rotation of this model
-     * Base implementation that does nothing, to be overridden by subclasses
+     * Updates the rotation of this model. Base implementation does nothing.
+     * Child classes should override this if they need rotation functionality.
      * @param {number} rotationAngle - The rotation angle in degrees
+     * @deprecated Use getRotation() to get a reference to the rotation object and modify it directly
      */
     updateRotation(rotationAngle) {
-        this.debugLog(`Base updateRotation called with ${rotationAngle}° - No action taken`);
-        // Do nothing in base implementation
+        // Base implementation does nothing
+        // Subclasses should override this if they need rotation functionality
+    }
+    
+    /**
+     * Gets or sets rotation information for this model
+     * @returns {Object} - The rotation object that can be modified by reference
+     */
+    getRotation() {
+        // Initialize a rotation object if it doesn't exist
+        if (!this._rotation) {
+            this._rotation = {
+                angle: 0,      // Current rotation angle in degrees
+                min: 0,        // Minimum rotation angle
+                max: 360,      // Maximum rotation angle
+                default: 0     // Default rotation angle
+            };
+        }
+        
+        return this._rotation;
     }
     
     /**

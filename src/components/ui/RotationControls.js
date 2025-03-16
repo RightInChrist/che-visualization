@@ -134,8 +134,25 @@ export class RotationControls {
         // Get the model
         const model = config.model;
         
-        // Add Y rotation control if model supports updateRotation
-        if (model && typeof model.updateRotation === 'function') {
+        // Add Y rotation control if model supports getRotation
+        if (model && typeof model.getRotation === 'function') {
+            // Get rotation object by reference
+            const rotation = model.getRotation();
+            
+            const yRotationContainer = this.createSliderRow(
+                "Y Rotation",
+                rotation.min || 0,
+                rotation.max || 360,
+                rotation.angle || 0,
+                (value) => {
+                    console.log(`Setting rotation for ${model.getName?.() || model.constructor.name} to ${value}°`);
+                    rotation.angle = value;
+                }
+            );
+            modelSection.appendChild(yRotationContainer);
+        }
+        // For backward compatibility
+        else if (model && typeof model.updateRotation === 'function') {
             const yRotationContainer = this.createSliderRow(
                 "Y Rotation",
                 0,

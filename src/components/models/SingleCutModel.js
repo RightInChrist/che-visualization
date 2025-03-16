@@ -485,18 +485,61 @@ export class SingleCutModel extends HexagonModel {
     /**
      * Updates the rotation of this model
      * @param {number} rotationAngle - The rotation angle in degrees
+     * @deprecated Use getRotation() to get a reference to the rotation object and modify it directly
      */
     updateRotation(rotationAngle) {
+        // Get the rotation object and update its angle
+        const rotation = this.getRotation();
+        rotation.angle = rotationAngle;
+        
+        // Apply the rotation
+        this.applyModelRotation(rotationAngle);
+    }
+    
+    /**
+     * Apply the rotation to the model's physical representation
+     * @param {number} rotationAngle - The rotation angle in degrees
+     */
+    applyModelRotation(rotationAngle) {
         // Convert to radians
         const rotationAngleRadians = (rotationAngle * Math.PI) / 180;
         
         // Update root node rotation around Y axis
-        this.rootNode.rotation.y = rotationAngleRadians;
+        if (this.rootNode) {
+            this.rootNode.rotation.y = rotationAngleRadians;
+        }
         
-        // Store the current angle
+        // Store the current angle in options for backward compatibility
         this.options.rotationAngle = rotationAngle;
         
-        this.debugLog(`Updated ${this.getName()} rotation to ${rotationAngle}°`);
+        this.debugLog(`Applied ${this.getName()} rotation: ${rotationAngle}°`);
+    }
+    
+    /**
+     * Gets or sets rotation information for this model
+     * @returns {Object} - The rotation object that can be modified by reference
+     */
+    getRotation() {
+        // Initialize a rotation object if it doesn't exist
+        if (!this._rotation) {
+            this._rotation = {
+                angle: this.options.rotationAngle || 0,  // Current rotation angle in degrees
+                min: 0,                                  // Minimum rotation angle
+                max: 360,                                // Maximum rotation angle
+                default: this.options.rotationAngle || 0 // Default rotation angle
+            };
+            
+            // Define a setter for the angle property that applies the rotation when changed
+            Object.defineProperty(this._rotation, 'angle', {
+                get: () => this._rotationAngle || 0,
+                set: (value) => {
+                    this._rotationAngle = value;
+                    this.applyModelRotation(value);
+                }
+            });
+        }
+        
+        return this._rotation;
     }
 
     /**
