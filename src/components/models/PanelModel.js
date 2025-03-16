@@ -258,4 +258,12 @@ export class PanelModel extends BaseModel {
         if (this.panelMesh) this.panelMesh.dispose();
         super.dispose();
     }
+    
+    /**
+     * Override getName to return "Panel"
+     * @returns {string} The display name for this model
+     */
+    getName() {
+        return "Panel";
+    }
 } 

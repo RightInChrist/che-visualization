@@ -169,6 +169,14 @@ export class PipeModel extends BaseModel {
     }
     
     /**
+     * Override getName to return "Pipe"
+     * @returns {string} The display name for this model
+     */
+    getName() {
+        return "Pipe";
+    }
+    
+    /**
      * Disposes of all resources
      */
     dispose() {

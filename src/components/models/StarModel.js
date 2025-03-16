@@ -74,6 +74,14 @@ export class StarModel extends CompositeModel {
     }
     
     /**
+     * Override getName to return "Star"
+     * @returns {string} The display name for this model
+     */
+    getName() {
+        return "Star";
+    }
+    
+    /**
      * Get all pipes from the central CUT
      * @returns {Array} - Array of all pipe objects
      */

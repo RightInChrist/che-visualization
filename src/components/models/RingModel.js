@@ -74,6 +74,14 @@ export class RingModel extends CompositeModel {
     }
     
     /**
+     * Override getName to return "Ring"
+     * @returns {string} The display name for this model
+     */
+    getName() {
+        return "Ring";
+    }
+    
+    /**
      * Get all pipes from the central CUT
      * @returns {Array} - Array of all pipe objects
      */

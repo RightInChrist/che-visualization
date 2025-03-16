@@ -496,4 +496,12 @@ export class SingleCutModel extends HexagonModel {
             this.scene.render();
         }
     }
+    
+    /**
+     * Override getName to return "CUT"
+     * @returns {string} The display name for this model
+     */
+    getName() {
+        return "CUT";
+    }
 } 

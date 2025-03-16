@@ -120,6 +120,14 @@ export class GroundModel extends BaseModel {
     }
     
     /**
+     * Override getName to return "Ground"
+     * @returns {string} The display name for this model
+     */
+    getName() {
+        return "Ground";
+    }
+    
+    /**
      * Override base setVisible method to handle mesh visibility
      * @param {boolean} isVisible - Whether the ground should be visible
      */

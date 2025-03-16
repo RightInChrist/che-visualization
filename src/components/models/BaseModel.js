@@ -75,6 +75,31 @@ export class BaseModel {
     }
     
     /**
+     * Get a user-friendly name for this model
+     * @returns {string} A display name for this model
+     */
+    getName() {
+        // Extract the base class name
+        let className = this.constructor.name;
+        
+        // Remove "Model" suffix if present
+        if (className.endsWith('Model')) {
+            className = className.slice(0, -5);
+        }
+        
+        // Handle special cases
+        if (className === 'SingleCut') {
+            return 'CUT';
+        }
+        
+        // Insert spaces before capital letters for multi-word names
+        const spaced = className.replace(/([A-Z])/g, ' $1').trim();
+        
+        // Return the formatted name
+        return spaced;
+    }
+    
+    /**
      * Debug logging function that only logs when debug is enabled
      * @param {...any} args - Arguments to log
      */

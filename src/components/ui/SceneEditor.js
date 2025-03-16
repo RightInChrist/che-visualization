@@ -17,6 +17,9 @@ export class SceneEditor {
         
         // Map to store object IDs for easier model reference
         this.objectIdMap = {};
+        
+        // Map to track duplicate model names for display purposes
+        this.nameCountMap = {};
 
         // Flag to prevent update loops
         this.isUpdating = false;
@@ -246,13 +249,57 @@ export class SceneEditor {
     }
     
     /**
+     * Get a display name for an object
+     * @param {string} defaultName - The default name for the object
+     * @param {Object} object - The object to get a name for
+     * @param {string} parentPath - Path of the parent object
+     * @returns {string} A display name for the object
+     */
+    getDisplayName(defaultName, object, parentPath = '') {
+        let displayName = defaultName;
+        
+        // If object has a getName method, use it
+        if (object && typeof object.getName === 'function') {
+            displayName = object.getName();
+        } else if (object && object.model && typeof object.model.getName === 'function') {
+            // If object has a model with getName method, use that
+            displayName = object.model.getName();
+        }
+        
+        // Create a key combining parent path and display name to track duplicates within same parent
+        const nameKey = `${parentPath}/${displayName}`;
+        
+        // Initialize counter for this name if it doesn't exist
+        if (!this.nameCountMap[nameKey]) {
+            this.nameCountMap[nameKey] = 0;
+        }
+        
+        // Increment counter for this name
+        this.nameCountMap[nameKey]++;
+        
+        // If this is a duplicate name (not the first occurrence), append a number
+        if (this.nameCountMap[nameKey] > 1) {
+            displayName = `${displayName} #${this.nameCountMap[nameKey]}`;
+        }
+        
+        return displayName;
+    }
+    
+    /**
      * Create an object list item, including children
      * @param {string} name - Name of the object
      * @param {Object} object - The object to create an item for
      * @param {Object} [parent] - Parent object (optional)
+     * @param {string} [parentPath=''] - Path of the parent object
      * @returns {HTMLElement} - The created list item
      */
-    createObjectListItem(name, object, parent = null) {
+    createObjectListItem(name, object, parent = null, parentPath = '') {
+        // Get a display name based on object type if it has getName method
+        let displayName = this.getDisplayName(name, object, parentPath);
+        
+        // Keep the original path for ID purposes
+        const objectPath = parentPath ? `${parentPath}/${name}` : name;
+        
         const listItem = document.createElement('div');
         listItem.className = 'scene-object-item';
         listItem.style.marginLeft = '15px';
@@ -263,10 +310,10 @@ export class SceneEditor {
         
         // Flag to check if this is a Central CUT model
         const isCentralCut = (
-            name === 'Central CUT' || 
-            name === 'Star Central CUT' || 
-            name.includes('Ring Model/Central CUT') || 
-            name.includes('Star Model/Star Central CUT')
+            displayName === 'Central CUT' || 
+            displayName === 'Star Central CUT' || 
+            objectPath.includes('Ring Model/Central CUT') || 
+            objectPath.includes('Star Model/Star Central CUT')
         );
         
         // Check if the object has children to determine if we need a collapse button
@@ -314,7 +361,7 @@ export class SceneEditor {
         const objectId = object.id || (object.model && object.model.id) || null;
         
         // Set data attributes for tracking
-        checkbox.setAttribute('data-object-path', name);
+        checkbox.setAttribute('data-object-path', objectPath);
         if (objectId) {
             checkbox.setAttribute('data-object-id', objectId);
             // Store the object in our ID map
@@ -342,7 +389,7 @@ export class SceneEditor {
         });
         
         // Store the checkbox for state tracking
-        this.checkboxElements[name] = {
+        this.checkboxElements[objectPath] = {
             element: checkbox,
             object: object,
             objectId: objectId
@@ -358,7 +405,7 @@ export class SceneEditor {
         
         const label = document.createElement('span');
         label.className = 'object-label';
-        label.textContent = name;
+        label.textContent = displayName; // Use the display name here
         label.style.flexGrow = '1';
         
         // Truncate long names with ellipsis
@@ -368,7 +415,7 @@ export class SceneEditor {
         label.style.maxWidth = '200px';
         
         // Highlight permanently hidden elements
-        if (this.isElementPermanentlyHidden(name, object)) {
+        if (this.isElementPermanentlyHidden(objectPath, object)) {
             label.style.color = '#999';
             label.style.textDecoration = 'line-through';
             label.title = 'This element is permanently hidden';
@@ -401,11 +448,11 @@ export class SceneEditor {
             
             // Invoke the logModelInfo function if it exists
             if (typeof this.logModelInfo === 'function') {
-                console.group(`Info for "${name}"`);
+                console.group(`Info for "${displayName}"`);
                 this.logModelInfo(object);
                 console.groupEnd();
             } else {
-                console.group(`Info for "${name}"`);
+                console.group(`Info for "${displayName}"`);
                 console.log('Object:', object);
                 if (object && object.constructor) {
                     console.log('Type:', object.constructor.name);
@@ -435,10 +482,10 @@ export class SceneEditor {
             if (isCentralCut && object.constructor && object.constructor.name === 'SingleCutModel') {
                 // Only add panels directly here, don't rely on addModelChildren for Central CUT
                 if (object.panels && object.panels.length > 0) {
-                    console.log(`[SceneEditor] Adding ${object.panels.length} panels for ${name}`);
+                    console.log(`[SceneEditor] Adding ${object.panels.length} panels for ${displayName}`);
                     object.panels.forEach((panel, index) => {
-                        const panelName = `${name}/Panel #${index + 1}`;
-                        const panelItem = this.createObjectListItem(panelName, panel, object);
+                        const panelName = `Panel #${index + 1}`;
+                        const panelItem = this.createObjectListItem(panelName, panel, object, objectPath);
                         childrenContainer.appendChild(panelItem);
                     });
                 }
@@ -448,17 +495,17 @@ export class SceneEditor {
                 // Add panels and pipes if they exist
                 if ((object.pipes || object.panels) && 
                     !(isCentralCut && object.constructor && object.constructor.name === 'SingleCutModel')) {
-                    this.addModelChildren(childrenContainer, object, name);
+                    this.addModelChildren(childrenContainer, object, objectPath);
                 }
                 
                 // If the object is a composite model with SingleCUTs, add them
                 if (object.model && object.model.singleCuts) {
-                    this.addCompositeModelChildren(childrenContainer, object, name);
+                    this.addCompositeModelChildren(childrenContainer, object, objectPath);
                 }
                 
                 // Add regular children for objects with a children property
                 if (object.children && Object.keys(object.children).length > 0) {
-                    this.addChildrenObjects(childrenContainer, object.children);
+                    this.addChildrenObjects(childrenContainer, object.children, objectPath);
                 }
             }
             
@@ -523,15 +570,21 @@ export class SceneEditor {
      * Add children for any model with pipes and panels
      * @param {HTMLElement} parentElement - Parent element to add to
      * @param {Object} model - The model with pipes and panels
-     * @param {string} parentName - Name of the parent model
+     * @param {string} parentPath - Path of the parent model
      */
-    addModelChildren(parentElement, model, parentName) {
+    addModelChildren(parentElement, model, parentPath) {
+        // Reset name counters for pipes and panels under this parent
+        const pipeKey = `${parentPath}/Pipe`;
+        const panelKey = `${parentPath}/Panel`;
+        this.nameCountMap[pipeKey] = 0;
+        this.nameCountMap[panelKey] = 0;
+        
         // Add all pipes
         if (model.pipes && model.pipes.length > 0) {
             model.pipes.forEach((pipe, index) => {
-                // Use qualified name that includes parent reference
-                const pipeName = parentName ? `${parentName}/Pipe #${index + 1}` : `Pipe #${index + 1}`;
-                const pipeItem = this.createObjectListItem(pipeName, pipe, model);
+                // Use pipe name if it has getName, otherwise use index+1
+                const pipeName = `Pipe #${index + 1}`;
+                const pipeItem = this.createObjectListItem(pipeName, pipe, model, parentPath);
                 parentElement.appendChild(pipeItem);
             });
         }
@@ -539,9 +592,9 @@ export class SceneEditor {
         // Add panels
         if (model.panels && model.panels.length > 0) {
             model.panels.forEach((panel, index) => {
-                // Use qualified name that includes parent reference
-                const panelName = parentName ? `${parentName}/Panel #${index + 1}` : `Panel #${index + 1}`;
-                const panelItem = this.createObjectListItem(panelName, panel, model);
+                // Use panel name if it has getName, otherwise use index+1
+                const panelName = `Panel #${index + 1}`;
+                const panelItem = this.createObjectListItem(panelName, panel, model, parentPath);
                 parentElement.appendChild(panelItem);
             });
         }
@@ -551,15 +604,19 @@ export class SceneEditor {
      * Add children for a composite model with SingleCUTs
      * @param {HTMLElement} parentElement - Parent element to add to
      * @param {Object} compositeModel - The composite model
-     * @param {string} parentName - Name of the parent model
+     * @param {string} parentPath - Path of the parent model
      */
-    addCompositeModelChildren(parentElement, compositeModel, parentName) {
+    addCompositeModelChildren(parentElement, compositeModel, parentPath) {
+        // Reset name counter for CUTs under this parent
+        const cutKey = `${parentPath}/CUT`;
+        this.nameCountMap[cutKey] = 0;
+        
         // Add all SingleCUTs
         if (compositeModel.model && compositeModel.model.singleCuts && compositeModel.model.singleCuts.length > 0) {
             compositeModel.model.singleCuts.forEach((singleCut, index) => {
-                // Use fully qualified name that includes the complete parent path
-                const singleCutName = parentName ? `${parentName}/Single CUT #${index + 1}` : `Single CUT #${index + 1}`;
-                const singleCutItem = this.createObjectListItem(singleCutName, singleCut, compositeModel);
+                // Use qualified name with index
+                const singleCutName = `Single CUT #${index + 1}`;
+                const singleCutItem = this.createObjectListItem(singleCutName, singleCut, compositeModel, parentPath);
                 parentElement.appendChild(singleCutItem);
             });
         }
@@ -569,10 +626,17 @@ export class SceneEditor {
      * Add generic children objects
      * @param {HTMLElement} parentElement - Parent element to add to
      * @param {Object} children - Children objects
+     * @param {string} parentPath - Path of the parent model
      */
-    addChildrenObjects(parentElement, children) {
+    addChildrenObjects(parentElement, children, parentPath) {
+        // Reset name counters for children under this parent
+        Object.keys(children).forEach(key => {
+            const childKey = `${parentPath}/${key}`;
+            this.nameCountMap[childKey] = 0;
+        });
+        
         Object.entries(children).forEach(([key, value]) => {
-            const childItem = this.createObjectListItem(key, value);
+            const childItem = this.createObjectListItem(key, value, null, parentPath);
             parentElement.appendChild(childItem);
         });
     }
