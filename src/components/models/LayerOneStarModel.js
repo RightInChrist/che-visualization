@@ -119,6 +119,33 @@ export class LayerOneStarModel extends CompositeModel {
     }
     
     /**
+     * Verify that the distances follow the expected pattern
+     * @param {Array} distances - Array of distances from center
+     */
+    verifyDistances(distances) {
+        if (!distances || distances.length === 0) {
+            return;
+        }
+        
+        // Calculate average distance with consistent precision
+        const avgDistance = parseFloat((distances.reduce((sum, d) => sum + d, 0) / distances.length).toFixed(2));
+        
+        let maxDeviation = 0;
+        
+        // Check deviations from average
+        distances.forEach((distance, i) => {
+            const deviation = parseFloat(Math.abs(distance - avgDistance).toFixed(2));
+            maxDeviation = Math.max(maxDeviation, deviation);
+            
+            if (deviation > 0.01) { // Use a threshold that matches our precision (0.01)
+                this.debugLog(`WARNING: SingleCUT #${i+1} has distance deviation of ${deviation.toFixed(2)} units from average ${avgDistance.toFixed(2)}`);
+            }
+        });
+        
+        this.debugLog(`SingleCUTs: average distance ${avgDistance.toFixed(2)}, max deviation ${maxDeviation.toFixed(2)}`);
+    }
+    
+    /**
      * Draw lines on the ground to visualize the radius measurements
      */
     drawRadiusLines() {
@@ -507,5 +534,34 @@ export class LayerOneStarModel extends CompositeModel {
             return this.rootNode.isEnabled();
         }
         return false;
+    }
+    
+    /**
+     * Setup which elements (pipes and panels) should be permanently hidden for each SingleCUT
+     * For LayerOneStarModel, nothing is permanently hidden by default
+     */
+    setupHiddenElements() {
+        this.debugLog('Setting up permanently hidden elements for SingleCUTs in LayerOneStarModel');
+        
+        // Initialize empty hidden elements map
+        this.hiddenElementsMap = {};
+        
+        // In LayerOneStarModel, we don't hide any elements by default
+        // This is just an empty implementation to match the API of LayerTwoModel
+    }
+    
+    /**
+     * Apply hiding to all child model elements based on hidden elements map
+     * For LayerOneStarModel, this is a no-op by default since nothing is hidden
+     */
+    applyHiddenElements() {
+        if (!this.childModels || !this.hiddenElementsMap) {
+            return;
+        }
+        
+        this.debugLog('Applying hidden elements to SingleCUTs in LayerOneStarModel (none by default)');
+        
+        // This is just an empty implementation to match the API of LayerTwoModel
+        // For LayerOneStarModel, we don't need to hide any elements by default
     }
 } 

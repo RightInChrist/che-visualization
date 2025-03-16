@@ -528,6 +528,33 @@ export class LayerTwoStarModel extends CompositeModel {
         }
         return false;
     }
+    
+    /**
+     * Verify that the distances follow the expected pattern
+     * @param {Array} distances - Array of distances from center
+     */
+    verifyDistances(distances) {
+        if (!distances || distances.length === 0) {
+            return;
+        }
+        
+        // Calculate average distance with consistent precision
+        const avgDistance = parseFloat((distances.reduce((sum, d) => sum + d, 0) / distances.length).toFixed(2));
+        
+        let maxDeviation = 0;
+        
+        // Check deviations from average
+        distances.forEach((distance, i) => {
+            const deviation = parseFloat(Math.abs(distance - avgDistance).toFixed(2));
+            maxDeviation = Math.max(maxDeviation, deviation);
+            
+            if (deviation > 0.01) { // Use a threshold that matches our precision (0.01)
+                this.debugLog(`WARNING: SingleCUT #${i+1} has distance deviation of ${deviation.toFixed(2)} units from average ${avgDistance.toFixed(2)}`);
+            }
+        });
+        
+        this.debugLog(`SingleCUTs: average distance ${avgDistance.toFixed(2)}, max deviation ${maxDeviation.toFixed(2)}`);
+    }
 }
 
 /**

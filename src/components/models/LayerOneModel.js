@@ -581,4 +581,33 @@ export class LayerOneModel extends CompositeModel {
     getCurrentSingleCutDeltaRotation() {
         return this.rotationDelta || 0;
     }
+
+    /**
+     * Setup which elements (pipes and panels) should be permanently hidden for each SingleCUT
+     * For LayerOneModel, nothing is permanently hidden by default
+     */
+    setupHiddenElements() {
+        this.debugLog('Setting up permanently hidden elements for SingleCUTs in LayerOneModel');
+        
+        // Initialize empty hidden elements map
+        this.hiddenElementsMap = {};
+        
+        // In LayerOneModel, we don't hide any elements by default
+        // This is just an empty implementation to match the API of LayerTwoModel
+    }
+
+    /**
+     * Apply hiding to all child model elements based on hidden elements map
+     * For LayerOneModel, this is a no-op by default since nothing is hidden
+     */
+    applyHiddenElements() {
+        if (!this.childModels || !this.hiddenElementsMap) {
+            return;
+        }
+        
+        this.debugLog('Applying hidden elements to SingleCUTs in LayerOneModel (none by default)');
+        
+        // This is just an empty implementation to match the API of LayerTwoModel
+        // For LayerOneModel, we don't need to hide any elements by default
+    }
 }
