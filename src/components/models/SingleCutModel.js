@@ -358,17 +358,17 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
-     * Apply default rotations to all panels
-     * This ensures panels have their correct default rotations applied
-     * @param {boolean} [safeMode=true] - When true, skips scene rendering during rotation application
+     * Model initialization method called after scene setup
+     * Applies default rotations to all panels and handles any necessary setup
+     * @param {boolean} [safeMode=true] - When true, skips scene rendering during setup
      */
-    applyPanelDefaultRotations(safeMode = true) {
+    onRender(safeMode = true) {
         if (!this.panels || this.panels.length === 0) {
-            this.debugLog('No panels to apply default rotations to');
+            this.debugLog('No panels to initialize');
             return;
         }
         
-        this.debugLog('Applying default rotations to all panels');
+        this.debugLog('Initializing panels with default rotations');
         
         // Current delta rotation (if any)
         const currentDelta = this.panelRotations.currentDelta || 0;
@@ -388,25 +388,50 @@ export class SingleCutModel extends HexagonModel {
                 this.debugLog(`Panel #${i+1}: Applying default angle of ${defaultAngleDegrees.toFixed(1)}°`);
                 
                 // Apply rotation directly to panel's rotation property
-                // We explicitly use the rotation property instead of rotate() method to avoid issues
-                const totalAngleRadians = defaultAngle + ((currentDelta * Math.PI) / 180);
-                
-                // Apply rotation and update the root node's world matrix
-                panel.rootNode.rotation.y = totalAngleRadians;
-                panel.rootNode.computeWorldMatrix(true);
-                
-                // Update the panel mesh
-                if (panel.panelMesh) {
-                    panel.panelMesh.markAsDirty();
-                    panel.panelMesh.refreshBoundingInfo();
-                    panel.panelMesh.computeWorldMatrix(true);
+                if (panel.setRotation) {
+                    panel.setRotation(defaultAngle + currentDelta);
                 }
                 
-                this.debugLog(`Panel #${i+1} rotation set to: ${(totalAngleRadians * 180 / Math.PI).toFixed(1)}° (default: ${defaultAngleDegrees.toFixed(1)}° + delta: ${currentDelta}°)`);
+                // Apply visibility if needed
+                if (panel.setVisible) {
+                    panel.setVisible(true);
+                }
+                
+                // Apply any default material settings or other properties
+                if (panel.panelMesh) {
+                    // Ensure the panel is visible
+                    panel.panelMesh.isVisible = true;
+                }
+                
+                // Handle safe mode to prevent rendering during bulk operations
+                if (safeMode && this.scene && panel.rootNode) {
+                    // Temporarily disable rendering updates for this node
+                    panel.rootNode.freezeWorldMatrix();
+                }
             }
         });
         
-        // DO NOT call scene.render() here during initialization
+        // If in safe mode, unfreeze all matrices after all operations are complete
+        if (safeMode && this.scene) {
+            // Schedule an unfreeze operation for next frame
+            this.scene.onBeforeRenderObservable.addOnce(() => {
+                this.panels.forEach((panel) => {
+                    if (panel && panel.rootNode) {
+                        panel.rootNode.unfreezeWorldMatrix();
+                    }
+                });
+            });
+        }
+        
+        this.debugLog('Panel initialization complete');
+    }
+    
+    /**
+     * @deprecated Use onRender() instead
+     * Legacy method for backward compatibility
+     */
+    applyPanelDefaultRotations(safeMode = true) {
+        return this.onRender(safeMode);
     }
     
     /**

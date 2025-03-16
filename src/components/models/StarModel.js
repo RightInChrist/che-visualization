@@ -99,4 +99,21 @@ export class StarModel extends CompositeModel {
             layerOne: [] // Empty since we only have the central CUT
         };
     }
+    
+    /**
+     * Model initialization method called after scene setup
+     * Ensures the model and its children are properly initialized
+     */
+    onRender() {
+        this.debugLog('Initializing Star Model');
+        
+        // Apply any Star-specific initialization here
+        
+        // Propagate to children - especially important for the central cut
+        if (this.centralCut && typeof this.centralCut.onRender === 'function') {
+            this.centralCut.onRender();
+        }
+        
+        this.debugLog('Star Model initialization complete');
+    }
 } 
