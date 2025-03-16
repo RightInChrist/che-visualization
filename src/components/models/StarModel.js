@@ -13,7 +13,7 @@ export class StarModel extends CompositeModel {
             singleCutRadius: 21,      // Radius for the SingleCUT
             rotationAngle: 30,        // Default rotation angle
             visibility: {
-                centralCut: true
+                centralCut: false
             }
         };
         
@@ -22,6 +22,12 @@ export class StarModel extends CompositeModel {
         
         // Create the central CUT
         this.createModels();
+        
+        // Initialize as invisible by default
+        this._isVisible = false;
+        if (this.rootNode) {
+            this.rootNode.setEnabled(false);
+        }
     }
     
     /**
@@ -42,6 +48,9 @@ export class StarModel extends CompositeModel {
         // Store reference to the central cut for direct access
         this.centralCut = centralCut;
         this.addChild(centralCut);
+        
+        // Ensure the central cut is also hidden by default
+        centralCut.setVisible(false);
         
         this.debugLog('Star Model creation complete');
     }

@@ -54,9 +54,8 @@ class CHEVisualization {
             // Create Star Model
             this.starModel = new StarModel(scene, new Vector3(0, 0, 0));
             
-            // Make sure all models are visible
+            // Make sure Ring Model is visible
             this.ringModel.setVisible(true);
-            this.starModel.setVisible(true);
             
             // Add shadows to all pipes in the scene
             // For Ring Model
