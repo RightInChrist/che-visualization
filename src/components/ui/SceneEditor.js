@@ -173,13 +173,15 @@ export class SceneEditor {
      * Expand all collapsible sections
      */
     expandAll() {
-        const collapseBtns = this.container.querySelectorAll('.collapse-btn');
-        collapseBtns.forEach(btn => {
-            const targetId = btn.getAttribute('data-target');
-            const targetElement = document.getElementById(targetId);
-            if (targetElement && targetElement.classList.contains('collapsed')) {
-                targetElement.classList.remove('collapsed');
-                btn.textContent = '-';
+        const childContainers = this.container.querySelectorAll('.object-children');
+        childContainers.forEach(container => {
+            container.classList.remove('collapsed');
+            
+            // Find the associated collapse button and update its text
+            const parentItem = container.parentElement;
+            const collapseBtn = parentItem.querySelector('.collapse-btn');
+            if (collapseBtn) {
+                collapseBtn.textContent = '-';
             }
         });
     }
@@ -188,13 +190,15 @@ export class SceneEditor {
      * Collapse all collapsible sections
      */
     collapseAll() {
-        const collapseBtns = this.container.querySelectorAll('.collapse-btn');
-        collapseBtns.forEach(btn => {
-            const targetId = btn.getAttribute('data-target');
-            const targetElement = document.getElementById(targetId);
-            if (targetElement && !targetElement.classList.contains('collapsed')) {
-                targetElement.classList.add('collapsed');
-                btn.textContent = '+';
+        const childContainers = this.container.querySelectorAll('.object-children');
+        childContainers.forEach(container => {
+            container.classList.add('collapsed');
+            
+            // Find the associated collapse button and update its text
+            const parentItem = container.parentElement;
+            const collapseBtn = parentItem.querySelector('.collapse-btn');
+            if (collapseBtn) {
+                collapseBtn.textContent = '+';
             }
         });
     }
@@ -210,6 +214,9 @@ export class SceneEditor {
         if (this.isVisible) {
             this.renderSceneObjects();
             this.updateCheckboxStates();
+            
+            // Start with all nodes collapsed for better usability
+            this.collapseAll();
         }
     }
     
