@@ -236,242 +236,199 @@ export class SceneEditor {
     }
     
     /**
-     * Creates a list item for an object in the scene hierarchy
+     * Create an object list item, including children
      * @param {string} name - Name of the object
-     * @param {Object} object - The object to create a list item for
-     * @param {Object} parent - Optional parent object
+     * @param {Object} object - The object to create an item for
+     * @param {Object} [parent] - Parent object (optional)
      * @returns {HTMLElement} - The created list item
      */
-    createObjectListItem(name, object, parent) {
-        // Store the full hierarchical path for the object
-        const objectPath = name;
+    createObjectListItem(name, object, parent = null) {
+        const listItem = document.createElement('div');
+        listItem.className = 'scene-object-item';
+        listItem.style.marginLeft = '15px';
+        listItem.style.marginBottom = '8px';
         
-        // Create a short display name (without path)
-        const displayName = name.includes('/') ? name.split('/').pop() : name;
+        const objectRow = document.createElement('div');
+        objectRow.className = 'object-row';
         
-        const objectItem = document.createElement('li');
-        objectItem.style.margin = '5px 0';
-        objectItem.id = `item-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
+        // Flag to check if this is a Central CUT model
+        const isCentralCut = (
+            name === 'Central CUT' || 
+            name === 'Star Central CUT' || 
+            name.includes('Ring Model/Central CUT') || 
+            name.includes('Star Model/Star Central CUT')
+        );
         
-        const objectContainer = document.createElement('div');
-        objectContainer.className = 'object-row';
+        // Check if the object has children to determine if we need a collapse button
+        const hasChildren = this.hasChildren(object) || 
+                           (isCentralCut && object.panels && object.panels.length > 0);
         
-        // Check if this is a permanently hidden pipe or panel
-        const isPermanentlyHidden = this.isElementPermanentlyHidden(name, object);
-        
-        // Create visibility toggle checkbox
-        const toggleCheckbox = document.createElement('input');
-        toggleCheckbox.type = 'checkbox';
-        toggleCheckbox.id = `checkbox-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
-        
-        // Store both the checkbox element and the parent reference
-        this.checkboxElements[objectPath] = {
-            element: toggleCheckbox,
-            parent: parent,
-            object: object,
-            isPermanentlyHidden: isPermanentlyHidden
-        };
-        
-        // Check if this is a toggleable object by checking its properties
-        // Ground objects, models with pipes/panels, pipes, and panels are toggleable
-        const isModel = object && (object.pipes || object.panels || 
-                                   (object.model && (object.model.singleCuts || object.model.pipes || object.model.panels)) ||
-                                   (object.constructor && object.constructor.name && 
-                                    (object.constructor.name.includes('Model') || object.constructor.name.includes('Ground'))));
-        
-        const isPipe = object && object.pipeMesh;
-        const isPanel = object && object.panelMesh;
-        const isToggable = isModel || isPipe || isPanel || name.includes('Pipe #') || name.includes('Panel #');
-        
-        // Determine if this object has children for collapse button
-        const hasChildElements = this.hasChildren(object);
-        
-        // Add collapse button if the object has children
-        if (hasChildElements) {
+        // Create collapse button for items with children
+        if (hasChildren) {
             const collapseBtn = document.createElement('span');
             collapseBtn.className = 'collapse-btn';
-            collapseBtn.textContent = '+'; // Closed by default
-            
-            const childListId = `childList-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
-            collapseBtn.setAttribute('data-target', childListId);
-            
-            collapseBtn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent propagation to the container
-                
-                const targetElement = document.getElementById(childListId);
-                if (targetElement) {
-                    const isCollapsed = targetElement.classList.contains('collapsed');
-                    if (isCollapsed) {
-                        targetElement.classList.remove('collapsed');
-                        collapseBtn.textContent = '-';
-                    } else {
-                        targetElement.classList.add('collapsed');
-                        collapseBtn.textContent = '+';
-                    }
+            collapseBtn.textContent = '-';
+            collapseBtn.title = 'Collapse/Expand';
+            collapseBtn.onclick = (e) => {
+                e.stopPropagation();
+                const childContainer = listItem.querySelector(':scope > .object-children');
+                if (childContainer) {
+                    const isCollapsed = childContainer.classList.contains('collapsed');
+                    childContainer.classList.toggle('collapsed');
+                    collapseBtn.textContent = isCollapsed ? '-' : '+';
                 }
-            });
-            
-            objectContainer.appendChild(collapseBtn);
+            };
+            objectRow.appendChild(collapseBtn);
         } else {
-            // Add spacing for alignment if no collapse button
+            // Add a spacer for items without a collapse button for proper alignment
             const spacer = document.createElement('span');
-            spacer.style.width = '16px';
             spacer.style.display = 'inline-block';
-            spacer.innerHTML = '&nbsp;';
-            objectContainer.appendChild(spacer);
+            spacer.style.width = '16px';
+            spacer.style.marginRight = '5px';
+            objectRow.appendChild(spacer);
         }
         
-        if (isToggable) {
-            if (isPermanentlyHidden) {
-                toggleCheckbox.disabled = true;
-                toggleCheckbox.checked = false;
-                
-                // Add 'disabled' class to the object container for styling
-                objectContainer.classList.add('disabled');
+        // Create checkbox for visibility toggle
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.style.marginRight = '5px';
+        checkbox.checked = this.getObjectVisibility(object);
+        
+        // Handle special cases for visibility check
+        if (typeof checkbox.checked !== 'boolean') {
+            checkbox.checked = true;
+        }
+        
+        // Set the name attribute for tracking
+        checkbox.setAttribute('data-object-path', name);
+        
+        // Add an event listener to toggle visibility
+        checkbox.addEventListener('change', () => {
+            const isChecked = checkbox.checked;
+            const path = checkbox.getAttribute('data-object-path');
+            
+            // Store the checkbox for state tracking
+            this.checkboxElements[path] = {
+                element: checkbox,
+                object: object
+            };
+            
+            // Toggle visibility
+            this.toggleObjectVisibility(path, object, isChecked);
+            
+            // Also update nested checkboxes
+            this.updateNestedCheckboxes(path, isChecked);
+        });
+        
+        // Store the checkbox for state tracking
+        this.checkboxElements[name] = {
+            element: checkbox,
+            object: object
+        };
+        
+        objectRow.appendChild(checkbox);
+        
+        // Create label for the object with info button
+        const labelContainer = document.createElement('span');
+        labelContainer.style.display = 'flex';
+        labelContainer.style.alignItems = 'center';
+        labelContainer.style.flexGrow = '1';
+        
+        const label = document.createElement('span');
+        label.className = 'object-label';
+        label.textContent = name;
+        label.style.flexGrow = '1';
+        
+        // Truncate long names with ellipsis
+        label.style.overflow = 'hidden';
+        label.style.textOverflow = 'ellipsis';
+        label.style.whiteSpace = 'nowrap';
+        label.style.maxWidth = '200px';
+        
+        // Highlight permanently hidden elements
+        if (this.isElementPermanentlyHidden(name, object)) {
+            label.style.color = '#999';
+            label.style.textDecoration = 'line-through';
+            label.title = 'This element is permanently hidden';
+        }
+        
+        // Add info button for debugging
+        const infoButton = document.createElement('button');
+        infoButton.textContent = 'i';
+        infoButton.style.marginLeft = '5px';
+        infoButton.style.width = '16px';
+        infoButton.style.height = '16px';
+        infoButton.style.background = '#333';
+        infoButton.style.color = '#fff';
+        infoButton.style.border = '1px solid #555';
+        infoButton.style.borderRadius = '50%';
+        infoButton.style.cursor = 'pointer';
+        infoButton.style.fontSize = '10px';
+        infoButton.style.lineHeight = '1';
+        infoButton.style.padding = '0';
+        infoButton.title = 'Show info';
+        
+        // Info button click handler
+        infoButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            
+            // Invoke the logModelInfo function if it exists
+            if (typeof this.logModelInfo === 'function') {
+                console.group(`Info for "${name}"`);
+                this.logModelInfo(object);
+                console.groupEnd();
             } else {
-                // Initialize checkbox state based on object visibility
-                toggleCheckbox.checked = this.getObjectVisibility(object);
-                
-                // Add event listener
-                toggleCheckbox.addEventListener('change', (e) => {
-                    // Get the checked state directly from the event target
-                    const isChecked = e.target.checked;
-                    
-                    // Toggle the object visibility
-                    this.toggleObjectVisibility(objectPath, object, isChecked);
-                    
-                    // If this is a parent object with children, update all child checkboxes
-                    const hasChildModels = object && (
-                        (object.model && object.model.singleCuts) || // For composite models with child SingleCUTs
-                        (object.pipes || object.panels) || // For single models with pipes/panels
-                        (object.childModels && object.childModels.length > 0) // For any composite model
-                    );
-                    
-                    if (hasChildModels) {
-                        this.updateNestedCheckboxes(objectPath, isChecked);
-                    }
+                console.group(`Info for "${name}"`);
+                console.log('Object:', object);
+                if (object && object.constructor) {
+                    console.log('Type:', object.constructor.name);
+                }
+                console.groupEnd();
+            }
+        });
+        
+        labelContainer.appendChild(label);
+        labelContainer.appendChild(infoButton);
+        objectRow.appendChild(labelContainer);
+        
+        listItem.appendChild(objectRow);
+        
+        // Create container for children
+        if (hasChildren) {
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'object-children';
+            childrenContainer.style.marginLeft = '15px';
+            
+            // Handle different types of objects and their children
+            
+            // Add panels and pipes if they exist
+            if (object.pipes || object.panels) {
+                this.addModelChildren(childrenContainer, object, name);
+            }
+            
+            // If the object is a composite model with SingleCUTs, add them
+            if (object.model && object.model.singleCuts) {
+                this.addCompositeModelChildren(childrenContainer, object, name);
+            }
+            
+            // Add regular children for objects with a children property
+            if (object.children && Object.keys(object.children).length > 0) {
+                this.addChildrenObjects(childrenContainer, object.children);
+            }
+            
+            // Special case for Central CUT - add individual panels as children
+            if (isCentralCut && object.panels && object.panels.length > 0) {
+                object.panels.forEach((panel, index) => {
+                    const panelName = `${name}/Panel #${index + 1}`;
+                    const panelItem = this.createObjectListItem(panelName, panel, object);
+                    childrenContainer.appendChild(panelItem);
                 });
             }
-        } else {
-            // For non-toggleable objects, hide checkbox
-            toggleCheckbox.style.display = 'none';
+            
+            listItem.appendChild(childrenContainer);
         }
         
-        objectContainer.appendChild(toggleCheckbox);
-        
-        // Create label for the object
-        const objectLabel = document.createElement('span');
-        objectLabel.textContent = displayName;
-        objectLabel.style.marginLeft = '5px';
-        objectLabel.className = 'object-label';
-        
-        // Check if this is a model that should show logs on click
-        const isLoggableModel = object && (object.constructor && 
-            (object.constructor.name.includes('Model') || 
-             object.constructor.name.includes('SingleCut')));
-        
-        // IMPORTANT CHANGE: Add click handler for collapse/expand to the container
-        // This separates the label click (for logs) from the container click (for collapse)
-        if (hasChildElements && !isLoggableModel) {
-            objectContainer.addEventListener('click', (e) => {
-                // Only handle clicks on the container itself, not on its children
-                if (e.target === objectContainer) {
-                    const collapseBtn = objectContainer.querySelector('.collapse-btn');
-                    if (collapseBtn) {
-                        collapseBtn.click();
-                    }
-                }
-            });
-        }
-        
-        // Model labels should have special styling and logging behavior
-        // These override any container click behaviors
-        if (isLoggableModel) {
-            objectLabel.style.cursor = 'pointer';
-            objectLabel.style.textDecoration = 'underline dotted';
-            objectLabel.style.color = '#4CAF50';
-            objectLabel.style.fontWeight = 'bold'; // Make it more obvious it's clickable
-            objectLabel.style.position = 'relative'; // For z-index
-            objectLabel.style.zIndex = '10'; // Ensure it's on top for click handling
-            
-            // Create a separate 'info' icon specifically for logging
-            const infoIcon = document.createElement('span');
-            infoIcon.textContent = 'ℹ️';
-            infoIcon.style.marginLeft = '5px';
-            infoIcon.style.cursor = 'pointer';
-            infoIcon.style.zIndex = '20';
-            infoIcon.title = 'Click for model details';
-            
-            // Info icon click handler is dedicated solely to logging
-            infoIcon.addEventListener('click', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                
-                console.log(`Clicked info icon for: ${displayName}`);
-                console.log(`Object type: ${object?.constructor?.name || 'unknown'}`);
-                
-                // Log model info
-                if (typeof this.logModelInfo === 'function') {
-                    console.log("Calling logModelInfo function");
-                    this.logModelInfo(object);
-                } else {
-                    console.log("WARNING: logModelInfo function not found");
-                    console.log("Model Debug Info:", object);
-                    
-                    // Try direct call to logModelDetails if available
-                    if (object && typeof object.logModelDetails === 'function') {
-                        console.log("Calling logModelDetails directly on object");
-                        object.logModelDetails();
-                    }
-                }
-            });
-            
-            // The label itself now only focuses on logging (not collapsing)
-            objectLabel.addEventListener('click', (e) => {
-                e.stopPropagation();
-                e.preventDefault();
-                
-                console.log(`Clicked label for: ${displayName}`);
-                infoIcon.click(); // Delegate to the info icon's click handler
-            });
-            
-            objectContainer.appendChild(objectLabel);
-            objectContainer.appendChild(infoIcon);
-        } else {
-            objectContainer.appendChild(objectLabel);
-        }
-        
-        // Add the object container to the list item
-        objectItem.appendChild(objectContainer);
-        
-        // Add child items container if this object has children
-        if (hasChildElements) {
-            const childList = document.createElement('ul');
-            childList.style.paddingLeft = '20px';
-            childList.style.listStyle = 'none';
-            
-            // Assign an ID to the child list for collapse functionality
-            childList.id = `childList-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
-            
-            // Set the child list to be collapsed by default
-            childList.classList.add('collapsed');
-            
-            // Determine the appropriate way to add children based on object properties
-            if (object.model && object.model.singleCuts && object.model.singleCuts.length > 0) {
-                // For composite models with SingleCUTs (like LayerOneRing)
-                this.addCompositeModelChildren(childList, object, name);
-            } else if (object.pipes || object.panels) {
-                // For SingleCUT models with pipes and panels
-                this.addModelChildren(childList, object, name);
-            } else if (object.children) {
-                // For generic objects with children
-                this.addChildrenObjects(childList, object.children);
-            }
-            
-            objectItem.appendChild(childList);
-        }
-        
-        return objectItem;
+        return listItem;
     }
     
     /**
@@ -666,146 +623,6 @@ export class SceneEditor {
     }
     
     /**
-     * Recursively set visibility on an object and all its children
-     * @param {Object} object - The object to set visibility on
-     * @param {boolean} isVisible - Whether the object should be visible
-     * @param {string} path - Optional path to the object for checking permanent hidden status
-     */
-    setObjectVisibility(object, isVisible, path = '') {
-        if (!object) {
-            console.log(`[SceneEditor] Object is null or undefined for path: ${path}`);
-            return;
-        }
-        
-        // Skip if this is a permanently hidden element
-        if (path && this.isElementPermanentlyHidden(path, object)) {
-            console.log(`[SceneEditor] Skipping permanently hidden element: ${path}`);
-            return;
-        }
-        
-        console.log(`[SceneEditor] Setting visibility for ${path} to ${isVisible ? 'visible' : 'hidden'}`);
-        
-        // For composite objects with model property
-        if (object.model && typeof object.model.setVisible === 'function') {
-            console.log(`[SceneEditor] Setting visibility via object.model.setVisible for ${path}`);
-            object.model.setVisible(isVisible);
-            
-            // Verify visibility was set correctly
-            if (typeof object.model.isVisible === 'function') {
-                console.log(`[SceneEditor] After setting, object.model.isVisible(): ${object.model.isVisible()}`);
-            }
-            
-            return; // Return early as we've handled this object
-        }
-        
-        // Set visibility on this object
-        if (typeof object.setVisible === 'function') {
-            // Use the object's setVisible method (BaseModel/CompositeModel)
-            console.log(`[SceneEditor] Using setVisible method for ${object.constructor ? object.constructor.name : 'object'}`, isVisible);
-            object.setVisible(isVisible);
-            
-            // Verify visibility was set correctly
-            if (typeof object.isVisible === 'function') {
-                console.log(`[SceneEditor] After setting, object.isVisible(): ${object.isVisible()}`);
-            }
-        } else if (object.rootNode && object.rootNode.setEnabled) {
-            // Set enabled state on the root node
-            console.log(`[SceneEditor] Setting root node enabled state to ${isVisible}`);
-            object.rootNode.setEnabled(isVisible);
-            
-            // Verify enabled state was set correctly
-            if (object.rootNode.isEnabled) {
-                console.log(`[SceneEditor] After setting, rootNode.isEnabled(): ${object.rootNode.isEnabled()}`);
-            }
-        } else if (object.mesh && object.mesh.isVisible !== undefined) {
-            // Set visibility on the mesh
-            console.log(`[SceneEditor] Setting mesh visibility to ${isVisible}`);
-            object.mesh.isVisible = isVisible;
-            
-            // Verify visibility was set correctly
-            console.log(`[SceneEditor] After setting, mesh.isVisible: ${object.mesh.isVisible}`);
-        } else if (object.pipeMesh && object.pipeMesh.isVisible !== undefined) {
-            // Set visibility on pipe mesh
-            console.log(`[SceneEditor] Setting pipe mesh visibility to ${isVisible}`);
-            object.pipeMesh.isVisible = isVisible;
-            
-            // Verify visibility was set correctly
-            console.log(`[SceneEditor] After setting, pipeMesh.isVisible: ${object.pipeMesh.isVisible}`);
-        } else if (object.panelMesh && object.panelMesh.isVisible !== undefined) {
-            // Set visibility on panel mesh
-            console.log(`[SceneEditor] Setting panel mesh visibility to ${isVisible}`);
-            object.panelMesh.isVisible = isVisible;
-            
-            // Ensure the parent node is also visible/invisible
-            if (object.rootNode) {
-                console.log(`[SceneEditor] Setting panel root node enabled state to ${isVisible}`);
-                object.rootNode.setEnabled(isVisible);
-            }
-            
-            // Force the panel mesh to update its visibility
-            object.panelMesh.refreshBoundingInfo();
-            
-            // Verify visibility was set correctly
-            console.log(`[SceneEditor] After setting, panelMesh.isVisible: ${object.panelMesh.isVisible}`);
-        } else {
-            console.log(`[SceneEditor] No visibility method found for object at path: ${path}`);
-            console.log(`[SceneEditor] Object:`, object);
-        }
-        
-        // Process children based on object type
-        console.log(`[SceneEditor] Processing children of ${path}`);
-        
-        // 1. Handle LayerOneRing/LayerOneStarModel case
-        if (object.model && object.model.singleCuts) {
-            // Process all SingleCut models
-            console.log(`[SceneEditor] Processing ${object.model.singleCuts.length} singleCuts for ${path}`);
-            object.model.singleCuts.forEach((singleCut, index) => {
-                // Build the path for the SingleCUT
-                const singleCutPath = path ? `${path}/Single CUT #${index + 1}` : `Single CUT #${index + 1}`;
-                this.setObjectVisibility(singleCut, isVisible, singleCutPath);
-            });
-        }
-        
-        // 2. Handle CompositeModel child models
-        if (object.childModels && Array.isArray(object.childModels)) {
-            console.log(`[SceneEditor] Processing ${object.childModels.length} childModels for ${path}`);
-            object.childModels.forEach((childModel, index) => {
-                const childPath = path ? `${path}/ChildModel #${index + 1}` : `ChildModel #${index + 1}`;
-                this.setObjectVisibility(childModel, isVisible, childPath);
-            });
-        }
-        
-        // 3. Handle SingleCutModel pipes and panels
-        if (object.pipes && Array.isArray(object.pipes)) {
-            console.log(`[SceneEditor] Processing ${object.pipes.length} pipes for ${path}`);
-            object.pipes.forEach((pipe, index) => {
-                // Build the path for the pipe
-                const pipePath = path ? `${path}/Pipe #${index + 1}` : `Pipe #${index + 1}`;
-                this.setObjectVisibility(pipe, isVisible, pipePath);
-            });
-        }
-        
-        if (object.panels && Array.isArray(object.panels)) {
-            console.log(`[SceneEditor] Processing ${object.panels.length} panels for ${path}`);
-            object.panels.forEach((panel, index) => {
-                // Build the path for the panel
-                const panelPath = path ? `${path}/Panel #${index + 1}` : `Panel #${index + 1}`;
-                this.setObjectVisibility(panel, isVisible, panelPath);
-            });
-        }
-        
-        // 4. Handle generic children object
-        if (object.children && typeof object.children === 'object') {
-            const childCount = Object.keys(object.children).length;
-            console.log(`[SceneEditor] Processing ${childCount} generic children for ${path}`);
-            Object.entries(object.children).forEach(([key, child]) => {
-                const childPath = path ? `${path}/${key}` : key;
-                this.setObjectVisibility(child, isVisible, childPath);
-            });
-        }
-    }
-    
-    /**
      * Toggle visibility of an object by path
      * @param {string} path - Path to the object
      * @param {Object} object - The object to toggle
@@ -814,9 +631,36 @@ export class SceneEditor {
     toggleObjectVisibility(path, object, isVisible) {
         console.log(`[SceneEditor] Toggling visibility of "${path}" to ${isVisible ? 'visible' : 'hidden'}`);
         
+        // Check if this is a panel of a Central CUT
+        const isCentralCutPanel = path.includes('/Central CUT/Panel #') || path.includes('/Star Central CUT/Panel #');
+        
+        // Handle individual panel visibility for Central CUT models
+        if (isCentralCutPanel && object) {
+            console.log(`[SceneEditor] Setting visibility of Central CUT Panel to ${isVisible}`);
+            
+            // Set panel visibility directly
+            if (object.panelMesh) {
+                object.panelMesh.isVisible = isVisible;
+                console.log(`[SceneEditor] Set panelMesh.isVisible to ${isVisible}`);
+            }
+            
+            // Also enable/disable the rootNode if it exists
+            if (object.rootNode) {
+                object.rootNode.setEnabled(isVisible);
+                console.log(`[SceneEditor] Set rootNode.enabled to ${isVisible}`);
+            }
+            
+            // Update the checkbox state
+            if (this.checkboxElements[path]) {
+                this.checkboxElements[path].element.checked = isVisible;
+            }
+            
+            return; // Early return after handling individual panel
+        }
+        
         // Extract root model type from path (either "Ring Model" or "Star Model")
         const rootModelType = path.startsWith('Ring Model') ? 'Ring Model' : 
-                             path.startsWith('Star Model') ? 'Star Model' : null;
+                            path.startsWith('Star Model') ? 'Star Model' : null;
         
         // Handle the Star Model and its children explicitly
         if (path === 'Star Model' || path.startsWith('Star Model/')) {
@@ -1031,5 +875,145 @@ export class SceneEditor {
                 this.toggle();
             }
         });
+    }
+    
+    /**
+     * Recursively set visibility on an object and all its children
+     * @param {Object} object - The object to set visibility on
+     * @param {boolean} isVisible - Whether the object should be visible
+     * @param {string} path - Optional path to the object for checking permanent hidden status
+     */
+    setObjectVisibility(object, isVisible, path = '') {
+        if (!object) {
+            console.log(`[SceneEditor] Object is null or undefined for path: ${path}`);
+            return;
+        }
+        
+        // Skip if this is a permanently hidden element
+        if (path && this.isElementPermanentlyHidden(path, object)) {
+            console.log(`[SceneEditor] Skipping permanently hidden element: ${path}`);
+            return;
+        }
+        
+        console.log(`[SceneEditor] Setting visibility for ${path} to ${isVisible ? 'visible' : 'hidden'}`);
+        
+        // For composite objects with model property
+        if (object.model && typeof object.model.setVisible === 'function') {
+            console.log(`[SceneEditor] Setting visibility via object.model.setVisible for ${path}`);
+            object.model.setVisible(isVisible);
+            
+            // Verify visibility was set correctly
+            if (typeof object.model.isVisible === 'function') {
+                console.log(`[SceneEditor] After setting, object.model.isVisible(): ${object.model.isVisible()}`);
+            }
+            
+            return; // Return early as we've handled this object
+        }
+        
+        // Set visibility on this object
+        if (typeof object.setVisible === 'function') {
+            // Use the object's setVisible method (BaseModel/CompositeModel)
+            console.log(`[SceneEditor] Using setVisible method for ${object.constructor ? object.constructor.name : 'object'}`, isVisible);
+            object.setVisible(isVisible);
+            
+            // Verify visibility was set correctly
+            if (typeof object.isVisible === 'function') {
+                console.log(`[SceneEditor] After setting, object.isVisible(): ${object.isVisible()}`);
+            }
+        } else if (object.rootNode && object.rootNode.setEnabled) {
+            // Set enabled state on the root node
+            console.log(`[SceneEditor] Setting root node enabled state to ${isVisible}`);
+            object.rootNode.setEnabled(isVisible);
+            
+            // Verify enabled state was set correctly
+            if (object.rootNode.isEnabled) {
+                console.log(`[SceneEditor] After setting, rootNode.isEnabled(): ${object.rootNode.isEnabled()}`);
+            }
+        } else if (object.mesh && object.mesh.isVisible !== undefined) {
+            // Set visibility on the mesh
+            console.log(`[SceneEditor] Setting mesh visibility to ${isVisible}`);
+            object.mesh.isVisible = isVisible;
+            
+            // Verify visibility was set correctly
+            console.log(`[SceneEditor] After setting, mesh.isVisible: ${object.mesh.isVisible}`);
+        } else if (object.pipeMesh && object.pipeMesh.isVisible !== undefined) {
+            // Set visibility on pipe mesh
+            console.log(`[SceneEditor] Setting pipe mesh visibility to ${isVisible}`);
+            object.pipeMesh.isVisible = isVisible;
+            
+            // Verify visibility was set correctly
+            console.log(`[SceneEditor] After setting, pipeMesh.isVisible: ${object.pipeMesh.isVisible}`);
+        } else if (object.panelMesh && object.panelMesh.isVisible !== undefined) {
+            // Set visibility on panel mesh
+            console.log(`[SceneEditor] Setting panel mesh visibility to ${isVisible}`);
+            object.panelMesh.isVisible = isVisible;
+            
+            // Ensure the parent node is also visible/invisible
+            if (object.rootNode) {
+                console.log(`[SceneEditor] Setting panel root node enabled state to ${isVisible}`);
+                object.rootNode.setEnabled(isVisible);
+            }
+            
+            // Force the panel mesh to update its visibility
+            object.panelMesh.refreshBoundingInfo();
+            
+            // Verify visibility was set correctly
+            console.log(`[SceneEditor] After setting, panelMesh.isVisible: ${object.panelMesh.isVisible}`);
+        } else {
+            console.log(`[SceneEditor] No visibility method found for object at path: ${path}`);
+            console.log(`[SceneEditor] Object:`, object);
+        }
+        
+        // Process children based on object type
+        console.log(`[SceneEditor] Processing children of ${path}`);
+        
+        // 1. Handle LayerOneRing/LayerOneStarModel case
+        if (object.model && object.model.singleCuts) {
+            // Process all SingleCut models
+            console.log(`[SceneEditor] Processing ${object.model.singleCuts.length} singleCuts for ${path}`);
+            object.model.singleCuts.forEach((singleCut, index) => {
+                // Build the path for the SingleCUT
+                const singleCutPath = path ? `${path}/Single CUT #${index + 1}` : `Single CUT #${index + 1}`;
+                this.setObjectVisibility(singleCut, isVisible, singleCutPath);
+            });
+        }
+        
+        // 2. Handle CompositeModel child models
+        if (object.childModels && Array.isArray(object.childModels)) {
+            console.log(`[SceneEditor] Processing ${object.childModels.length} childModels for ${path}`);
+            object.childModels.forEach((childModel, index) => {
+                const childPath = path ? `${path}/ChildModel #${index + 1}` : `ChildModel #${index + 1}`;
+                this.setObjectVisibility(childModel, isVisible, childPath);
+            });
+        }
+        
+        // 3. Handle SingleCutModel pipes and panels
+        if (object.pipes && Array.isArray(object.pipes)) {
+            console.log(`[SceneEditor] Processing ${object.pipes.length} pipes for ${path}`);
+            object.pipes.forEach((pipe, index) => {
+                // Build the path for the pipe
+                const pipePath = path ? `${path}/Pipe #${index + 1}` : `Pipe #${index + 1}`;
+                this.setObjectVisibility(pipe, isVisible, pipePath);
+            });
+        }
+        
+        if (object.panels && Array.isArray(object.panels)) {
+            console.log(`[SceneEditor] Processing ${object.panels.length} panels for ${path}`);
+            object.panels.forEach((panel, index) => {
+                // Build the path for the panel
+                const panelPath = path ? `${path}/Panel #${index + 1}` : `Panel #${index + 1}`;
+                this.setObjectVisibility(panel, isVisible, panelPath);
+            });
+        }
+        
+        // 4. Handle generic children object
+        if (object.children && typeof object.children === 'object') {
+            const childCount = Object.keys(object.children).length;
+            console.log(`[SceneEditor] Processing ${childCount} generic children for ${path}`);
+            Object.entries(object.children).forEach(([key, child]) => {
+                const childPath = path ? `${path}/${key}` : key;
+                this.setObjectVisibility(child, isVisible, childPath);
+            });
+        }
     }
 }
