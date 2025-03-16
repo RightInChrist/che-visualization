@@ -723,13 +723,27 @@ export class RotationControls {
         headerContainer.appendChild(title);
         deltaContainer.appendChild(headerContainer);
         
+        // Reference to dropdown container for updating values
+        let panelRotationDropdown = null;
+        
         // Create the global delta rotation slider
         const deltaSlider = this.createSliderRow(
             `Global ${componentType} Delta`,
             min,
             max,
             currentValue || defaultValue,
-            onValueChange
+            (value) => {
+                // Call the provided callback
+                onValueChange(value);
+                
+                // Update the dropdown values if open
+                if (panelRotationDropdown && typeof panelRotationDropdown.updateValues === 'function') {
+                    // Wait for the model to finish updating
+                    setTimeout(() => {
+                        panelRotationDropdown.updateValues();
+                    }, 100);
+                }
+            }
         );
         
         // Add some styling to make it stand out
@@ -749,7 +763,7 @@ export class RotationControls {
         
         // For Panel type, add a dropdown to view panel rotation values if available
         if (componentType === "Panel" && typeof model.getPanelRotations === 'function') {
-            this.addPanelRotationValuesDropdown(deltaContainer, model);
+            panelRotationDropdown = this.addPanelRotationValuesDropdown(deltaContainer, model);
         }
     }
     
@@ -878,6 +892,8 @@ export class RotationControls {
             // Get panel rotation state
             const panelRotations = model.getPanelRotations();
             
+            console.log("Panel rotation values:", panelRotations);
+            
             if (panelRotations && panelRotations.defaultAngles) {
                 // Create rows for each panel
                 panelRotations.defaultAngles.forEach((defaultAngle, index) => {
@@ -909,6 +925,9 @@ export class RotationControls {
             }
         };
         
+        // Store reference to update function for external updates
+        dropdownContainer.updateValues = updateRotationValues;
+        
         // Toggle dropdown visibility
         dropdownToggle.addEventListener('click', () => {
             const isVisible = rotationValuesList.style.display !== 'none';
@@ -925,5 +944,8 @@ export class RotationControls {
         dropdownContainer.appendChild(dropdownToggle);
         dropdownContainer.appendChild(rotationValuesList);
         container.appendChild(dropdownContainer);
+        
+        // Return the container with updateValues function for external updates
+        return dropdownContainer;
     }
 } 

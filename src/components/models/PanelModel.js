@@ -78,6 +78,12 @@ export class PanelModel extends BaseModel {
         if (!this.initialRotation && this.rootNode) {
             this.initialRotation = this.rootNode.rotation.clone();
             console.log(`Stored initial rotation for panel ${this.panelIndex}: (${this.radToDeg(this.initialRotation.x)}°, ${this.radToDeg(this.initialRotation.y)}°, ${this.radToDeg(this.initialRotation.z)}°)`);
+            
+            // For SingleCutModel panels, log the default rotation
+            if (this.rotationState && this.panelIndex >= 0) {
+                const defaultAngle = this.rotationState.defaultAngles[this.panelIndex];
+                console.log(`Panel ${this.panelIndex} default angle from shared state: ${defaultAngle?.toFixed(1)}°`);
+            }
         }
     }
     
@@ -94,6 +100,12 @@ export class PanelModel extends BaseModel {
         // Update current delta in the shared state if available
         if (this.rotationState && this.panelIndex >= 0) {
             this.rotationState.currentDelta = deltaRotation;
+            
+            // Also update the current angle in the shared state
+            if (this.rotationState.defaultAngles && this.rotationState.defaultAngles[this.panelIndex] !== undefined) {
+                this.rotationState.currentAngles[this.panelIndex] = 
+                    this.rotationState.defaultAngles[this.panelIndex] + deltaRotation;
+            }
         }
         
         // Reset to initial rotation
@@ -102,6 +114,9 @@ export class PanelModel extends BaseModel {
         // Apply new delta
         const deltaRadians = (deltaRotation * Math.PI) / 180;
         this.rootNode.rotate(Axis.Y, deltaRadians, Space.LOCAL);
+        
+        // Log the current rotation after applying delta
+        console.log(`Panel ${this.panelIndex} rotation after delta: (${this.radToDeg(this.rootNode.rotation.y)}°)`);
         
         // Force updates
         this.rootNode.computeWorldMatrix(true);

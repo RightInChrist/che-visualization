@@ -60,6 +60,9 @@ export class SingleCutModel extends HexagonModel {
         }
         
         this.debugLog('SingleCUT model creation complete');
+        
+        // Log the rotation state after initialization
+        this.debugLog('Panel rotation state after initialization:', JSON.stringify(this.panelRotations));
     }
     
     /**
@@ -118,8 +121,13 @@ export class SingleCutModel extends HexagonModel {
             
             // Get default rotation angle for this panel
             const defaultAngle = this.getDefaultPanelRotation(i);
-            this.panelRotations.defaultAngles[i] = defaultAngle * 180 / Math.PI; // Store in degrees
-            this.panelRotations.currentAngles[i] = this.panelRotations.defaultAngles[i]; // Initialize current to default
+            const defaultAngleDegrees = defaultAngle * 180 / Math.PI; // Store in degrees
+            
+            // Store default and current angles in the shared state
+            this.panelRotations.defaultAngles[i] = defaultAngleDegrees;
+            this.panelRotations.currentAngles[i] = defaultAngleDegrees; // Initialize current to default
+            
+            this.debugLog(`Panel #${i+1} default angle: ${defaultAngleDegrees.toFixed(1)}°`);
             
             // Create panel with calculated transform
             const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
@@ -143,6 +151,12 @@ export class SingleCutModel extends HexagonModel {
                 }
             }
         }
+        
+        // Verify rotation state after panel creation
+        this.debugLog('Panel rotation state after panel creation:');
+        this.debugLog('  Default angles:', this.panelRotations.defaultAngles.map(a => a.toFixed(1) + '°').join(', '));
+        this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
+        this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
     }
     
     /**
@@ -320,18 +334,31 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
-     * Get the default rotation angle for a panel based on its index
-     * @param {number} index - Panel index (0-5)
+     * Get the default rotation angle for a specific panel
+     * @param {number} index - Panel index (0-based)
      * @returns {number} - Default rotation angle in radians
      */
     getDefaultPanelRotation(index) {
-        if (index === 1 || index === 4) { // Panels 2 and 5
-            return 0; // No additional rotation
-        } else if (index === 2 || index === 5) { // Panels 3 and 6
-            return 120 * Math.PI / 180; // 120 degrees
-        } else { // Panels 1 and 4
-            return 60 * Math.PI / 180; // 60 degrees
+        // Default angles in radians
+        // Panel indices 0 and 3: 60 degrees (π/3)
+        // Panel indices 1 and 4: 0 degrees (0)
+        // Panel indices 2 and 5: 120 degrees (2π/3)
+        const cornerCount = this.options.cornerCount || 6;
+        
+        if (cornerCount === 6) {
+            // For standard hexagon
+            const normIndex = index % cornerCount;
+            if (normIndex === 0 || normIndex === 3) {
+                return Math.PI / 3; // 60 degrees
+            } else if (normIndex === 1 || normIndex === 4) {
+                return 0; // 0 degrees
+            } else if (normIndex === 2 || normIndex === 5) {
+                return 2 * Math.PI / 3; // 120 degrees
+            }
         }
+        
+        // Default fallback based on position
+        return (index * 2 * Math.PI) / cornerCount;
     }
     
     /**
@@ -358,11 +385,16 @@ export class SingleCutModel extends HexagonModel {
                 // Update the current angle in our shared state
                 if (this.panelRotations.defaultAngles[i] !== undefined) {
                     this.panelRotations.currentAngles[i] = this.panelRotations.defaultAngles[i] + deltaRotation;
+                    console.log(`Panel #${i+1}: Applied rotation delta: ${deltaRotation}° (current: ${this.panelRotations.currentAngles[i]}°, default: ${this.panelRotations.defaultAngles[i]}°)`);
                 }
-                
-                console.log(`Panel #${i+1}: Applied rotation delta: ${deltaRotation}° (current: ${this.panelRotations.currentAngles[i]}°)`);
             }
         });
+        
+        // Log the updated rotation state
+        this.debugLog('Panel rotation state after update:');
+        this.debugLog('  Default angles:', this.panelRotations.defaultAngles.map(a => a.toFixed(1) + '°').join(', '));
+        this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
+        this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
         
         // Force an immediate render of the scene
         if (this.scene) {
