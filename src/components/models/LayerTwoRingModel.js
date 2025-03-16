@@ -92,10 +92,17 @@ export class LayerTwoRingModel extends HexagonModel {
             this.addChild(cornerCut);
         }
         
-        // Create a SingleCUT at each side
+        // Create a SingleCUT at each side (between corners)
         for (let i = 0; i < 6; i++) {
-            // Calculate the position from the side node
-            const sidePosition = this.sideNodes[i].position.clone();
+            // Calculate the next corner index (wrapping around to 0)
+            const nextCornerIndex = (i + 1) % 6;
+            
+            // Get positions of current and next corner
+            const currentCornerPosition = this.cornerNodes[i].position.clone();
+            const nextCornerPosition = this.cornerNodes[nextCornerIndex].position.clone();
+            
+            // Calculate midpoint between the corners
+            const sidePosition = currentCornerPosition.add(nextCornerPosition).scale(0.5);
             
             // Create a SingleCUT model at this side
             const sideCut = new SingleCutModel(this.scene, sidePosition, {
