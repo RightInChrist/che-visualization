@@ -313,8 +313,8 @@ class CHEVisualization {
                 const toggleButtons = document.createElement('div');
                 toggleButtons.id = 'toggleButtons';
                 toggleButtons.style.position = 'absolute';
-                toggleButtons.style.top = '10px';
-                toggleButtons.style.left = '10px';
+                toggleButtons.style.bottom = '20px';
+                toggleButtons.style.right = '20px';
                 toggleButtons.style.display = 'flex';
                 toggleButtons.style.flexDirection = 'row';
                 toggleButtons.style.gap = '10px';
