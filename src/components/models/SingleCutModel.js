@@ -472,24 +472,7 @@ export class SingleCutModel extends HexagonModel {
         
         this.debugLog('Panel initialization complete');
     }
-    
-    /**
-     * @deprecated Use onRender() instead
-     * Legacy method for backward compatibility
-     */
-    applyPanelDefaultRotations(safeMode = true) {
-        return this.onRender(safeMode);
-    }
-    
-    /**
-     * Get current panel rotation values for all panels
-     * This can be accessed by the RotationControl component
-     * @returns {Object} - Object containing panel rotation information
-     */
-    getPanelRotations() {
-        return this.panelRotations;
-    }
-    
+
     /**
      * Gets the rotation information for all children (panels)
      * Implementation simply returns the rotation objects array by reference

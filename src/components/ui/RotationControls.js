@@ -1,6 +1,5 @@
 import * as BABYLON from '@babylonjs/core';
 import '@babylonjs/gui';
-import { AdvancedDynamicTexture, Grid, Rectangle, TextBlock, Slider, Button, Control } from '@babylonjs/gui';
 import { ModelConfigHelper } from './ModelConfigHelper';
 
 /**
