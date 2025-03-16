@@ -221,6 +221,14 @@ export class SceneEditor {
             this.renderSceneObjects();
             this.updateCheckboxStates();
             
+            // Apply initial visibility states based on isVisible property
+            for (const [name, object] of Object.entries(this.sceneObjects)) {
+                if (object.isVisible === false && this.checkboxElements[name]) {
+                    this.checkboxElements[name].element.checked = false;
+                    this.toggleObjectVisibility(name, object, false);
+                }
+            }
+            
             // Start with all nodes collapsed for better usability
             this.collapseAll();
         }
@@ -243,6 +251,12 @@ export class SceneEditor {
         for (const [name, object] of Object.entries(this.sceneObjects)) {
             const objectItem = this.createObjectListItem(name, object);
             objectTree.appendChild(objectItem);
+            
+            // If the object has isVisible explicitly set to false, update checkbox
+            if (object.isVisible === false && this.checkboxElements[name]) {
+                this.checkboxElements[name].element.checked = false;
+                this.toggleObjectVisibility(name, object, false);
+            }
         }
         
         this.objectListContainer.appendChild(objectTree);
@@ -735,6 +749,12 @@ export class SceneEditor {
         
         if (!object) {
             log(`[SceneEditor] Object is null or undefined`);
+            return false;
+        }
+        
+        // Check for explicit isVisible property (for object groups in our scene structure)
+        if (object.isVisible === false) {
+            log(`[SceneEditor] Object has explicit isVisible property set to false`);
             return false;
         }
 

@@ -140,7 +140,7 @@ class CHEVisualization {
             
             // Organize scene objects for the scene editor
             const sceneObjects = {
-                'Ground #1': this.ground,
+                'Ground': this.ground,
                 'Ring Model': {
                     model: this.ringModel,
                     children: {
@@ -148,9 +148,6 @@ class CHEVisualization {
                             model: this.ringModel.centralCut
                         }
                     }
-                },
-                'Central CUT': {
-                    model: this.centralCutModel
                 },
                 'Star Model': {
                     model: this.starModel,
@@ -161,6 +158,7 @@ class CHEVisualization {
                     }
                 },
                 'Camera Controller': {
+                    isVisible: false,
                     children: {
                         'Orbit Camera': this.cameraController.orbitCamera,
                         'First Person Camera': this.cameraController.firstPersonCamera,
@@ -168,12 +166,16 @@ class CHEVisualization {
                     }
                 },
                 'Lights': {
+                    isVisible: false,
                     children: {
                         'Hemispheric Light': scene.getLightByName('hemisphericLight'),
                         'Directional Light': scene.getLightByName('directionalLight')
                     }
                 },
-                'Axes': axesViewer
+                'Axes': {
+                    isVisible: false,
+                    model: axesViewer
+                }
             };
             
             // Create scene editor
