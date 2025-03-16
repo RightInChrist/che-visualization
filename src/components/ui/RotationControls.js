@@ -130,15 +130,17 @@ export class RotationControls {
         header.appendChild(modelName);
         modelSection.appendChild(header);
         
-        // Check if this is a LayerTwoModel
-        const isLayerTwoModel = config.model && config.model.constructor && 
-                               config.model.constructor.name === 'LayerTwoModel';
+        // Check if this model has child SingleCUT models (applies to LayerOne, LayerTwo, etc.)
+        const model = config.model;
+        const hasSingleCutChildren = model && model.childModels && 
+            model.childModels.some(child => child && child.constructor.name === 'SingleCutModel');
         
-        // Special handling for LayerTwoModel - add master delta rotation control
-        if (isLayerTwoModel) {
-            // Get the model
-            const layerTwoModel = config.model;
-            
+        // Check if model supports global delta rotation control
+        const supportsDeltaRotation = model && 
+            typeof model.updateAllSingleCutRotations === 'function';
+        
+        // Special handling for models with SingleCUT children that support delta rotation
+        if (hasSingleCutChildren && supportsDeltaRotation) {
             // Create container for the master delta control
             const masterDeltaContainer = document.createElement('div');
             masterDeltaContainer.className = 'master-delta-container';
@@ -155,8 +157,9 @@ export class RotationControls {
             masterHeader.style.justifyContent = 'space-between';
             masterHeader.style.alignItems = 'center';
             
+            const modelTypeName = model.constructor.name.replace('Model', '');
             const masterTitle = document.createElement('h5');
-            masterTitle.textContent = 'Master Rotation Delta Control';
+            masterTitle.textContent = `${modelTypeName} Master Rotation Control`;
             masterTitle.style.margin = '0';
             masterTitle.style.color = '#4CAF50';
             masterTitle.style.fontWeight = 'bold';
@@ -164,26 +167,25 @@ export class RotationControls {
             masterHeader.appendChild(masterTitle);
             masterDeltaContainer.appendChild(masterHeader);
             
-            // Create slider row using our existing method but customize for delta
-            const min = layerTwoModel.getMinSingleCutDeltaRotation ? 
-                layerTwoModel.getMinSingleCutDeltaRotation() : -180;
-            const max = layerTwoModel.getMaxSingleCutDeltaRotation ? 
-                layerTwoModel.getMaxSingleCutDeltaRotation() : 180;
-            const defaultValue = layerTwoModel.getDefaultSingleCutDeltaRotation ? 
-                layerTwoModel.getDefaultSingleCutDeltaRotation() : 0;
-            const currentValue = layerTwoModel.getCurrentSingleCutDeltaRotation ? 
-                layerTwoModel.getCurrentSingleCutDeltaRotation() : 0;
+            // Get min/max/default values using methods if available, otherwise use sensible defaults
+            const min = typeof model.getMinSingleCutDeltaRotation === 'function' ? 
+                model.getMinSingleCutDeltaRotation() : -180;
+            const max = typeof model.getMaxSingleCutDeltaRotation === 'function' ? 
+                model.getMaxSingleCutDeltaRotation() : 180;
+            const defaultValue = typeof model.getDefaultSingleCutDeltaRotation === 'function' ? 
+                model.getDefaultSingleCutDeltaRotation() : 0;
+            const currentValue = typeof model.getCurrentSingleCutDeltaRotation === 'function' ? 
+                model.getCurrentSingleCutDeltaRotation() : 0;
             
+            // Create the global delta rotation slider
             const deltaSlider = this.createSliderRow(
                 "Global SingleCUT Delta",
                 min,
                 max,
                 currentValue || defaultValue,
                 (value) => {
-                    console.log(`Setting global delta rotation to ${value}°`);
-                    if (layerTwoModel && typeof layerTwoModel.updateAllSingleCutRotations === 'function') {
-                        layerTwoModel.updateAllSingleCutRotations(value);
-                    }
+                    console.log(`Setting global delta rotation for ${model.constructor.name} to ${value}°`);
+                    model.updateAllSingleCutRotations(value);
                 }
             );
             
@@ -223,14 +225,19 @@ export class RotationControls {
             const updateRotationValues = () => {
                 rotationValuesList.innerHTML = '';
                 
-                if (layerTwoModel && layerTwoModel.childModels) {
-                    layerTwoModel.childModels.forEach((singleCut, index) => {
+                if (model && model.childModels) {
+                    // Only include SingleCutModel children
+                    const singleCutChildren = model.childModels.filter(
+                        child => child && child.constructor.name === 'SingleCutModel'
+                    );
+                    
+                    singleCutChildren.forEach((singleCut, index) => {
                         if (singleCut) {
                             const valueRow = document.createElement('div');
                             valueRow.style.display = 'flex';
                             valueRow.style.justifyContent = 'space-between';
                             valueRow.style.padding = '3px 0';
-                            valueRow.style.borderBottom = index < layerTwoModel.childModels.length - 1 ? 
+                            valueRow.style.borderBottom = index < singleCutChildren.length - 1 ? 
                                 '1px solid #444' : 'none';
                             
                             const label = document.createElement('span');
@@ -239,8 +246,13 @@ export class RotationControls {
                             
                             const value = document.createElement('span');
                             const rotation = singleCut.options?.rotationAngle || 0;
-                            const originalRotation = singleCut.originalRotation || 0;
-                            value.textContent = `${rotation.toFixed(0)}° (Base: ${originalRotation.toFixed(0)}°)`;
+                            
+                            // Show original rotation if available
+                            if (typeof singleCut.originalRotation !== 'undefined') {
+                                value.textContent = `${rotation.toFixed(0)}° (Base: ${singleCut.originalRotation.toFixed(0)}°)`;
+                            } else {
+                                value.textContent = `${rotation.toFixed(0)}°`;
+                            }
                             
                             valueRow.appendChild(label);
                             valueRow.appendChild(value);
@@ -327,8 +339,8 @@ export class RotationControls {
             childrenContainer.style.marginTop = '10px';
             childrenContainer.style.marginLeft = `${this.options.defaultIndentation}px`;
             
-            // Special case: Don't show child SingleCUTs for LayerTwoModel since we have the dropdown
-            const shouldHideChildren = isLayerTwoModel;
+            // Skip showing child SingleCUTs if we already have the master rotation control
+            const shouldHideChildren = hasSingleCutChildren && supportsDeltaRotation;
             
             if (!shouldHideChildren) {
                 // Create sections for each child model

@@ -43,67 +43,83 @@ export class LayerTwoStarModel extends CompositeModel {
     createModels() {
         this.debugLog('Creating Layer Two Star model');
         
-        const starRadius = this.options.outerRadius;
+        // Use consistent precision for radius values
+        const radius = parseFloat(this.options.outerRadius.toFixed(2));
+        const singleCutRadius = parseFloat(this.options.singleCutRadius.toFixed(2));
         
+        this.debugLog(`Using radius: ${radius.toFixed(2)}, SingleCUT radius: ${singleCutRadius.toFixed(2)}`);
+
         // Store positions for verification
         const positions = [];
         const distances = [];
         
-        // Create 12 SingleCUTs in a star pattern
+        // Create 12 SingleCUTs in a regular dodecagon
         const numModels = 12;
         
-        this.debugLog(`Using star radius: ${starRadius.toFixed(4)}, SingleCUT radius: ${this.options.singleCutRadius.toFixed(4)}`);
+        // Define initial rotation values for each model based on the provided pattern
+        // These are the base rotations for each model
+        this.initialRotations = [
+            210, // Cut 1
+            150, // Cut 2
+            150, // Cut 3
+            90,  // Cut 4
+            90,  // Cut 5
+            30,  // Cut 6
+            30,  // Cut 7
+            330, // Cut 8
+            330, // Cut 9
+            270, // Cut 10
+            270, // Cut 11
+            210  // Cut 12
+        ];
         
-        // Create a perfect star shape by placing all vertices at exactly the same distance from center
+        // Store the current rotation delta (will be applied on top of initial rotations)
+        this.rotationDelta = 0;
+        
+        // Create a dodecagon with equal distances from center
         for (let i = 0; i < numModels; i++) {
-            // Using consistent angle calculation to ensure equidistant placement
-            const angle = (i * 2 * Math.PI) / numModels;
+            // Calculate angle with consistent precision
+            const angle = parseFloat(((i * 2 * Math.PI) / numModels).toFixed(6));
             
-            // Calculate the position with high precision
-            // Use exact radius value, not a rounded approximation
-            const x = exactMultiply(starRadius, Math.cos(angle));
-            const z = exactMultiply(starRadius, Math.sin(angle));
+            // Calculate the position with consistent precision
+            const x = exactMultiply(radius, Math.cos(angle));
+            const z = exactMultiply(radius, Math.sin(angle));
             
             const position = new Vector3(x, 0, z);
             positions.push(position);
             
-            // Verify distance from center with high precision
-            const distanceFromCenter = Math.sqrt(x * x + z * z);
+            // Verify distance from center with consistent precision
+            const distanceFromCenter = parseFloat(Math.sqrt(x * x + z * z).toFixed(2));
             distances.push(distanceFromCenter);
             
-            this.debugLog(`SingleCUT #${i+1}: angle=${(angle * 180 / Math.PI).toFixed(4)}°, ` +
-                         `position=(${x.toFixed(6)}, 0, ${z.toFixed(6)}), ` +
-                         `distance=${distanceFromCenter.toFixed(6)}`);
+            this.debugLog(`SingleCUT #${i+1}: angle=${(angle * 180 / Math.PI).toFixed(2)}°, ` +
+                         `radius=${radius.toFixed(2)}, ` +
+                         `position=(${x.toFixed(2)}, 0, ${z.toFixed(2)}), ` +
+                         `distance=${distanceFromCenter.toFixed(2)}`);
             
-            // Create SingleCUT with rotation pointing outward from center
-            const rotationAngle = this.options.singleCutRotationAngle;
+            // Get the initial rotation for this SingleCUT
+            // Use modulo to handle case where we might have less than 12 models
+            const rotationIndex = i % this.initialRotations.length;
+            const initialRotation = this.initialRotations[rotationIndex];
             
-            // Create the SingleCUT model
+            this.debugLog(`SingleCUT #${i+1}: initial rotation=${initialRotation}°`);
+            
+            // Create a SingleCUT with its own panels and rotation angle
             const singleCut = new SingleCutModel(this.scene, position, {
-                radius: this.options.singleCutRadius,
-                rotationAngle: rotationAngle,
-                skipPanels: false, // Star model has individual panels for each SingleCUT
+                radius: singleCutRadius,
+                rotationAngle: initialRotation,
                 parent: this
             });
+            
+            // Store original rotation value for reference
+            singleCut.originalRotation = initialRotation;
             
             // Add to the model children
             this.addChild(singleCut);
         }
         
-        // Verify that all distances are the same
-        const avgDistance = distances.reduce((sum, distance) => sum + distance, 0) / distances.length;
-        let maxDeviation = 0;
-        
-        distances.forEach((distance, i) => {
-            const deviation = Math.abs(distance - avgDistance);
-            maxDeviation = Math.max(maxDeviation, deviation);
-            
-            if (deviation > 0.001) {
-                this.debugLog(`WARNING: SingleCUT #${i+1} has distance deviation of ${deviation.toFixed(6)} units from average ${avgDistance.toFixed(6)}`);
-            }
-        });
-        
-        this.debugLog(`All SingleCUTs placed with average distance ${avgDistance.toFixed(6)} and max deviation ${maxDeviation.toFixed(6)}`);
+        // Verify that distances match the expected pattern
+        this.verifyDistances(distances);
         
         this.debugLog('Layer Two Star model creation complete');
     }
@@ -423,47 +439,70 @@ export class LayerTwoStarModel extends CompositeModel {
     }
     
     /**
-     * Update the rotation of all child SingleCUT models to the same value
-     * @param {number} rotationAngleDegrees - New rotation angle in degrees for all SingleCUTs
+     * Update all SingleCUT rotations with a delta value applied to their initial rotations
+     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
      */
-    updateAllSingleCutRotations(rotationAngleDegrees) {
-        this.debugLog(`Setting all SingleCUT rotations in Star model to ${rotationAngleDegrees} degrees`);
-        
-        // Store this as the common SingleCUT rotation value
-        this.options.singleCutRotationAngle = rotationAngleDegrees;
-        
-        // Update all child SingleCUT models
-        if (this.childModels && this.childModels.length > 0) {
-            this.childModels.forEach(singleCut => {
-                if (singleCut && typeof singleCut.updateRotation === 'function') {
-                    singleCut.updateRotation(rotationAngleDegrees);
-                }
-            });
+    updateAllSingleCutRotations(deltaRotation) {
+        if (!this.childModels || this.childModels.length === 0) {
+            this.debugLog('No child models to update rotations for');
+            return;
         }
+        
+        // Store the current rotation delta
+        this.rotationDelta = deltaRotation;
+        
+        console.log(`Updating all SingleCUT rotations with delta: ${deltaRotation}°`);
+        
+        // Update each child model with its initial rotation + the delta
+        this.childModels.forEach((singleCut, i) => {
+            if (singleCut && typeof singleCut.updateRotation === 'function') {
+                // Get the original rotation value (or use the initialRotations array as fallback)
+                const originalRotation = singleCut.originalRotation || this.initialRotations[i % this.initialRotations.length];
+                
+                // Calculate new rotation by adding delta
+                let newRotation = originalRotation + deltaRotation;
+                
+                // Normalize to 0-360 range
+                newRotation = ((newRotation % 360) + 360) % 360;
+                
+                console.log(`SingleCUT #${i+1}: Updating rotation from ${originalRotation}° to ${newRotation}° (delta: ${deltaRotation}°)`);
+                
+                // Update the rotation
+                singleCut.updateRotation(newRotation);
+            }
+        });
     }
     
     /**
-     * Get the default SingleCut rotation value for all child models
-     * @returns {number} - Default SingleCut rotation in degrees
+     * Get min delta rotation value for SingleCUTs
+     * @returns {number} - Minimum delta rotation in degrees
      */
-    getDefaultSingleCutRotation() {
-        return this.options.singleCutRotationAngle || 0;
+    getMinSingleCutDeltaRotation() {
+        return -180;
     }
     
     /**
-     * Get the min SingleCut rotation value
-     * @returns {number} - Minimum SingleCut rotation in degrees
+     * Get max delta rotation value for SingleCUTs
+     * @returns {number} - Maximum delta rotation in degrees
      */
-    getMinSingleCutRotation() {
+    getMaxSingleCutDeltaRotation() {
+        return 180;
+    }
+    
+    /**
+     * Get default delta rotation value for SingleCUTs
+     * @returns {number} - Default delta rotation in degrees
+     */
+    getDefaultSingleCutDeltaRotation() {
         return 0;
     }
     
     /**
-     * Get the max SingleCut rotation value
-     * @returns {number} - Maximum SingleCut rotation in degrees
+     * Get current delta rotation value for SingleCUTs
+     * @returns {number} - Current delta rotation in degrees
      */
-    getMaxSingleCutRotation() {
-        return 360;
+    getCurrentSingleCutDeltaRotation() {
+        return this.rotationDelta || 0;
     }
     
     /**
