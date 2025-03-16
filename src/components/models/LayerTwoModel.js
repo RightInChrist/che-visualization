@@ -30,6 +30,14 @@ export class LayerTwoModel extends CompositeModel {
         // Store references to radius visualization elements
         this.radiusLines = [];
         
+        // Debugging state for reposition tracking
+        this.repositionAttempts = 0;
+        this.firstRepositionTime = null;
+        this.lastRepositionTime = null;
+        this.successfulRepositions = 0;
+        this.positionChangeThreshold = 0.001; // Minimum change to consider a reposition "worked"
+        this.positionChangeHistory = []; // Track changes over time
+        
         // Create the models
         this.createModels();
         
@@ -329,6 +337,17 @@ export class LayerTwoModel extends CompositeModel {
      * This avoids recreating the models when only their positions need to change
      */
     updateChildPositions() {
+        // Track reposition attempts
+        this.repositionAttempts++;
+        const currentTime = performance.now();
+        if (!this.firstRepositionTime) {
+            this.firstRepositionTime = currentTime;
+        }
+        const elapsed = currentTime - (this.firstRepositionTime || currentTime);
+        this.lastRepositionTime = currentTime;
+        
+        console.log(`LayerTwo reposition attempt #${this.repositionAttempts} (elapsed: ${elapsed.toFixed(2)}ms)`);
+        
         this.debugLog('Updating positions of existing SingleCUT models');
         
         if (!this.childModels || this.childModels.length === 0) {
@@ -346,6 +365,10 @@ export class LayerTwoModel extends CompositeModel {
         // Store positions for verification
         const positions = [];
         const distances = [];
+        
+        // Track position changes for this update
+        const positionChanges = [];
+        let successfulChangesThisAttempt = 0;
         
         // Update the position of each child model
         for (let i = 0; i < numModels; i++) {
@@ -375,8 +398,20 @@ export class LayerTwoModel extends CompositeModel {
                 // Update the position
                 singleCut.rootNode.position = position;
                 
+                // Calculate the actual change
+                const actualChange = Vector3.Distance(prevPos, position);
+                positionChanges.push(actualChange);
+                
+                // Determine if this was a significant position change
+                const isSignificantChange = actualChange > this.positionChangeThreshold;
+                if (isSignificantChange) {
+                    successfulChangesThisAttempt++;
+                    this.successfulRepositions++;
+                }
+                
                 this.debugLog(`SingleCUT #${i+1}: Updated position from (${prevPos.x.toFixed(2)}, ${prevPos.y.toFixed(2)}, ${prevPos.z.toFixed(2)}) ` +
-                             `to (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+                             `to (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}) - ` +
+                             `Change: ${actualChange.toFixed(4)} - ${isSignificantChange ? 'SIGNIFICANT' : 'minimal'}`);
                 
                 // Log comprehensive details about the updated SingleCUT
                 if (typeof singleCut.logModelDetails === 'function') {
@@ -387,6 +422,27 @@ export class LayerTwoModel extends CompositeModel {
             }
         }
         
+        // Calculate stats for this reposition attempt
+        const avgChange = positionChanges.length > 0 ? 
+            positionChanges.reduce((sum, val) => sum + val, 0) / positionChanges.length : 0;
+            
+        // Track the changes in history for analysis
+        this.positionChangeHistory.push({
+            attempt: this.repositionAttempts,
+            timestamp: currentTime,
+            elapsed: elapsed,
+            changes: positionChanges,
+            avgChange: avgChange,
+            successfulChanges: successfulChangesThisAttempt
+        });
+        
+        // Log summary for this reposition attempt
+        console.log(`LayerTwo reposition summary #${this.repositionAttempts}:
+  - Changed models: ${successfulChangesThisAttempt}/${positionChanges.length}
+  - Average change distance: ${avgChange.toFixed(4)}
+  - Total successful repositions: ${this.successfulRepositions}
+  - Time since first attempt: ${elapsed.toFixed(2)}ms`);
+        
         // Verify that distances match the expected pattern
         this.verifyDistances(distances);
         
@@ -394,6 +450,37 @@ export class LayerTwoModel extends CompositeModel {
         this.logLayerTwoSummary();
         
         this.debugLog('Position update complete for all SingleCUT models');
+    }
+    
+    /**
+     * Get debugging statistics about repositioning attempts
+     * Can be called from the console to analyze performance
+     */
+    getRepositionStats() {
+        // Return comprehensive stats about repositioning
+        const now = performance.now();
+        const stats = {
+            attempts: this.repositionAttempts,
+            successfulRepositions: this.successfulRepositions,
+            timeElapsed: this.firstRepositionTime ? (now - this.firstRepositionTime) : 0,
+            firstAttempt: this.firstRepositionTime,
+            lastAttempt: this.lastRepositionTime,
+            history: this.positionChangeHistory,
+            
+            // Calculate success rate
+            successRate: this.repositionAttempts > 0 ? 
+                (this.successfulRepositions / (this.repositionAttempts * this.childModels?.length || 1)) : 0,
+                
+            // Find when positions stabilized (all changes minimal)
+            stabilizedAtAttempt: this.positionChangeHistory.findIndex(record => 
+                record.successfulChanges === 0 && record.attempt > 1),
+                
+            // Average change per attempt
+            averageChangePerAttempt: this.positionChangeHistory.map(record => record.avgChange)
+        };
+        
+        console.log("LayerTwo Reposition Statistics:", stats);
+        return stats;
     }
     
     /**
