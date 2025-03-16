@@ -2,56 +2,131 @@ import { Vector3, Color3 } from '@babylonjs/core';
 import { PipeModel } from './PipeModel';
 import { PanelModel } from './PanelModel';
 import * as BABYLON from '@babylonjs/core';
-import { BaseModel } from './BaseModel';
+import { HexagonModel } from './HexagonModel';
 
 /**
  * Creates a Single CUT model (Convective Heat Engine) with pipes and panels arranged in a hexagonal pattern
+ * Extends HexagonModel to use consistent hexagonal geometry
  */
-export class SingleCutModel extends BaseModel {
+export class SingleCutModel extends HexagonModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            pipesCount: 6, // Number of pipes in the hexagonal arrangement (only the outer ring)
-            pipeRadius: 1, // meters (changed from 5 to 1)
+            pipeRadius: 1, // meters
             pipeHeight: 1000, // meters
             pipeColor: new Color3(0.7, 0.7, 0.7),
             panelWidth: 50, // meters
             panelHeight: 1000, // meters
-            panelDepth: 0.1, // meters (changed from 2 to 0.1 for thinner panels)
+            panelDepth: 0.1, // meters (thin panels)
             panelColor: new Color3(0.2, 0.6, 0.8),
-            radius: 21, // Distance from center to each pipe in hexagonal pattern (changed from 150 to 21)
-            debug: false, // Enable/disable debug logging
-            skipPanels: false, // New option to skip creating panels, for models that share panels across SingleCUTs
-            rotationAngle: 0, // Default rotation angle in degrees
-            parent: null, // Reference to parent model (if any)
+            skipPanels: false, // Option to skip creating panels, for models that share panels across SingleCUTs
         };
 
         // Call parent constructor with merged options
+        // Note: cornerCount and radius are handled by HexagonModel
         super(scene, position, { ...defaultOptions, ...options });
         
-        // Store initial position and radius values for logging comparisons
-        this.initialValues = {
-            position: position.clone(),
-            radius: this.options.radius,
-            rotationAngle: this.options.rotationAngle
-        };
-        
-        // Create the models
+        // Create the pipes and panels
         this.createModels();
         
-        // Apply initial rotation if specified
-        if (this.options.rotationAngle !== 0) {
-            this.updateRotation(this.options.rotationAngle);
+        this.debugLog('SingleCUT model created');
+    }
+    
+    /**
+     * Create the model with pipes and panels
+     */
+    createModels() {
+        this.pipes = [];
+        this.panels = [];
+        
+        // Debug log
+        this.debugLog('Creating SingleCUT model with', this.options.cornerCount, 'pipes and panels');
+        
+        // Create pipes at each corner of the hexagon
+        this.createPipes();
+        
+        // Only create panels if not skipping them
+        if (!this.options.skipPanels) {
+            this.createPanels();
+        } else {
+            this.debugLog('Skipping panel creation as requested by skipPanels option');
+        }
+        
+        this.debugLog('SingleCUT model creation complete');
+    }
+    
+    /**
+     * Create pipes at each corner of the hexagon
+     */
+    createPipes() {
+        const cornerCount = this.options.cornerCount;
+        
+        for (let i = 0; i < cornerCount; i++) {
+            // Get the corner position from the cornerNodes array (already calculated)
+            const position = this.cornerNodes[i].position.clone();
+            
+            this.debugLog(`Pipe ${i+1}: Position (${position.x.toFixed(2)}, 0, ${position.z.toFixed(2)})`);
+            
+            const pipe = new PipeModel(this.scene, position, {
+                height: this.options.pipeHeight,
+                radius: this.options.pipeRadius,
+                color: this.options.pipeColor
+            });
+            
+            pipe.rootNode.parent = this.rootNode;
+            this.pipes.push(pipe);
+            
+            // Check if this pipe should be permanently hidden (based on parent model)
+            if (this.options.parent && typeof this.options.parent.isElementPermanentlyHidden === 'function') {
+                // Get our index in the parent's childModels array
+                const ourIndex = this.options.parent.childModels ? 
+                    this.options.parent.childModels.indexOf(this) : -1;
+                    
+                if (ourIndex !== -1 && this.options.parent.isElementPermanentlyHidden(ourIndex, 'pipe', i)) {
+                    this.debugLog(`Permanently hiding Pipe #${i+1} as requested by parent model`);
+                    pipe.pipeMesh.isVisible = false;
+                    pipe.rootNode.setEnabled(false);
+                }
+            }
         }
     }
     
     /**
-     * Helper function to convert radians to degrees and format for display
-     * @param {number} radians - Angle in radians
-     * @returns {string} - Formatted string with angle in degrees
+     * Create panels connecting the pipes
      */
-    radToDeg(radians) {
-        return (radians * 180 / Math.PI).toFixed(2) + '°';
+    createPanels() {
+        const cornerCount = this.options.cornerCount;
+        
+        for (let i = 0; i < cornerCount; i++) {
+            const nextIndex = (i + 1) % cornerCount;
+            
+            this.debugLog(`Creating panel ${i+1} between pipes ${i+1} and ${nextIndex+1}`);
+            
+            // Get positions from cornerNodes and calculate panel transform
+            const currentPipePos = this.cornerNodes[i].position.clone();
+            const nextPipePos = this.cornerNodes[nextIndex].position.clone();
+            
+            // Calculate position and orientation for the panel
+            const transform = this.calculatePanelTransform(i, currentPipePos, nextPipePos);
+            
+            // Create panel with calculated transform
+            const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
+            
+            this.panels.push(panel);
+            
+            // Check if this panel should be permanently hidden (based on parent model)
+            if (this.options.parent && typeof this.options.parent.isElementPermanentlyHidden === 'function') {
+                // Get our index in the parent's childModels array
+                const ourIndex = this.options.parent.childModels ? 
+                    this.options.parent.childModels.indexOf(this) : -1;
+                    
+                if (ourIndex !== -1 && this.options.parent.isElementPermanentlyHidden(ourIndex, 'panel', i)) {
+                    this.debugLog(`Permanently hiding Panel #${i+1} as requested by parent model`);
+                    panel.panelMesh.isVisible = false;
+                    panel.rootNode.setEnabled(false);
+                }
+            }
+        }
     }
     
     /**
@@ -68,8 +143,9 @@ export class SingleCutModel extends BaseModel {
         // Calculate direction vector from current pipe to next pipe
         const direction = nextPipePos.subtract(pipePos).normalize();
 
-        const angle = 0; // don't care about angle between pipes for now
-
+        // Calculate angle
+        const angle = Math.atan2(direction.z, direction.x);
+        
         const rotation = new BABYLON.Vector3(0, angle, 0);
         
         // Calculate distance between pipes for panel width
@@ -143,94 +219,6 @@ export class SingleCutModel extends BaseModel {
     }
     
     /**
-     * Create the model with pipes and panels
-     */
-    createModels() {
-        this.pipes = [];
-        this.panels = [];
-        
-        // Debug log
-        this.debugLog('Creating SingleCUT model with', this.options.pipesCount, 'pipes and panels');
-        
-        // Create an array to store pipe positions for panel connections
-        const pipePositions = [];
-        
-        // Create pipes at hexagon vertices
-        for (let i = 0; i < this.options.pipesCount; i++) {
-            const angle = (i * 2 * Math.PI) / this.options.pipesCount;
-            const x = this.options.radius * Math.cos(angle);
-            const z = this.options.radius * Math.sin(angle);
-            
-            // Create pipe at current position
-            const position = new BABYLON.Vector3(x, 0, z);
-            pipePositions.push(position); // Store position for panel creation
-            
-            this.debugLog(`Pipe ${i+1}: Position (${x.toFixed(2)}, 0, ${z.toFixed(2)}), Angle: ${this.radToDeg(angle)}`);
-            
-            const pipe = new PipeModel(this.scene, position, {
-                height: this.options.pipeHeight,
-                radius: this.options.pipeRadius,
-                color: this.options.pipeColor
-            });
-            
-            pipe.rootNode.parent = this.rootNode;
-            this.pipes.push(pipe);
-            
-            // Check if this pipe should be permanently hidden (based on parent model)
-            if (this.options.parent && typeof this.options.parent.isElementPermanentlyHidden === 'function') {
-                // Get our index in the parent's childModels array
-                const ourIndex = this.options.parent.childModels ? 
-                    this.options.parent.childModels.indexOf(this) : -1;
-                    
-                if (ourIndex !== -1 && this.options.parent.isElementPermanentlyHidden(ourIndex, 'pipe', i)) {
-                    this.debugLog(`Permanently hiding Pipe #${i+1} as requested by parent model`);
-                    pipe.pipeMesh.isVisible = false;
-                    pipe.rootNode.setEnabled(false);
-                }
-            }
-        }
-        
-        // Only create panels if not skipping them
-        if (!this.options.skipPanels) {
-            // Create panels connecting pipes
-            for (let i = 0; i < this.options.pipesCount; i++) {
-                const nextIndex = (i + 1) % this.options.pipesCount;
-                
-                this.debugLog(`Creating panel ${i+1} between pipes ${i+1} and ${nextIndex+1}`);
-                
-                // Get the transform for the panel (position, rotation, width)
-                const transform = this.calculatePanelTransform(
-                    i,
-                    pipePositions[i], 
-                    pipePositions[nextIndex]
-                );
-                
-                // Create panel with calculated transform and store the full panel object
-                const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
-                
-                this.panels.push(panel);
-                
-                // Check if this panel should be permanently hidden (based on parent model)
-                if (this.options.parent && typeof this.options.parent.isElementPermanentlyHidden === 'function') {
-                    // Get our index in the parent's childModels array
-                    const ourIndex = this.options.parent.childModels ? 
-                        this.options.parent.childModels.indexOf(this) : -1;
-                        
-                    if (ourIndex !== -1 && this.options.parent.isElementPermanentlyHidden(ourIndex, 'panel', i)) {
-                        this.debugLog(`Permanently hiding Panel #${i+1} as requested by parent model`);
-                        panel.panelMesh.isVisible = false;
-                        panel.rootNode.setEnabled(false);
-                    }
-                }
-            }
-        } else {
-            this.debugLog('Skipping panel creation as requested by skipPanels option');
-        }
-        
-        this.debugLog('SingleCUT model creation complete');
-    }
-    
-    /**
      * Updates the level of detail based on camera distance
      * @param {Vector3} cameraPosition - The camera position
      */
@@ -263,153 +251,7 @@ export class SingleCutModel extends BaseModel {
     }
     
     /**
-     * Disposes of all resources
-     */
-    dispose() {
-        this.pipes.forEach(pipe => pipe.dispose());
-        this.panels.forEach(panel => panel.dispose());
-        super.dispose();
-    }
-    
-    /**
-     * Log detailed information about this model
-     * Useful for debugging when triggered from scene editor
-     */
-    logModelDetails() {
-        const currentPosition = this.rootNode.position;
-        const initialPosition = this.initialValues.position;
-        
-        console.log(`
------- SingleCUT Model ${this.uniqueId} Details ------
-Initial values:
-  - Position: (${initialPosition.x.toFixed(2)}, ${initialPosition.y.toFixed(2)}, ${initialPosition.z.toFixed(2)})
-  - Radius: ${this.initialValues.radius.toFixed(2)}
-  - Rotation: ${this.initialValues.rotationAngle.toFixed(2)}° (${(this.initialValues.rotationAngle * Math.PI / 180).toFixed(4)} rad)
-
-Current values:
-  - Position: (${currentPosition.x.toFixed(2)}, ${currentPosition.y.toFixed(2)}, ${currentPosition.z.toFixed(2)})
-  - Radius: ${this.options.radius.toFixed(2)}
-  - Rotation: ${this.options.rotationAngle.toFixed(2)}° (${(this.options.rotationAngle * Math.PI / 180).toFixed(4)} rad)
-
-Changes:
-  - Position delta: (${(currentPosition.x - initialPosition.x).toFixed(2)}, ${(currentPosition.y - initialPosition.y).toFixed(2)}, ${(currentPosition.z - initialPosition.z).toFixed(2)})
-  - Radius delta: ${(this.options.radius - this.initialValues.radius).toFixed(2)}
-  - Rotation delta: ${(this.options.rotationAngle - this.initialValues.rotationAngle).toFixed(2)}°
-
-Distance from initial position: ${BABYLON.Vector3.Distance(initialPosition, currentPosition).toFixed(2)}
-------------------------------------------
-`);
-    }
-    
-    /**
-     * Update rotation of this SingleCUT model
-     * @param {number} rotationAngleDegrees - Rotation angle in degrees
-     */
-    updateRotation(rotationAngleDegrees) {
-        // Convert to radians
-        const rotationAngle = (rotationAngleDegrees * Math.PI) / 180;
-        
-        // Update root node rotation around Y axis
-        this.rootNode.rotation.y = rotationAngle;
-        
-        // Store the current angle
-        this.options.rotationAngle = rotationAngleDegrees;
-        
-        this.debugLog(`Updated SingleCUT rotation to ${rotationAngleDegrees} degrees`);
-        
-        // Enhanced logging to compare with initial values
-        console.log(`SingleCut ${this.uniqueId}: Rotation updated from ${this.initialValues.rotationAngle.toFixed(2)}° to ${rotationAngleDegrees.toFixed(2)}° (delta: ${(rotationAngleDegrees - this.initialValues.rotationAngle).toFixed(2)}°)`);
-        
-        // If this model is part of a collection in a parent model, 
-        // update the parent's reference to this model's rotation
-        if (this.options.parent) {
-            // The parent handles updating its own rotation independently
-            // This just ensures we update our local rotation value
-        }
-    }
-    
-    /**
-     * Get the default radius value for this model
-     * @returns {number} - Default radius
-     */
-    getDefaultRadius() {
-        return this.options.radius;
-    }
-    
-    /**
-     * Get the min radius value for this model
-     * @returns {number} - Minimum radius
-     */
-    getMinRadius() {
-        return 10; // Minimum sensible radius for a SingleCUT
-    }
-    
-    /**
-     * Get the max radius value for this model
-     * @returns {number} - Maximum radius
-     */
-    getMaxRadius() {
-        return 30; // Maximum sensible radius for a SingleCUT
-    }
-    
-    /**
-     * Get the default rotation value for this model
-     * @returns {number} - Default rotation in degrees
-     */
-    getDefaultRotation() {
-        return this.options.rotationAngle;
-    }
-    
-    /**
-     * Get the min rotation value for this model
-     * @returns {number} - Minimum rotation in degrees
-     */
-    getMinRotation() {
-        return 0;
-    }
-    
-    /**
-     * Get the max rotation value for this model
-     * @returns {number} - Maximum rotation in degrees
-     */
-    getMaxRotation() {
-        return 360;
-    }
-    
-    /**
-     * Calculate the distance between opposite panels
-     * This is useful for displaying in UI controls
-     * @returns {number} - Distance in meters
-     */
-    calculatePanelDistance() {
-        // For a regular hexagon, the distance between opposite panels (sides)
-        // is radius * √3, not radius * 2 (which would be the distance between opposite corners)
-        const distanceBetweenPanels = this.options.radius * Math.sqrt(3);
-        return distanceBetweenPanels;
-    }
-    
-    /**
-     * Get child models (none for SingleCUTModel since it's a leaf node)
-     * @returns {Array} - Empty array since SingleCUTModel has no child models
-     */
-    getChildren() {
-        return [];
-    }
-    
-    /**
-     * Check if the model is visible
-     * @returns {boolean} - Whether the model is visible
-     */
-    isVisible() {
-        // Check root node visibility first
-        if (this.rootNode) {
-            return this.rootNode.isEnabled();
-        }
-        return false;
-    }
-    
-    /**
-     * Update the radius of this SingleCUT model
+     * Override updateRadius to also update pipes and panels
      * @param {number} newRadius - New radius value for the model
      */
     updateRadius(newRadius) {
@@ -418,12 +260,46 @@ Distance from initial position: ${BABYLON.Vector3.Distance(initialPosition, curr
         }
         
         const oldRadius = this.options.radius;
-        this.options.radius = newRadius;
         
-        // Enhanced logging to compare with initial values
-        console.log(`SingleCut ${this.uniqueId}: Updated radius from ${oldRadius.toFixed(2)} to ${newRadius.toFixed(2)} (initial: ${this.initialValues.radius.toFixed(2)}, total delta: ${(newRadius - this.initialValues.radius).toFixed(2)})`);
+        // First call the parent method to update base geometry
+        super.updateRadius(newRadius);
         
-        // For a more complete implementation, we would also resize the actual geometry here
-        // But for now, we're just updating the stored radius value
+        this.debugLog(`SingleCut ${this.uniqueId}: Updated radius from ${oldRadius.toFixed(2)} to ${newRadius.toFixed(2)} (initial: ${this.initialValues.radius.toFixed(2)}, total delta: ${(newRadius - this.initialValues.radius).toFixed(2)})`);
+        
+        // Now update our pipes and panels by recreating them
+        // This ensures proper positioning and sizing
+        this.dispose(false); // Dispose only the pipes and panels, not the base nodes
+        this.createModels(); // Recreate pipes and panels
+    }
+    
+    /**
+     * Disposes of all resources
+     * @param {boolean} fullDispose - If true, dispose everything including the base class. If false, only dispose pipes and panels.
+     */
+    dispose(fullDispose = true) {
+        // Dispose pipes
+        if (this.pipes) {
+            this.pipes.forEach(pipe => pipe.dispose());
+            this.pipes = [];
+        }
+        
+        // Dispose panels
+        if (this.panels) {
+            this.panels.forEach(panel => panel.dispose());
+            this.panels = [];
+        }
+        
+        // If full dispose, call parent dispose
+        if (fullDispose) {
+            super.dispose();
+        }
+    }
+    
+    /**
+     * Get child models (none for SingleCUTModel since it's a leaf node)
+     * @returns {Array} - Empty array since SingleCUTModel has no child models
+     */
+    getChildren() {
+        return [];
     }
 } 
