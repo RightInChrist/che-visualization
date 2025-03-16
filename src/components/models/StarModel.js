@@ -3,6 +3,8 @@ import { CompositeModel } from './CompositeModel';
 import { SingleCutModel } from './SingleCutModel';
 import { LayerOneStarModel } from './LayerOneStarModel';
 import { LayerTwoStarModel } from './LayerTwoStarModel';
+import { LayerThreeStarModel } from './LayerThreeStarModel';
+import { LayerFourStarModel } from './LayerFourStarModel';
 
 /**
  * StarModel - A model with a central CUT and outer star rings
@@ -14,7 +16,7 @@ export class StarModel extends CompositeModel {
             debug: false,
             singleCutRadius: 21,      // Radius for the SingleCUT
             rotationAngle: 0,         // Default rotation angle for star (different from ring)
-            outerRadius: 80.0,        // Outer radius (now matches LayerTwoStarModel)
+            outerRadius: 168.0,       // Outer radius (now matches LayerFourStarModel)
             visibility: {
                 centralCut: true,
                 outerRing: true
@@ -38,7 +40,7 @@ export class StarModel extends CompositeModel {
      * Create the central SingleCUT model and star layers
      */
     createModels() {
-        this.debugLog('Creating Star Model with central CUT and outer star layers');
+        this.debugLog('Creating Star Model with central CUT and four star layers');
         
         const { singleCutRadius, rotationAngle, outerRadius } = this.options;
         
@@ -54,7 +56,7 @@ export class StarModel extends CompositeModel {
         this.centralCut = centralCut;
         this.addChild(centralCut);
         
-        // Create the Layer One Star with 6 SingleCUTs
+        // Create the Layer One Star with 6 SingleCUTs at corners
         const layerOneStar = new LayerOneStarModel(this.scene, new Vector3(0, 0, 0), {
             singleCutRadius: singleCutRadius,
             cornerRotationAngle: rotationAngle,
@@ -79,12 +81,40 @@ export class StarModel extends CompositeModel {
         this.layerTwoStar = layerTwoStar;
         this.addChild(layerTwoStar);
         
+        // Create the Layer Three Star with 18 SingleCUTs (6 corners, 12 sides)
+        const layerThreeStar = new LayerThreeStarModel(this.scene, new Vector3(0, 0, 0), {
+            singleCutRadius: singleCutRadius,
+            cornerRotationAngle: rotationAngle,
+            sideRotationAngle: rotationAngle,
+            parent: this,
+            debug: this.options.debug
+        });
+        
+        // Store reference to the layer three star for direct access
+        this.layerThreeStar = layerThreeStar;
+        this.addChild(layerThreeStar);
+        
+        // Create the Layer Four Star with 24 SingleCUTs (6 corners, 18 sides)
+        const layerFourStar = new LayerFourStarModel(this.scene, new Vector3(0, 0, 0), {
+            singleCutRadius: singleCutRadius,
+            cornerRotationAngle: rotationAngle,
+            sideRotationAngle: rotationAngle,
+            parent: this,
+            debug: this.options.debug
+        });
+        
+        // Store reference to the layer four star for direct access
+        this.layerFourStar = layerFourStar;
+        this.addChild(layerFourStar);
+        
         // Ensure the star components are hidden by default
         centralCut.setVisible(false);
         layerOneStar.setVisible(false);
         layerTwoStar.setVisible(false);
+        layerThreeStar.setVisible(false);
+        layerFourStar.setVisible(false);
         
-        this.debugLog('Star Model creation complete');
+        this.debugLog('Star Model creation complete with all four layers');
     }
 
     /**
@@ -119,6 +149,16 @@ export class StarModel extends CompositeModel {
             this.layerTwoStar.onRender();
         }
         
+        // Propagate to layer three star
+        if (this.layerThreeStar && typeof this.layerThreeStar.onRender === 'function') {
+            this.layerThreeStar.onRender();
+        }
+        
+        // Propagate to layer four star
+        if (this.layerFourStar && typeof this.layerFourStar.onRender === 'function') {
+            this.layerFourStar.onRender();
+        }
+        
         this.debugLog('Star Model initialization complete');
     }
     
@@ -131,12 +171,14 @@ export class StarModel extends CompositeModel {
         this.options.outerRadius = outerRadius;
         this.options.singleCutRadius = singleCutRadius;
         
-        // Calculate proportional radiuses based on the outerRadius (layer two radius)
+        // Store default radii for proportional scaling
         const layerOneDefaultRadius = this.layerOneStar ? this.layerOneStar.getDefaultRadius() : 42.0;
-        const layerTwoDefaultRadius = this.layerTwoStar ? this.layerTwoStar.getDefaultRadius() : 80.0;
+        const layerTwoDefaultRadius = this.layerTwoStar ? this.layerTwoStar.getDefaultRadius() : 84.0;
+        const layerThreeDefaultRadius = this.layerThreeStar ? this.layerThreeStar.getDefaultRadius() : 126.0;
+        const layerFourDefaultRadius = this.layerFourStar ? this.layerFourStar.getDefaultRadius() : 168.0;
         
         // Use proportional scaling if outerRadius differs from default
-        const scaleFactor = outerRadius / layerTwoDefaultRadius;
+        const scaleFactor = outerRadius / layerFourDefaultRadius;
         
         // Update layer one star radius
         if (this.layerOneStar) {
@@ -149,6 +191,22 @@ export class StarModel extends CompositeModel {
         // Update layer two star radius
         if (this.layerTwoStar) {
             const radius = this.layerTwoStar.getRadius();
+            if (radius) {
+                radius.value = layerTwoDefaultRadius * scaleFactor;
+            }
+        }
+        
+        // Update layer three star radius
+        if (this.layerThreeStar) {
+            const radius = this.layerThreeStar.getRadius();
+            if (radius) {
+                radius.value = layerThreeDefaultRadius * scaleFactor;
+            }
+        }
+        
+        // Update layer four star radius
+        if (this.layerFourStar) {
+            const radius = this.layerFourStar.getRadius();
             if (radius) {
                 radius.value = outerRadius;
             }

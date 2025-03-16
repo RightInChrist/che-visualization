@@ -170,7 +170,11 @@ class CHEVisualization {
                         layerOneRadius: this.starModel.layerOneStar && this.starModel.layerOneStar.options ? 
                             this.starModel.layerOneStar.options.radius.toFixed(1) : 'unknown',
                         layerTwoRadius: this.starModel.layerTwoStar && this.starModel.layerTwoStar.options ? 
-                            this.starModel.layerTwoStar.options.radius.toFixed(1) : 'unknown'
+                            this.starModel.layerTwoStar.options.radius.toFixed(1) : 'unknown',
+                        layerThreeRadius: this.starModel.layerThreeStar && this.starModel.layerThreeStar.options ? 
+                            this.starModel.layerThreeStar.options.radius.toFixed(1) : 'unknown',
+                        layerFourRadius: this.starModel.layerFourStar && this.starModel.layerFourStar.options ? 
+                            this.starModel.layerFourStar.options.radius.toFixed(1) : 'unknown'
                     }
                 };
             },
