@@ -1,0 +1,4 @@
+# Configuration file for GitHub Pages
+theme: none
+site_title: Convective Heat Engine Visualization
+site_description: 3D visualization of a Convective Heat Engine (CHE) with 1000-meter-tall pipes and panels arranged in hexagonal patterns. 
