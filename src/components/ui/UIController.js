@@ -36,13 +36,13 @@ export class UIController {
      * Initializes UI elements and event listeners
      */
     initUI() {
+        // Create the camera toggle button - always add this button
+        this.createCameraToggleButton();
+        
         // If showOnlyDebugToggle is true, only create essential UI elements
         if (this.options.showOnlyDebugToggle) {
             return;
         }
-        
-        // Create the camera toggle button
-        this.createCameraToggleButton();
         
         // Create scene editor button (if not already created)
         if (this.options.sceneEditor) {

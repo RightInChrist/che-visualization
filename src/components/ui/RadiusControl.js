@@ -113,7 +113,7 @@ export class RadiusControl {
             this.panel.style.color = this.options.textColor;
             this.panel.style.display = this.options.isVisible ? 'block' : 'none';
             this.panel.style.pointerEvents = 'auto'; // Enable pointer events
-            this.panel.style.width = '300px';
+            this.panel.style.maxWidth = '400px';
             this.panel.style.maxHeight = '400px';
             this.panel.style.overflowY = 'auto';
             

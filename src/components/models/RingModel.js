@@ -12,7 +12,6 @@ export class RingModel extends CompositeModel {
         const defaultOptions = {
             debug: false,
             singleCutRadius: 21,    // Radius for the SingleCUT
-            outerRingRadius: 72,    // Radius for the outer ring of CUTs
             rotationAngle: 30,      // Default rotation angle
             visibility: {
                 ring: true
@@ -32,7 +31,7 @@ export class RingModel extends CompositeModel {
     createModels() {
         this.debugLog('Creating Ring Model with central CUT and outer ring');
         
-        const { singleCutRadius, outerRingRadius, rotationAngle } = this.options;
+        const { singleCutRadius, rotationAngle } = this.options;
         
         // Create a central SingleCUT
         const centralCut = new SingleCutModel(this.scene, new Vector3(0, 0, 0), {
@@ -48,7 +47,6 @@ export class RingModel extends CompositeModel {
         
         // Create the Layer One Ring with 6 SingleCUTs
         const layerOneRing = new LayerOneRingModel(this.scene, new Vector3(0, 0, 0), {
-            radius: outerRingRadius,
             singleCutRadius: singleCutRadius,
             cornerRotationAngle: rotationAngle,
             parent: this,
@@ -98,7 +96,6 @@ export class RingModel extends CompositeModel {
      * @param {number} singleCutRadius - The radius for individual SingleCUTs
      */
     updateRadiusSettings(outerRadius, singleCutRadius) {
-        this.options.outerRingRadius = outerRadius;
         this.options.singleCutRadius = singleCutRadius;
         
         // Update layer one ring radius

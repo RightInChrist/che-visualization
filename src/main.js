@@ -144,11 +144,17 @@ class CHEVisualization {
             },
             // Helper functions
             getStats: () => {
-                console.log("Getting model stats:");
+                if (!this.ringModel || !this.starModel) {
+                    return "Models not initialized yet";
+                }
+                
                 return {
+                    cameraMode: this.cameraController ? this.cameraController.currentMode : 'unknown',
+                    fps: this.engine ? this.engine.getFps().toFixed() : 'unknown',
                     ringModel: {
                         childCount: this.ringModel.childModels ? this.ringModel.childModels.length : 0,
-                        radius: this.ringModel.options ? this.ringModel.options.outerRadius : 'unknown'
+                        radius: this.ringModel.layerOneRing && this.ringModel.layerOneRing.options ? 
+                            this.ringModel.layerOneRing.options.outerRingRadius : 'unknown'
                     },
                     starModel: {
                         childCount: this.starModel.childModels ? this.starModel.childModels.length : 0,
@@ -162,7 +168,8 @@ class CHEVisualization {
                 
                 // Update Ring Model positions
                 if (this.ringModel && typeof this.ringModel.updateRadiusSettings === 'function') {
-                    const outerRadius = this.ringModel.options ? this.ringModel.options.outerRadius : 72.52;
+                    const outerRadius = this.ringModel.layerOneRing && this.ringModel.layerOneRing.options ? 
+                        this.ringModel.layerOneRing.options.outerRingRadius : 36.4;
                     const singleCutRadius = this.ringModel.options ? this.ringModel.options.singleCutRadius : 21;
                     this.ringModel.updateRadiusSettings(outerRadius, singleCutRadius);
                     console.log(`Updated Ring Model positions with radius=${outerRadius}`);

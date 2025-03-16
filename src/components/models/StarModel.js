@@ -54,21 +54,7 @@ export class StarModel extends CompositeModel {
         
         this.debugLog('Star Model creation complete');
     }
-    
-    /**
-     * Update the radius settings for the central CUT
-     * @param {number} outerRadius - Not used in this simplified model
-     * @param {number} singleCutRadius - New radius for the SingleCUT
-     */
-    updateRadiusSettings(outerRadius, singleCutRadius) {
-        this.options.singleCutRadius = singleCutRadius;
-        
-        // Update the central SingleCUT radius
-        if (this.centralCut && typeof this.centralCut.updateRadius === 'function') {
-            this.centralCut.updateRadius(singleCutRadius);
-        }
-    }
-    
+
     /**
      * Override getName to return "Star"
      * @returns {string} The display name for this model
@@ -76,70 +62,8 @@ export class StarModel extends CompositeModel {
     getName() {
         return "Star";
     }
-    
-    /**
-     * Get all pipes from the central CUT
-     * @returns {Array} - Array of all pipe objects
-     */
-    getAllPipes() {
-        return this.centralCut && this.centralCut.pipes ? [...this.centralCut.pipes] : [];
-    }
-    
-    /**
-     * Get all SingleCUT models
-     * @returns {Object} - Object containing all SingleCUT models by layer
-     */
-    getAllSingleCuts() {
-        return {
-            central: this.centralCut ? [this.centralCut] : [],
-            layerOne: [] // Empty since we only have the central CUT
-        };
-    }
-    
-    /**
-     * Gets the rotation object for this model
-     * @returns {Object} - Rotation object with angle, min, max and default properties
-     */
-    getRotation() {
-        // Initialize a rotation object if it doesn't exist
-        if (!this._rotation) {
-            this._rotation = {
-                angle: this.options.rotationAngle || 0,    // Current rotation angle
-                min: 0,                                    // Minimum rotation angle
-                max: 360,                                  // Maximum rotation angle
-                default: this.options.rotationAngle || 0   // Default rotation angle
-            };
-            
-            // Define a setter for the angle property that applies rotation when changed
-            Object.defineProperty(this._rotation, 'angle', {
-                get: () => this.options.rotationAngle || 0,
-                set: (value) => {
-                    // Update the stored angle
-                    this.options.rotationAngle = value;
-                    
-                    // Apply rotation to the model if it has a root node
-                    if (this.rootNode) {
-                        this.rootNode.rotation.y = (value * Math.PI) / 180;
-                    }
-                }
-            });
-        }
-        
-        return this._rotation;
-    }
-    
-    /**
-     * Gets the rotation information for child models (centralCut)
-     * For use with rotation controls UI
-     * @returns {Array} - Array of rotation objects
-     */
-    getChildrenRotations() {
-        if (this.centralCut && typeof this.centralCut.getRotation === 'function') {
-            return [this.centralCut.getRotation()];
-        }
-        return null;
-    }
-    
+ 
+
     /**
      * Model initialization method called after scene setup
      * Ensures the model and its children are properly initialized
