@@ -62,16 +62,25 @@ export class LayerTwoModel extends CompositeModel {
         this.debugLog(`Using dodecagon radius: ${dodecagonRadius.toFixed(2)}, SingleCUT radius: ${this.options.singleCutRadius.toFixed(2)}`);
         
         // Create 12 SingleCUTs in a dodecagonal pattern
-        for (let i = 0; i < 12; i++) {
-            const angle = (i * 2 * Math.PI) / 12;
+        const numModels = 12;
+        
+        // Create a perfect dodecagon by placing all vertices at exactly the same distance from center
+        for (let i = 0; i < numModels; i++) {
+            // Using consistent angle calculation to ensure equidistant placement
+            const angle = (i * 2 * Math.PI) / numModels;
 
-            // Calculate the position for this SingleCUT
+            // Calculate the position for this SingleCUT with precise math
             const x = dodecagonRadius * Math.cos(angle);
             const z = dodecagonRadius * Math.sin(angle);
             
             const position = new Vector3(x, 0, z);
             
-            this.debugLog(`Creating SingleCUT #${i+1} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) with angle ${(angle * 180 / Math.PI).toFixed(2)}°`);
+            // Verify distance from center to ensure equidistance
+            const distanceFromCenter = Math.sqrt(x * x + z * z);
+            
+            this.debugLog(`Creating SingleCUT #${i+1} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) ` +
+                         `with angle ${(angle * 180 / Math.PI).toFixed(2)}° ` +
+                         `distance from center: ${distanceFromCenter.toFixed(2)}`);
             
             // Create a SingleCUT with its own panels and rotation angle
             const singleCut = new SingleCutModel(this.scene, position, {
