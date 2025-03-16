@@ -58,13 +58,6 @@ class CHEVisualization {
             this.ringModel.setVisible(true);
             this.starModel.setVisible(true);
             
-            // Apply a 30-degree rotation to the star model
-            console.log('Applying 30-degree rotation to the Star Model...');
-            if (this.starModel.updateAllSingleCutRotations) {
-                this.starModel.updateAllSingleCutRotations(30);
-                console.log('Applied 30-degree rotation to Star Model');
-            }
-            
             // Add shadows to all pipes in the scene
             // For Ring Model
             if (this.ringModel && typeof this.ringModel.getAllPipes === 'function') {
