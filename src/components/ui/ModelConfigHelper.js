@@ -30,15 +30,32 @@ export class ModelConfigHelper {
         // Check if this is a SingleCutModel
         const isSingleCutModel = model.constructor && model.constructor.name === 'SingleCutModel';
         
+        // Check if model supports getRadius
+        const hasGetRadius = typeof model.getRadius === 'function';
+        
+        // Get radius configuration
+        let radiusConfig;
+        if (hasGetRadius) {
+            const radius = model.getRadius();
+            radiusConfig = {
+                default: radius.default,
+                min: radius.min,
+                max: radius.max,
+                value: radius.value
+            };
+        } else {
+            radiusConfig = {
+                default: this.getDefaultValue(model, 'getDefaultRadius', 42),
+                min: this.getDefaultValue(model, 'getMinRadius', 10),
+                max: this.getDefaultValue(model, 'getMaxRadius', 100)
+            };
+        }
+        
         // Base configuration for the model
         const config = {
             name: model.constructor ? model.constructor.name : 'Unknown Model',
             model: model,
-            radius: {
-                default: this.getDefaultValue(model, 'getDefaultRadius', 42),
-                min: this.getDefaultValue(model, 'getMinRadius', 10),
-                max: this.getDefaultValue(model, 'getMaxRadius', 100)
-            },
+            radius: radiusConfig,
             singleCutRadius: {
                 default: this.getDefaultValue(model, 'getDefaultSingleCutRadius', 21),
                 min: this.getDefaultValue(model, 'getMinSingleCutRadius', 10),

@@ -356,6 +356,35 @@ export class HexagonModel extends CompositeModel {
     }
     
     /**
+     * Gets or sets radius information for this model
+     * @returns {Object} - The radius object that can be modified by reference
+     */
+    getRadius() {
+        // Initialize a radius object if it doesn't exist
+        if (!this._radius) {
+            this._radius = {
+                value: this.options.radius,      // Current radius value
+                min: this.getMinRadius(),        // Minimum radius
+                max: this.getMaxRadius(),        // Maximum radius
+                default: this.getDefaultRadius() // Default radius
+            };
+            
+            // Define a setter for the value property that applies the radius when changed
+            Object.defineProperty(this._radius, 'value', {
+                get: () => this.options.radius,
+                set: (value) => {
+                    // Only update if the value actually changed
+                    if (this.options.radius !== value) {
+                        this.updateRadius(value);
+                    }
+                }
+            });
+        }
+        
+        return this._radius;
+    }
+    
+    /**
      * Disposes of the resources used by this model
      */
     dispose() {

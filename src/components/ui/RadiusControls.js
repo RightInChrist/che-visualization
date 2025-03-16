@@ -98,11 +98,11 @@ export class RadiusControls {
     }
     
     /**
-     * Create a section for a model with all its radius controls recursively
-     * @param {Object} config - Model configuration
-     * @param {number} modelIndex - Model index
-     * @param {number} level - Nesting level (0 for top level)
-     * @returns {HTMLElement} - The model section container
+     * Creates a model section in the controls panel
+     * @param {Object} config - The model configuration
+     * @param {number} modelIndex - Index of the model in the array
+     * @param {number} level - Nesting level for indentation
+     * @returns {HTMLElement} - The created model section
      */
     createModelSection(config, modelIndex, level) {
         // Create model section container
@@ -139,16 +139,40 @@ export class RadiusControls {
         modelNameHeader.textContent = config.name;
         modelNameHeader.style.margin = '0 0 10px 0';
         modelSection.appendChild(modelNameHeader);
+
+        const model = config.model;
         
-        // Create outer radius control if available
-        if (config.model && typeof config.model.updateRadiusSettings === 'function') {
+        // Add radius control using getRadius if available
+        if (model && typeof model.getRadius === 'function') {
+            const radius = model.getRadius();
+            
+            // Create radius slider
+            const radiusContainer = this.createSliderRow(
+                "Radius",
+                radius.min,
+                radius.max,
+                radius.value,
+                (value) => {
+                    radius.value = value;
+                    // Update panel distance display if available
+                    this.updatePanelDistanceDisplay(model);
+                },
+                0.01 // Allow hundredths precision
+            );
+            modelSection.appendChild(radiusContainer);
+            
+            // Create panel distance indicator
+            this.createPanelDistanceIndicator(modelSection, model);
+        }
+        // Create outer radius control for models with updateRadiusSettings
+        else if (model && typeof model.updateRadiusSettings === 'function') {
             // Get current values or defaults
             let outerRadius = 42; // Default
             let singleCutRadius = 21; // Default
             
-            if (config.model.options) {
-                outerRadius = config.model.options.outerRadius || outerRadius;
-                singleCutRadius = config.model.options.singleCutRadius || singleCutRadius;
+            if (model.options) {
+                outerRadius = model.options.outerRadius || outerRadius;
+                singleCutRadius = model.options.singleCutRadius || singleCutRadius;
             }
             
             // Create outer radius slider
@@ -157,15 +181,15 @@ export class RadiusControls {
                 30,
                 100,
                 outerRadius,
-                (value) => this.onOuterRadiusChange(config.model, value),
+                (value) => this.onOuterRadiusChange(model, value),
                 0.01 // Allow hundredths precision
             );
             modelSection.appendChild(outerRadiusContainer);
             
             // Create SingleCut radius control
-            const hasSingleCutControl = config.model && (
-                (config.model.constructor.name === 'SingleCutModel') ||
-                (config.model.children && config.model.children.some(child => 
+            const hasSingleCutControl = model && (
+                (model.constructor.name === 'SingleCutModel') ||
+                (model.children && model.children.some(child => 
                     child.constructor.name === 'SingleCutModel'))
             );
             
@@ -175,7 +199,7 @@ export class RadiusControls {
                     10,
                     40,
                     singleCutRadius,
-                    (value) => this.onSingleCutRadiusChange(config.model, value),
+                    (value) => this.onSingleCutRadiusChange(model, value),
                     0.01 // Allow hundredths precision
                 );
                 
@@ -187,15 +211,14 @@ export class RadiusControls {
                 modelSection.appendChild(singleCutRadiusContainer);
                 
                 // Create panel distance indicator
-                this.createPanelDistanceIndicator(modelSection, config.model);
+                this.createPanelDistanceIndicator(modelSection, model);
             }
         }
-        // Add direct radius control for SingleCutModel
-        else if (config.model && config.model.constructor && config.model.constructor.name === 'SingleCutModel' && 
-                typeof config.model.updateRadius === 'function') {
+        // Add direct radius control for models with updateRadius
+        else if (model && typeof model.updateRadius === 'function') {
             // Get current radius value
-            let radius = config.model.options && config.model.options.radius !== undefined ? 
-                config.model.options.radius : 21;
+            let radius = model.options && model.options.radius !== undefined ? 
+                model.options.radius : 21;
             
             // Create radius slider
             const radiusContainer = this.createSliderRow(
@@ -204,12 +227,12 @@ export class RadiusControls {
                 40,
                 radius,
                 (value) => {
-                    if (config.model && typeof config.model.updateRadius === 'function') {
-                        config.model.updateRadius(value);
+                    if (model && typeof model.updateRadius === 'function') {
+                        model.updateRadius(value);
                         
                         // Update panel distance display if available
                         if (typeof this.updatePanelDistanceDisplay === 'function') {
-                            this.updatePanelDistanceDisplay(config.model);
+                            this.updatePanelDistanceDisplay(model);
                         }
                     }
                 },
@@ -218,37 +241,8 @@ export class RadiusControls {
             
             modelSection.appendChild(radiusContainer);
             
-            // Add panel rotation control for SingleCutModel
-            if (typeof config.model.updateRotation === 'function') {
-                // Get current rotation value or default to 0
-                let rotation = config.model.options && config.model.options.rotationAngle !== undefined ? 
-                    config.model.options.rotationAngle : 0;
-                
-                // Create rotation slider
-                const rotationContainer = this.createSliderRow(
-                    "Panel Rotation",
-                    0,
-                    360,
-                    rotation,
-                    (value) => {
-                        if (config.model && typeof config.model.updateRotation === 'function') {
-                            config.model.updateRotation(value);
-                            console.log(`Updated SingleCutModel panel rotation to ${value}°`);
-                        }
-                    },
-                    1 // Step of 1 degree
-                );
-                
-                // Style the rotation control to stand out
-                rotationContainer.style.borderLeft = '3px solid #ff9900';
-                rotationContainer.style.backgroundColor = 'rgba(255, 153, 0, 0.1)';
-                rotationContainer.style.paddingLeft = '10px';
-                
-                modelSection.appendChild(rotationContainer);
-            }
-            
             // Create panel distance indicator
-            this.createPanelDistanceIndicator(modelSection, config.model);
+            this.createPanelDistanceIndicator(modelSection, model);
         }
         
         // Recursively create sections for children if enabled
