@@ -2,9 +2,10 @@ import { Vector3 } from '@babylonjs/core';
 import { CompositeModel } from './CompositeModel';
 import { SingleCutModel } from './SingleCutModel';
 import { LayerOneRingModel } from './LayerOneRingModel';
+import { LayerTwoRingModel } from './LayerTwoRingModel';
 
 /**
- * RingModel - A model with a central CUT and a ring of 6 SingleCUTs
+ * RingModel - A model with a central CUT and two rings of SingleCUTs
  */
 export class RingModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
@@ -26,10 +27,10 @@ export class RingModel extends CompositeModel {
     }
     
     /**
-     * Create the central SingleCUT model and layer one ring
+     * Create the central SingleCUT model and layer rings
      */
     createModels() {
-        this.debugLog('Creating Ring Model with central CUT and outer ring');
+        this.debugLog('Creating Ring Model with central CUT and outer rings');
         
         const { singleCutRadius, rotationAngle } = this.options;
         
@@ -56,6 +57,19 @@ export class RingModel extends CompositeModel {
         // Store reference to the layer one ring for direct access
         this.layerOneRing = layerOneRing;
         this.addChild(layerOneRing);
+
+        // Create the Layer Two Ring with 12 SingleCUTs (6 corners, 6 sides)
+        const layerTwoRing = new LayerTwoRingModel(this.scene, new Vector3(0, 0, 0), {
+            singleCutRadius: singleCutRadius,
+            cornerRotationAngle: rotationAngle,
+            sideRotationAngle: rotationAngle,
+            parent: this,
+            debug: this.options.debug
+        });
+        
+        // Store reference to the layer two ring for direct access
+        this.layerTwoRing = layerTwoRing;
+        this.addChild(layerTwoRing);
         
         this.debugLog('Ring Model creation complete');
     }
@@ -86,6 +100,11 @@ export class RingModel extends CompositeModel {
         if (this.layerOneRing && typeof this.layerOneRing.onRender === 'function') {
             this.layerOneRing.onRender();
         }
+
+        // Propagate to layer two ring
+        if (this.layerTwoRing && typeof this.layerTwoRing.onRender === 'function') {
+            this.layerTwoRing.onRender();
+        }
         
         this.debugLog('Ring Model initialization complete');
     }
@@ -98,11 +117,19 @@ export class RingModel extends CompositeModel {
     updateRadiusSettings(outerRadius, singleCutRadius) {
         this.options.singleCutRadius = singleCutRadius;
         
-        // Update layer one ring radius
+        // Update layer one ring radius - keep default radius for layer one
         if (this.layerOneRing) {
-            const radius = this.layerOneRing.getRadius();
-            if (radius) {
-                radius.value = outerRadius;
+            const layerOneRadius = this.layerOneRing.getRadius();
+            if (layerOneRadius) {
+                layerOneRadius.value = this.layerOneRing.getDefaultRadius();
+            }
+        }
+
+        // Update layer two ring radius - use the provided outer radius
+        if (this.layerTwoRing) {
+            const layerTwoRadius = this.layerTwoRing.getRadius();
+            if (layerTwoRadius) {
+                layerTwoRadius.value = outerRadius;
             }
         }
         
