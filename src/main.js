@@ -426,6 +426,16 @@ class CHEVisualization {
                     return null;
                 }
             },
+            // Guaranteed refresh using radius trick
+            guaranteedRefresh: () => {
+                if (window.cheDebug.models.layerTwoRing) {
+                    console.log("Executing guaranteed refresh method...");
+                    return window.cheDebug.models.layerTwoRing.guaranteedRefresh();
+                } else {
+                    console.error("LayerTwoRing model not accessible");
+                    return null;
+                }
+            },
             // Get a specific child model by index
             getSingleCut: (index) => {
                 if (window.cheDebug.models.layerTwoRing && 
@@ -445,6 +455,7 @@ CHE Visualization Debug Console Commands:
 cheDebug.getStats() - Get debugging statistics for LayerTwoRing
 cheDebug.repositionLayerTwo() - Manually trigger repositioning
 cheDebug.forceUpdatePositions() - Force complete recalculation and update of positions
+cheDebug.guaranteedRefresh() - Force a visual refresh using the radius update trick (RECOMMENDED)
 cheDebug.getSingleCut(index) - Get a specific SingleCUT model by index (0-11)
 cheDebug.models - Access all models directly
 cheDebug.app - Access the main application instance

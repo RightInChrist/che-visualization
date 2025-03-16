@@ -570,6 +570,29 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
     }
     
     /**
+     * Guaranteed refresh method that forces Babylon.js to update visuals
+     * Uses the radius update trick to ensure changes are reflected in the canvas
+     */
+    guaranteedRefresh() {
+        console.log("Performing guaranteed position refresh with radius trick...");
+        
+        // Store current radius values
+        const currentOuterRadius = this.options.outerRadius;
+        const currentSingleCutRadius = this.options.singleCutRadius;
+        
+        // Make a tiny change to force update
+        this.updateRadiusSettings(currentOuterRadius + 0.01, currentSingleCutRadius);
+        
+        // Set a timeout to revert back to original values
+        setTimeout(() => {
+            this.updateRadiusSettings(currentOuterRadius, currentSingleCutRadius);
+            console.log("Guaranteed refresh complete - visual update should now be visible");
+        }, 50);
+        
+        return "Guaranteed refresh initiated";
+    }
+    
+    /**
      * Update just the inner radius setting
      * @param {number} innerRadius - New radius for inner SingleCUTs
      */
