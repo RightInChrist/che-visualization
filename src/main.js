@@ -8,6 +8,8 @@ import { GroundModel } from './components/models/GroundModel';
 import { SingleCutModel } from './components/models/SingleCutModel';
 import { LayerOneModel } from './components/models/LayerOneModel';
 import { LayerOneStarModel } from './components/models/LayerOneStarModel';
+import { LayerTwoModel } from './components/models/LayerTwoModel';
+import { LayerTwoStarModel } from './components/models/LayerTwoStarModel';
 import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
@@ -77,11 +79,34 @@ class CHEVisualization {
                 shadowGenerator.addShadowCaster(pipe.pipeMesh);
             });
             
+            // Create Layer Two Ring model
+            this.layerTwoRing = new LayerTwoModel(scene, new Vector3(0, 0, 0));
+            
+            // Create Layer Two Star model
+            this.layerTwoStar = new LayerTwoStarModel(scene, new Vector3(0, 0, 0));
+            
+            // Hide the Layer Two Star model initially (will be reflected in the SceneEditor)
+            this.layerTwoStar.setVisible(false);
+            
+            // Add shadows to all the new pipes
+            const allLayerTwoPipes = this.layerTwoRing.getAllPipes();
+            allLayerTwoPipes.forEach(pipe => {
+                shadowGenerator.addShadowCaster(pipe.pipeMesh);
+            });
+            
+            const allLayerTwoStarPipes = this.layerTwoStar.getAllPipes();
+            allLayerTwoStarPipes.forEach(pipe => {
+                shadowGenerator.addShadowCaster(pipe.pipeMesh);
+            });
+            
             // Combine all pipe meshes for collision detection
             const centralPipeMeshes = allCentralPipes.map(pipe => pipe.pipeMesh);
             const layerOnePipeMeshes = allLayerOnePipes.map(pipe => pipe.pipeMesh);
             const layerOneStarPipeMeshes = allLayerOneStarPipes.map(pipe => pipe.pipeMesh);
-            const pipeMeshes = [...centralPipeMeshes, ...layerOnePipeMeshes, ...layerOneStarPipeMeshes];
+            const layerTwoPipeMeshes = allLayerTwoPipes.map(pipe => pipe.pipeMesh);
+            const layerTwoStarPipeMeshes = allLayerTwoStarPipes.map(pipe => pipe.pipeMesh);
+            const pipeMeshes = [...centralPipeMeshes, ...layerOnePipeMeshes, ...layerOneStarPipeMeshes, 
+                                ...layerTwoPipeMeshes, ...layerTwoStarPipeMeshes];
             
             // Create camera controller
             this.cameraController = new CameraController(
@@ -108,17 +133,47 @@ class CHEVisualization {
                 layerOneStarSingleCutsObjects[`Single CUT #${index + 1}`] = singleCut;
             });
             
-            // Organize scene objects for the scene editor
+            // For LayerTwo models - add each SingleCUT to the scene editor
+            const layerTwoSingleCutsObjects = {};
+            const layerTwoStarSingleCutsObjects = {};
+            
+            // Add each LayerTwo SingleCUT model to the scene editor
+            this.layerTwoRing.singleCuts.forEach((singleCut, index) => {
+                layerTwoSingleCutsObjects[`Single CUT #${index + 1}`] = singleCut;
+            });
+            
+            // Add each LayerTwoStar SingleCUT model to the scene editor
+            this.layerTwoStar.singleCuts.forEach((singleCut, index) => {
+                layerTwoStarSingleCutsObjects[`Single CUT #${index + 1}`] = singleCut;
+            });
+            
+            // Organize scene objects for the scene editor with Ring and Star groups
             const sceneObjects = {
                 'Ground #1': this.ground,
                 'Central CUT': this.centralCut,
-                'Layer One Ring': {
-                    model: this.layerOneRing,
-                    children: layerOneSingleCutsObjects
+                'Ring Arrangement': {
+                    children: {
+                        'Layer One Ring': {
+                            model: this.layerOneRing,
+                            children: layerOneSingleCutsObjects
+                        },
+                        'Layer Two Ring': {
+                            model: this.layerTwoRing,
+                            children: layerTwoSingleCutsObjects
+                        }
+                    }
                 },
-                'Layer One Star': {
-                    model: this.layerOneStar,
-                    children: layerOneStarSingleCutsObjects
+                'Star Arrangement': {
+                    children: {
+                        'Layer One Star': {
+                            model: this.layerOneStar,
+                            children: layerOneStarSingleCutsObjects
+                        },
+                        'Layer Two Star': {
+                            model: this.layerTwoStar,
+                            children: layerTwoStarSingleCutsObjects
+                        }
+                    }
                 },
                 'Camera Controller': {
                     children: {
@@ -167,23 +222,23 @@ class CHEVisualization {
                 document.body.appendChild(toggleButtons);
             }
             
-            // Create radius controls for both Layer One Ring and Layer One Star models
+            // Create radius controls for all Ring and Star models
             const radiusControls = new RadiusControls(
                 scene, 
-                [this.layerOneRing, this.layerOneStar],
+                [this.layerOneRing, this.layerOneStar, this.layerTwoRing, this.layerTwoStar],
                 {
                     isVisible: false,
-                    modelNames: ["Layer One Ring", "Layer One Star"]
+                    modelNames: ["Layer One Ring", "Layer One Star", "Layer Two Ring", "Layer Two Star"]
                 }
             );
             
-            // Create rotation controls for both Layer One Ring and Layer One Star models
+            // Create rotation controls for all Ring and Star models
             const rotationControls = new RotationControls(
                 scene, 
-                [this.layerOneRing, this.layerOneStar], 
+                [this.layerOneRing, this.layerOneStar, this.layerTwoRing, this.layerTwoStar], 
                 {
                     isVisible: false,
-                    modelNames: ["Layer One Ring", "Layer One Star"]
+                    modelNames: ["Layer One Ring", "Layer One Star", "Layer Two Ring", "Layer Two Star"]
                 }
             );
             
@@ -204,6 +259,8 @@ class CHEVisualization {
                 this.centralCut.updateLOD(cameraPosition);
                 this.layerOneRing.updateLOD(cameraPosition);
                 this.layerOneStar.updateLOD(cameraPosition);
+                this.layerTwoRing.updateLOD(cameraPosition);
+                this.layerTwoStar.updateLOD(cameraPosition);
                 
                 // Update scene editor if needed
                 if (this.sceneEditor) {
