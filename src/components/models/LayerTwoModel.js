@@ -38,6 +38,9 @@ export class LayerTwoModel extends CompositeModel {
         this.positionChangeThreshold = 0.001; // Minimum change to consider a reposition "worked"
         this.positionChangeHistory = []; // Track changes over time
         
+        // Track if initial creation phase is complete
+        this.initializationComplete = false;
+        
         // Create the models
         this.createModels();
         
@@ -53,6 +56,10 @@ export class LayerTwoModel extends CompositeModel {
         // Rotate the entire model by the specified angle around the Y axis
         this.updateRotation(this.options.rotationAngle);
         this.debugLog(`Rotated Layer Two Ring by ${this.options.rotationAngle} degrees`);
+        
+        // Mark initialization as complete
+        this.initializationComplete = true;
+        this.debugLog('LayerTwoModel initialization complete');
     }
     
     /**
@@ -78,6 +85,9 @@ export class LayerTwoModel extends CompositeModel {
         // Create 12 SingleCUTs in an alternating pattern
         const numModels = 12;
         
+        // Store calculated positions for resetting
+        this.calculatedPositions = [];
+        
         // Create a dodecagon with alternating distances from center
         for (let i = 0; i < numModels; i++) {
             // Calculate angle with consistent precision
@@ -92,6 +102,7 @@ export class LayerTwoModel extends CompositeModel {
             
             const position = new Vector3(x, 0, z);
             positions.push(position);
+            this.calculatedPositions.push(position.clone()); // Clone to avoid reference issues
             
             // Verify distance from center with consistent precision
             const distanceFromCenter = parseFloat(Math.sqrt(x * x + z * z).toFixed(2));
@@ -304,6 +315,9 @@ export class LayerTwoModel extends CompositeModel {
             this.debugLog(`Updating radius settings - outer: ${this.options.outerRadius}, calculated inner: ${this.options.innerRadius}, singleCut: ${this.options.singleCutRadius}`);
         }
         
+        // Need to recalculate the positions for each SingleCUT
+        this.calculatedPositions = this.calculateChildPositions();
+        
         // Check if we have existing children to update
         if (this.childModels && this.childModels.length > 0) {
             // Update positions of existing children instead of recreating them
@@ -333,6 +347,57 @@ export class LayerTwoModel extends CompositeModel {
     }
     
     /**
+     * Calculate the positions for all child models based on current radius settings
+     * Returns an array of Vector3 positions
+     */
+    calculateChildPositions() {
+        const positions = [];
+        const numModels = 12; // Always 12 SingleCUTs in this model
+        
+        // Use consistent precision for all calculations
+        const outerRadius = parseFloat(this.options.outerRadius.toFixed(2));
+        const innerRadius = parseFloat(this.options.innerRadius.toFixed(2));
+        
+        for (let i = 0; i < numModels; i++) {
+            // Calculate angle with consistent precision
+            const angle = parseFloat(((i * 2 * Math.PI) / numModels).toFixed(6));
+            
+            // Alternate between inner and outer radius
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            
+            // Calculate the position with consistent precision
+            const x = exactMultiply(radius, Math.cos(angle));
+            const z = exactMultiply(radius, Math.sin(angle));
+            
+            positions.push(new Vector3(x, 0, z));
+        }
+        
+        return positions;
+    }
+    
+    /**
+     * Force update of SingleCUT initial positions to match current positions
+     * This helps with position drift and ensures future repositioning works correctly
+     */
+    resetInitialPositions() {
+        if (!this.childModels || this.childModels.length === 0) {
+            this.debugLog('No child models to reset initial positions for');
+            return;
+        }
+        
+        this.debugLog('Resetting SingleCUT initial positions to match current positions');
+        
+        // Update each child model's initial positions
+        this.childModels.forEach((singleCut, i) => {
+            if (singleCut && singleCut.initialValues) {
+                // Reset the initial position to match current position
+                singleCut.initialValues.position = singleCut.rootNode.position.clone();
+                this.debugLog(`Reset initial position for SingleCUT #${i+1} to (${singleCut.initialValues.position.x.toFixed(2)}, ${singleCut.initialValues.position.y.toFixed(2)}, ${singleCut.initialValues.position.z.toFixed(2)})`);
+            }
+        });
+    }
+    
+    /**
      * Update positions of existing SingleCUT model instances
      * This avoids recreating the models when only their positions need to change
      */
@@ -355,51 +420,29 @@ export class LayerTwoModel extends CompositeModel {
             return;
         }
         
-        // Use consistent precision for all calculations
-        const numModels = this.childModels.length;
-        const outerRadius = parseFloat(this.options.outerRadius.toFixed(2));
-        const innerRadius = parseFloat(this.options.innerRadius.toFixed(2));
-        
-        this.debugLog(`Updating positions using outer radius: ${outerRadius.toFixed(2)}, inner radius: ${innerRadius.toFixed(2)}`);
-        
-        // Store positions for verification
-        const positions = [];
-        const distances = [];
+        // Re-calculate positions if they haven't been calculated yet
+        if (!this.calculatedPositions || this.calculatedPositions.length !== this.childModels.length) {
+            this.calculatedPositions = this.calculateChildPositions();
+        }
         
         // Track position changes for this update
         const positionChanges = [];
         let successfulChangesThisAttempt = 0;
         
         // Update the position of each child model
-        for (let i = 0; i < numModels; i++) {
-            // Calculate angle with consistent precision
-            const angle = parseFloat(((i * 2 * Math.PI) / numModels).toFixed(6));
-            
-            // Alternate between inner and outer radius
-            const radius = i % 2 === 0 ? outerRadius : innerRadius;
-            
-            // Calculate the position with consistent precision
-            const x = exactMultiply(radius, Math.cos(angle));
-            const z = exactMultiply(radius, Math.sin(angle));
-            
-            const position = new Vector3(x, 0, z);
-            positions.push(position);
-            
-            // Verify distance from center with consistent precision
-            const distanceFromCenter = parseFloat(Math.sqrt(x * x + z * z).toFixed(2));
-            distances.push(distanceFromCenter);
-            
-            // Update the position of the existing SingleCUT model
+        for (let i = 0; i < this.childModels.length; i++) {
             const singleCut = this.childModels[i];
-            if (singleCut && singleCut.rootNode) {
+            const targetPosition = this.calculatedPositions[i];
+            
+            if (singleCut && singleCut.rootNode && targetPosition) {
                 // Store the previous position for logging
                 const prevPos = singleCut.rootNode.position.clone();
                 
-                // Update the position
-                singleCut.rootNode.position = position;
+                // Update the position directly on the Babylon.js node
+                singleCut.rootNode.position = targetPosition.clone();
                 
                 // Calculate the actual change
-                const actualChange = Vector3.Distance(prevPos, position);
+                const actualChange = Vector3.Distance(prevPos, targetPosition);
                 positionChanges.push(actualChange);
                 
                 // Determine if this was a significant position change
@@ -410,7 +453,7 @@ export class LayerTwoModel extends CompositeModel {
                 }
                 
                 this.debugLog(`SingleCUT #${i+1}: Updated position from (${prevPos.x.toFixed(2)}, ${prevPos.y.toFixed(2)}, ${prevPos.z.toFixed(2)}) ` +
-                             `to (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}) - ` +
+                             `to (${targetPosition.x.toFixed(2)}, ${targetPosition.y.toFixed(2)}, ${targetPosition.z.toFixed(2)}) - ` +
                              `Change: ${actualChange.toFixed(4)} - ${isSignificantChange ? 'SIGNIFICANT' : 'minimal'}`);
                 
                 // Log comprehensive details about the updated SingleCUT
@@ -420,6 +463,12 @@ export class LayerTwoModel extends CompositeModel {
             } else {
                 this.debugLog(`Warning: Could not update position for SingleCUT #${i+1} - model or rootNode missing`);
             }
+        }
+        
+        // If this wasn't the initial positioning, reset initial positions
+        // This ensures future position updates work correctly
+        if (this.initializationComplete && this.repositionAttempts > 1) {
+            this.resetInitialPositions();
         }
         
         // Calculate stats for this reposition attempt
@@ -442,9 +491,6 @@ export class LayerTwoModel extends CompositeModel {
   - Average change distance: ${avgChange.toFixed(4)}
   - Total successful repositions: ${this.successfulRepositions}
   - Time since first attempt: ${elapsed.toFixed(2)}ms`);
-        
-        // Verify that distances match the expected pattern
-        this.verifyDistances(distances);
         
         // Log a summary of the update
         this.logLayerTwoSummary();
@@ -502,6 +548,25 @@ Position Pattern: Alternating at ${this.options.outerRadius.toFixed(2)} and ${th
 Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFixed(2)} units
 ==============================================
 `);
+    }
+    
+    /**
+     * Force recalculation and update of all child positions
+     * Useful for debugging and recovery from position drift
+     */
+    forceUpdatePositions() {
+        this.debugLog('Forcing update of all SingleCUT positions');
+        
+        // Recalculate positions based on current radius settings
+        this.calculatedPositions = this.calculateChildPositions();
+        
+        // Update child positions
+        this.updateChildPositions();
+        
+        // Reset initial positions to match current positions
+        this.resetInitialPositions();
+        
+        return this.childModels.length;
     }
     
     /**

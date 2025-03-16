@@ -415,6 +415,17 @@ class CHEVisualization {
                     return null;
                 }
             },
+            // Force a complete recalculation and update of child positions
+            forceUpdatePositions: () => {
+                if (window.cheDebug.models.layerTwoRing) {
+                    console.log("Forcing complete recalculation of all positions...");
+                    const count = window.cheDebug.models.layerTwoRing.forceUpdatePositions();
+                    return `Force updated ${count} SingleCUT positions`;
+                } else {
+                    console.error("LayerTwoRing model not accessible");
+                    return null;
+                }
+            },
             // Get a specific child model by index
             getSingleCut: (index) => {
                 if (window.cheDebug.models.layerTwoRing && 
@@ -433,6 +444,7 @@ CHE Visualization Debug Console Commands:
 ----------------------------------------
 cheDebug.getStats() - Get debugging statistics for LayerTwoRing
 cheDebug.repositionLayerTwo() - Manually trigger repositioning
+cheDebug.forceUpdatePositions() - Force complete recalculation and update of positions
 cheDebug.getSingleCut(index) - Get a specific SingleCUT model by index (0-11)
 cheDebug.models - Access all models directly
 cheDebug.app - Access the main application instance
