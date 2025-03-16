@@ -444,6 +444,40 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
+     * Gets the rotation information for all children (panels)
+     * Implementation for SingleCutModel returns panel rotations
+     * @returns {Object} - Rotation information for panels
+     */
+    getChildrenRotations() {
+        // For SingleCutModel, children are the panels
+        const panelRotations = [];
+        
+        // Gather rotation information from each panel
+        if (this.panels && this.panels.length > 0) {
+            this.panels.forEach((panel, index) => {
+                if (panel && panel.rootNode) {
+                    const rotation = panel.rootNode.rotation.y * 180 / Math.PI; // Convert to degrees
+                    const defaultAngle = this.getDefaultPanelRotation(index) * 180 / Math.PI; // Convert to degrees
+                    
+                    panelRotations.push({
+                        id: `panel-${index}`,
+                        name: `Panel ${index + 1}`,
+                        rotation: rotation,
+                        baseRotation: defaultAngle,
+                        delta: this.panelRotations.currentDelta || 0
+                    });
+                }
+            });
+        }
+        
+        return {
+            type: 'panels',
+            currentDelta: this.panelRotations.currentDelta || 0,
+            children: panelRotations
+        };
+    }
+    
+    /**
      * Get min delta rotation value for panels
      * @returns {number} - Minimum delta rotation in degrees
      */

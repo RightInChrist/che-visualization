@@ -130,252 +130,74 @@ export class RotationControls {
         header.appendChild(modelName);
         modelSection.appendChild(header);
         
-        // Check if this model has children that can be rotated
+        // Get the model
         const model = config.model;
-        const hasChildModels = model && model.childModels && model.childModels.length > 0;
         
-        // Check if model supports child rotation controls
-        const supportsChildRotation = model && 
-            typeof model.updateChildrenRotation === 'function';
-            
-        // Check if model supports self rotation
-        const supportsRotation = model && 
-            typeof model.updateRotation === 'function';
-
-        // Add control for child component rotation if supported
-        if (hasChildModels && supportsChildRotation) {
-            this.addDeltaRotationControl(
-                modelSection, 
-                model, 
-                model.getName ? model.getName() : "Child",
-                model.getMinChildRotation?.() ?? -180,
-                model.getMaxChildRotation?.() ?? 180,
-                model.getDefaultChildRotation?.() ?? 0,
-                model.getCurrentChildRotation?.() ?? 0,
-                (value) => {
-                    console.log(`Setting global child rotation for ${model.getName?.() || model.constructor.name} to ${value}°`);
-                    model.updateChildrenRotation(value);
-                }
-            );
-        }
-        
-        // Add control for self rotation if supported
-        if (model && supportsRotation) {
-            this.addDeltaRotationControl(
-                modelSection,
-                model,
-                "Self",
-                model.getMinSelfRotation?.() ?? -180,
-                model.getMaxSelfRotation?.() ?? 180,
-                model.getDefaultSelfRotation?.() ?? 0,
-                model.getCurrentSelfRotation?.() ?? 0,
+        // Add Y rotation control if model supports updateRotation
+        if (model && typeof model.updateRotation === 'function') {
+            const yRotationContainer = this.createSliderRow(
+                "Y Rotation",
+                0,
+                360,
+                model.options?.rotationAngle || 0,
                 (value) => {
                     console.log(`Setting rotation for ${model.getName?.() || model.constructor.name} to ${value}°`);
                     model.updateRotation(value);
                 }
             );
+            modelSection.appendChild(yRotationContainer);
         }
         
-        // Create X rotation control if available
-        if (config.rotation.x !== undefined) {
-            const xRotationContainer = this.createSliderRow(
-                "X Rotation",
-                0,
-                360,
-                config.rotation.x.default,
-                (value) => this.onRotationChange(config.model, 'x', value)
-            );
-            modelSection.appendChild(xRotationContainer);
-        }
-        
-        // Create Y rotation control if available
-        if (config.rotation.y !== undefined) {
-            console.log(`Creating Y rotation slider for ${config.name} with value ${config.rotation.y.default}`);
+        // Add child rotation control if model supports both updateChildrenRotation and getChildrenRotations
+        if (model && 
+            typeof model.updateChildrenRotation === 'function' && 
+            typeof model.getChildrenRotations === 'function') {
             
-            const hasSingleCutControl = config.model.constructor && 
-                (config.model.constructor.name === 'SingleCutModel');
+            // Get current child rotations
+            const childRotations = model.getChildrenRotations();
+            
+            if (childRotations) {
+                const childRotationContainer = document.createElement('div');
+                childRotationContainer.className = 'child-rotation-container';
+                childRotationContainer.style.border = '1px solid #555';
+                childRotationContainer.style.borderRadius = '5px';
+                childRotationContainer.style.padding = '10px';
+                childRotationContainer.style.marginBottom = '15px';
+                childRotationContainer.style.backgroundColor = 'rgba(0, 50, 100, 0.2)';
                 
-            const sliderLabel = hasSingleCutControl ? "Rotation" : "Y Rotation";
-            
-            const yRotationContainer = this.createSliderRow(
-                sliderLabel,
-                config.rotation.y.min,
-                config.rotation.y.max,
-                config.rotation.y.default,
-                (value) => this.onRotationChange(config.model, 'y', value)
-            );
-            
-            if (hasSingleCutControl) {
-                // Style differently for SingleCutModel
-                yRotationContainer.style.backgroundColor = 'rgba(0, 100, 100, 0.1)';
-                yRotationContainer.style.padding = '5px';
-                yRotationContainer.style.borderRadius = '3px';
-                yRotationContainer.style.marginBottom = '10px';
+                // Create header for control
+                const headerContainer = document.createElement('div');
+                headerContainer.style.marginBottom = '8px';
+                headerContainer.style.display = 'flex';
+                headerContainer.style.justifyContent = 'space-between';
+                headerContainer.style.alignItems = 'center';
                 
-                // Check if model supports panel rotation functionality
-                if (typeof config.model.updateAllPanelRotations === 'function') {
-                    // Create container for the panel delta control
-                    const panelDeltaContainer = document.createElement('div');
-                    panelDeltaContainer.className = 'panel-delta-container';
-                    panelDeltaContainer.style.border = '1px solid #555';
-                    panelDeltaContainer.style.borderRadius = '5px';
-                    panelDeltaContainer.style.padding = '10px';
-                    panelDeltaContainer.style.marginBottom = '15px';
-                    panelDeltaContainer.style.backgroundColor = 'rgba(100, 50, 0, 0.2)';
-                    
-                    // Create header for panel control
-                    const panelHeader = document.createElement('div');
-                    panelHeader.style.marginBottom = '8px';
-                    panelHeader.style.display = 'flex';
-                    panelHeader.style.justifyContent = 'space-between';
-                    panelHeader.style.alignItems = 'center';
-                    
-                    const panelTitle = document.createElement('h5');
-                    panelTitle.textContent = `Panel Rotation Controls`;
-                    panelTitle.style.margin = '0';
-                    panelTitle.style.color = '#ff9900';
-                    panelTitle.style.fontWeight = 'bold';
-                    
-                    panelHeader.appendChild(panelTitle);
-                    panelDeltaContainer.appendChild(panelHeader);
-                    
-                    // Get min/max/default values using methods if available, otherwise use sensible defaults
-                    const min = typeof config.model.getMinPanelDeltaRotation === 'function' ? 
-                        config.model.getMinPanelDeltaRotation() : -180;
-                    const max = typeof config.model.getMaxPanelDeltaRotation === 'function' ? 
-                        config.model.getMaxPanelDeltaRotation() : 180;
-                    const defaultValue = typeof config.model.getDefaultPanelDeltaRotation === 'function' ? 
-                        config.model.getDefaultPanelDeltaRotation() : 0;
-                    const currentValue = typeof config.model.getCurrentPanelDeltaRotation === 'function' ? 
-                        config.model.getCurrentPanelDeltaRotation() : 0;
-                    
-                    // Create the global delta rotation slider
-                    const deltaSlider = this.createSliderRow(
-                        "Global Panel Delta",
-                        min,
-                        max,
-                        currentValue || defaultValue,
-                        (value) => {
-                            console.log(`Setting global panel delta rotation for ${config.model.constructor.name} to ${value}°`);
-                            config.model.updateAllPanelRotations(value);
-                        }
-                    );
-                    
-                    // Add some styling to make it stand out
-                    deltaSlider.style.backgroundColor = 'rgba(200, 100, 0, 0.1)';
-                    deltaSlider.style.padding = '5px';
-                    deltaSlider.style.borderRadius = '3px';
-                    
-                    panelDeltaContainer.appendChild(deltaSlider);
-                    
-                    // Add dropdown to view all panel rotation values
-                    const dropdownContainer = document.createElement('div');
-                    dropdownContainer.style.marginTop = '10px';
-                    
-                    const dropdownToggle = document.createElement('button');
-                    dropdownToggle.textContent = 'Show Panel Rotation Values ▼';
-                    dropdownToggle.style.backgroundColor = '#444';
-                    dropdownToggle.style.color = '#fff';
-                    dropdownToggle.style.border = '1px solid #555';
-                    dropdownToggle.style.borderRadius = '3px';
-                    dropdownToggle.style.padding = '5px 10px';
-                    dropdownToggle.style.cursor = 'pointer';
-                    dropdownToggle.style.width = '100%';
-                    dropdownToggle.style.textAlign = 'left';
-                    
-                    const rotationValuesList = document.createElement('div');
-                    rotationValuesList.style.display = 'none';
-                    rotationValuesList.style.marginTop = '5px';
-                    rotationValuesList.style.border = '1px solid #555';
-                    rotationValuesList.style.borderRadius = '3px';
-                    rotationValuesList.style.padding = '5px';
-                    rotationValuesList.style.backgroundColor = '#333';
-                    rotationValuesList.style.maxHeight = '200px';
-                    rotationValuesList.style.overflowY = 'auto';
-                    
-                    // Function to update rotation values in the dropdown
-                    const updateRotationValues = () => {
-                        rotationValuesList.innerHTML = '';
-                        
-                        if (config.model && config.model.panels) {
-                            config.model.panels.forEach((panel, index) => {
-                                if (panel && panel.rootNode) {
-                                    const valueRow = document.createElement('div');
-                                    valueRow.style.display = 'flex';
-                                    valueRow.style.justifyContent = 'space-between';
-                                    valueRow.style.padding = '3px 0';
-                                    valueRow.style.borderBottom = index < config.model.panels.length - 1 ? 
-                                        '1px solid #444' : 'none';
-                                    
-                                    const label = document.createElement('span');
-                                    label.textContent = `Panel #${index + 1}:`;
-                                    label.style.fontWeight = 'bold';
-                                    
-                                    const value = document.createElement('span');
-                                    const rotation = panel.rootNode.rotation.y * 180 / Math.PI; // Convert radians to degrees
-                                    
-                                    // Show original rotation if available
-                                    if (panel.originalRotation) {
-                                        const originalRotation = panel.originalRotation.y * 180 / Math.PI;
-                                        value.textContent = `${rotation.toFixed(0)}° (Base: ${originalRotation.toFixed(0)}°)`;
-                                    } else {
-                                        value.textContent = `${rotation.toFixed(0)}°`;
-                                    }
-                                    
-                                    valueRow.appendChild(label);
-                                    valueRow.appendChild(value);
-                                    rotationValuesList.appendChild(valueRow);
-                                }
-                            });
-                        }
-                    };
-                    
-                    // Toggle dropdown visibility
-                    dropdownToggle.addEventListener('click', () => {
-                        const isVisible = rotationValuesList.style.display !== 'none';
-                        rotationValuesList.style.display = isVisible ? 'none' : 'block';
-                        dropdownToggle.textContent = isVisible ? 
-                            'Show Panel Rotation Values ▼' : 'Hide Panel Rotation Values ▲';
-                        
-                        if (!isVisible) {
-                            // Update values when showing
-                            updateRotationValues();
-                        }
-                    });
-                    
-                    dropdownContainer.appendChild(dropdownToggle);
-                    dropdownContainer.appendChild(rotationValuesList);
-                    panelDeltaContainer.appendChild(dropdownContainer);
-                    
-                    // Add the panel container after the main rotation slider
-                    modelSection.appendChild(panelDeltaContainer);
-                }
+                const title = document.createElement('h5');
+                title.textContent = `${model.getName?.() || 'Child'} Rotations`;
+                title.style.margin = '0';
+                title.style.color = '#4CAF50';
+                title.style.fontWeight = 'bold';
+                
+                headerContainer.appendChild(title);
+                childRotationContainer.appendChild(headerContainer);
+                
+                // Create slider for global delta
+                const deltaSlider = this.createSliderRow(
+                    "Delta Rotation",
+                    -180,
+                    180,
+                    childRotations.currentDelta || 0,
+                    (value) => {
+                        model.updateChildrenRotation(value);
+                    }
+                );
+                childRotationContainer.appendChild(deltaSlider);
+                
+                // Add dropdown to show all child rotation values
+                this.addChildRotationValuesDropdown(childRotationContainer, model);
+                
+                modelSection.appendChild(childRotationContainer);
             }
-            
-            modelSection.appendChild(yRotationContainer);
-        } else if (config.rotation.default !== undefined) {
-            // Fallback for models that only have default rotation defined
-            console.log(`Creating default Y rotation slider for ${config.name} with value ${config.rotation.default}`);
-            const yRotationContainer = this.createSliderRow(
-                "Y Rotation",
-                config.rotation.min,
-                config.rotation.max,
-                config.rotation.default,
-                (value) => this.onRotationChange(config.model, 'y', value)
-            );
-            modelSection.appendChild(yRotationContainer);
-        }
-        
-        // Create Z rotation control if available
-        if (config.rotation.z !== undefined) {
-            const zRotationContainer = this.createSliderRow(
-                "Z Rotation",
-                0,
-                360,
-                config.rotation.z.default,
-                (value) => this.onRotationChange(config.model, 'z', value)
-            );
-            modelSection.appendChild(zRotationContainer);
         }
         
         // If model has children and recursive option is true, create sections for child models
@@ -386,18 +208,13 @@ export class RotationControls {
             childrenContainer.style.marginTop = '10px';
             childrenContainer.style.marginLeft = `${this.options.defaultIndentation}px`;
             
-            // Skip showing child SingleCUTs if we already have the master rotation control
-            const shouldHideChildren = hasChildModels && supportsChildRotation;
+            // Create sections for each child model
+            config.children.forEach((childConfig, childIndex) => {
+                const childSection = this.createModelSection(childConfig, childIndex, level + 1);
+                childrenContainer.appendChild(childSection);
+            });
             
-            if (!shouldHideChildren) {
-                // Create sections for each child model
-                config.children.forEach((childConfig, childIndex) => {
-                    const childSection = this.createModelSection(childConfig, childIndex, level + 1);
-                    childrenContainer.appendChild(childSection);
-                });
-                
-                modelSection.appendChild(childrenContainer);
-            }
+            modelSection.appendChild(childrenContainer);
         }
         
         return modelSection;
@@ -691,84 +508,24 @@ export class RotationControls {
     }
     
     /**
-     * Add a delta rotation control for a specific component type
-     * @param {HTMLElement} container - The container to add the control to
-     * @param {Object} model - The model to control
-     * @param {string} componentType - The type of component
-     * @param {number} min - Minimum rotation value
-     * @param {number} max - Maximum rotation value
-     * @param {number} defaultValue - Default rotation value
-     * @param {number} currentValue - Current rotation value
-     * @param {Function} onValueChange - Callback function for value changes
-     */
-    addDeltaRotationControl(container, model, componentType, min, max, defaultValue, currentValue, onValueChange) {
-        // Create container for the delta control
-        const deltaContainer = document.createElement('div');
-        deltaContainer.className = 'delta-rotation-container';
-        deltaContainer.style.border = '1px solid #555';
-        deltaContainer.style.borderRadius = '5px';
-        deltaContainer.style.padding = '10px';
-        deltaContainer.style.marginBottom = '15px';
-        deltaContainer.style.backgroundColor = 'rgba(0, 50, 100, 0.2)';
-        
-        // Create header for control
-        const headerContainer = document.createElement('div');
-        headerContainer.style.marginBottom = '8px';
-        headerContainer.style.display = 'flex';
-        headerContainer.style.justifyContent = 'space-between';
-        headerContainer.style.alignItems = 'center';
-        
-        const modelName = model.getName ? model.getName() : model.constructor.name.replace('Model', '');
-        const title = document.createElement('h5');
-        title.textContent = `${modelName} ${componentType} Rotation Control`;
-        title.style.margin = '0';
-        title.style.color = '#4CAF50';
-        title.style.fontWeight = 'bold';
-        
-        headerContainer.appendChild(title);
-        deltaContainer.appendChild(headerContainer);
-        
-        // Create the global delta rotation slider
-        const deltaSlider = this.createSliderRow(
-            `${componentType} Rotation`,
-            min,
-            max,
-            currentValue || defaultValue,
-            (value) => {
-                // Call the provided callback
-                onValueChange(value);
-            }
-        );
-        
-        // Add some styling to make it stand out
-        deltaSlider.style.backgroundColor = 'rgba(0, 100, 0, 0.1)';
-        deltaSlider.style.padding = '5px';
-        deltaSlider.style.borderRadius = '3px';
-        
-        deltaContainer.appendChild(deltaSlider);
-        
-        // Add the container to the parent container
-        container.appendChild(deltaContainer);
-        
-        // Add dropdown if model has childModels
-        if (model.childModels && model.childModels.length > 0) {
-            this.addRotationValuesDropdown(deltaContainer, model, componentType);
-        }
-    }
-    
-    /**
-     * Add a dropdown to show rotation values for child components
+     * Add a dropdown to show all child rotation values
      * @param {HTMLElement} container - The container to add the dropdown to
-     * @param {Object} model - The model containing children
-     * @param {string} componentType - The type of component
+     * @param {Object} model - The model to get child rotations from
      */
-    addRotationValuesDropdown(container, model, componentType) {
+    addChildRotationValuesDropdown(container, model) {
+        // Get child rotations
+        const childRotations = model.getChildrenRotations();
+        
+        if (!childRotations || !childRotations.children || childRotations.children.length === 0) {
+            return;
+        }
+        
         // Add dropdown to view all rotation values
         const dropdownContainer = document.createElement('div');
         dropdownContainer.style.marginTop = '10px';
         
         const dropdownToggle = document.createElement('button');
-        dropdownToggle.textContent = `Show Rotation Values ▼`;
+        dropdownToggle.textContent = `Show Child Rotation Values ▼`;
         dropdownToggle.style.backgroundColor = '#444';
         dropdownToggle.style.color = '#fff';
         dropdownToggle.style.border = '1px solid #555';
@@ -792,36 +549,31 @@ export class RotationControls {
         const updateRotationValues = () => {
             rotationValuesList.innerHTML = '';
             
-            if (model && model.childModels) {
-                // Include all child models
-                model.childModels.forEach((childModel, index) => {
-                    if (childModel) {
-                        const valueRow = document.createElement('div');
-                        valueRow.style.display = 'flex';
-                        valueRow.style.justifyContent = 'space-between';
-                        valueRow.style.padding = '3px 0';
-                        valueRow.style.borderBottom = index < model.childModels.length - 1 ? 
-                            '1px solid #444' : 'none';
-                        
-                        const childName = childModel.getName ? childModel.getName() : `Child ${index + 1}`;
-                        const childId = childModel.getId ? childModel.getId() : `idx-${index}`;
-                        
-                        const label = document.createElement('span');
-                        label.textContent = childName;
-                        label.style.fontWeight = 'bold';
-                        label.title = `ID: ${childId}`;
-                        
-                        const value = document.createElement('span');
-                        const rotation = childModel.options?.rotationAngle || 0;
-                        
-                        value.textContent = `${rotation.toFixed(0)}°`;
-                        
-                        valueRow.appendChild(label);
-                        valueRow.appendChild(value);
-                        rotationValuesList.appendChild(valueRow);
-                    }
-                });
-            }
+            // Display information for each child
+            childRotations.children.forEach((child, index) => {
+                const valueRow = document.createElement('div');
+                valueRow.style.display = 'flex';
+                valueRow.style.justifyContent = 'space-between';
+                valueRow.style.padding = '3px 0';
+                valueRow.style.borderBottom = index < childRotations.children.length - 1 ? 
+                    '1px solid #444' : 'none';
+                
+                const label = document.createElement('span');
+                label.textContent = child.name || `Child ${index + 1}`;
+                label.style.fontWeight = 'bold';
+                label.title = `ID: ${child.id || index}`;
+                
+                const value = document.createElement('span');
+                if (child.baseRotation !== undefined) {
+                    value.textContent = `${child.rotation.toFixed(0)}° (Base: ${child.baseRotation.toFixed(0)}°, Delta: ${child.delta || 0}°)`;
+                } else {
+                    value.textContent = `${child.rotation.toFixed(0)}°`;
+                }
+                
+                valueRow.appendChild(label);
+                valueRow.appendChild(value);
+                rotationValuesList.appendChild(valueRow);
+            });
         };
         
         // Toggle dropdown visibility
@@ -829,7 +581,7 @@ export class RotationControls {
             const isVisible = rotationValuesList.style.display !== 'none';
             rotationValuesList.style.display = isVisible ? 'none' : 'block';
             dropdownToggle.textContent = isVisible ? 
-                `Show Rotation Values ▼` : `Hide Rotation Values ▲`;
+                `Show Child Rotation Values ▼` : `Hide Child Rotation Values ▲`;
             
             if (!isVisible) {
                 // Update values when showing

@@ -270,6 +270,15 @@ export class HexagonModel extends CompositeModel {
     }
     
     /**
+     * Gets the rotation information for all children
+     * Base implementation that returns null, to be overridden by subclasses
+     * @returns {Object|null} - Rotation information for child elements, or null if not supported
+     */
+    getChildrenRotations() {
+        return null; // Base implementation returns null
+    }
+    
+    /**
      * Get the default radius value for this model
      * @returns {number} - Default radius
      */

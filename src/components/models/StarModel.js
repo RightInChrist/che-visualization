@@ -70,39 +70,6 @@ export class StarModel extends CompositeModel {
     }
     
     /**
-     * Update rotation for the central CUT
-     * @param {number} rotationAngle - New rotation angle in degrees
-     */
-    updateRotation(rotationAngle) {
-        this.options.rotationAngle = rotationAngle;
-        
-        // Update rotation for the central CUT
-        if (this.centralCut && typeof this.centralCut.updateRotation === 'function') {
-            this.centralCut.updateRotation(rotationAngle);
-        }
-    }
-    
-    /**
-     * Update rotation for all children
-     * @param {number} rotationAngle - New rotation angle in degrees for children
-     */
-    updateChildrenRotation(rotationAngle) {
-        // Update rotation for the central CUT
-        if (this.centralCut && typeof this.centralCut.updateChildrenRotation === 'function') {
-            this.centralCut.updateChildrenRotation(rotationAngle);
-        }
-    }
-    
-    /**
-     * @deprecated Use updateRotation() instead
-     * Update rotation for the central CUT
-     * @param {number} rotationAngle - New rotation angle in degrees
-     */
-    updateAllSingleCutRotations(rotationAngle) {
-        return this.updateRotation(rotationAngle);
-    }
-    
-    /**
      * Override getName to return "Star"
      * @returns {string} The display name for this model
      */
