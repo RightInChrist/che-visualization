@@ -229,49 +229,34 @@ export class RadiusControls {
         }
         // Create outer radius control for models with updateRadiusSettings
         else if (model && typeof model.updateRadiusSettings === 'function') {
-            // Get current values or defaults
-            let outerRadius = 42; // Default
-            let innerRadius = 21; // Default
+            // Get current radius value or default
+            let radius = model.options && model.options.radius !== undefined ? 
+                model.options.radius : 21;
             
-            if (model.options) {
-                outerRadius = model.options.outerRadius || outerRadius;
-                innerRadius = model.options.innerRadius || innerRadius;
-            }
-            
-            // Create outer radius slider
-            const outerRadiusContainer = this.createSliderRow(
-                "Outer Radius",
-                30,
+            // Create a standard radius slider - simplified to use just one radius control
+            const radiusContainer = this.createSliderRow(
+                "Radius",
+                10,
                 100,
-                outerRadius,
-                (value) => this.onOuterRadiusChange(model, value),
+                radius,
+                (value) => {
+                    if (model && typeof model.updateRadius === 'function') {
+                        model.updateRadius(value);
+                    } else if (model && typeof model.updateRadiusSettings === 'function') {
+                        // Fall back to updateRadiusSettings with same value for both parameters
+                        model.updateRadiusSettings(value, value/2);
+                    }
+                    
+                    // Update distance display
+                    this.updateDistanceDisplay(model);
+                },
                 0.01 // Allow hundredths precision
             );
-            modelSection.appendChild(outerRadiusContainer);
             
-            // Create inner radius control
-            const hasInnerRadiusControl = true; // Simplified check - all models can have inner radius
+            modelSection.appendChild(radiusContainer);
             
-            if (hasInnerRadiusControl) {
-                const innerRadiusContainer = this.createSliderRow(
-                    "Inner Radius",
-                    10,
-                    40,
-                    innerRadius,
-                    (value) => this.onInnerRadiusChange(model, value),
-                    0.01 // Allow hundredths precision
-                );
-                
-                // Style the inner radius control differently
-                innerRadiusContainer.style.paddingLeft = '10px';
-                innerRadiusContainer.style.borderLeft = '3px solid #3399ff';
-                innerRadiusContainer.style.backgroundColor = 'rgba(51, 153, 255, 0.1)';
-                
-                modelSection.appendChild(innerRadiusContainer);
-                
-                // Create distance indicator
-                this.createDistanceIndicator(modelSection, model);
-            }
+            // Create distance indicator
+            this.createDistanceIndicator(modelSection, model);
         }
         // Add direct radius control for models with updateRadius
         else if (model && typeof model.updateRadius === 'function') {
@@ -524,50 +509,37 @@ export class RadiusControls {
                           model.options.modelIndex : 
                           "unknown";
         
-        console.log(`Calculating distance for ${modelType} (index: ${modelIndex})`);
-        
         // Method 1: Check if model has a calculateSideDistance method
         if (model && typeof model.calculateSideDistance === 'function') {
             distance = model.calculateSideDistance();
-            calculationMethod = "model.calculateSideDistance()";
-            console.log(`Using model's calculateSideDistance method: ${distance}`);
         }
         // Method 2: Use child models' calculateSideDistance if they exist
         else if (model && typeof model.getChildren === 'function' && model.getChildren().length > 0) {
             const childModel = model.getChildren()[0]; // Get first child
             if (childModel && typeof childModel.calculateSideDistance === 'function') {
                 distance = childModel.calculateSideDistance();
-                calculationMethod = "childModel.calculateSideDistance()";
-                console.log(`Using child model's calculateSideDistance method: ${distance}`);
             }
         }
-        // Method 3: Fallback calculation for any model with outerRadius
-        else if (model && model.options && model.options.outerRadius !== undefined) {
+        // Method 3: Fallback calculation for any model with radius
+        else if (model && model.options) {
+            // Try to use any radius value we can find
+            let radius = model.options.radius || model.options.outerRadius || 21;
             // Use the standard formula for hexagons: distance = radius * √3
-            distance = model.options.outerRadius * Math.sqrt(3);
-            calculationMethod = "outerRadius * Math.sqrt(3)";
-            console.log(`Using formula calculation: ${model.options.outerRadius} * √3 = ${distance}`);
+            distance = radius * Math.sqrt(3);
         }
         
         // Try to find the specific display element for this model
         // First try with ID that includes model type and index
         let displayElement = document.getElementById(`distance-${modelType}-${modelIndex}`);
         
-        if (displayElement) {
-            console.log(`Found distance display by ID for ${modelType} (index: ${modelIndex})`);
-        } else {
+        if (!displayElement) {
             // If not found by ID, try by data attributes
-            console.log(`Trying to find distance display by data attributes for ${modelType} (index: ${modelIndex})`);
             const elements = document.querySelectorAll(`[data-model-type="${modelType}"][data-model-index="${modelIndex}"]`);
             
             if (elements.length > 0) {
                 displayElement = elements[0];
-                console.log(`Found ${elements.length} distance display(s) by data attributes`);
             } else {
                 // Last attempt: find any element with matching model type in matching section
-                console.warn(`No display found by ID or data attributes for ${modelType} (index: ${modelIndex}), trying section lookup`);
-                
-                // Find the model section for this model index
                 const modelSection = document.querySelector(`.model-radius-section[data-model-index="${modelIndex}"]`);
                 
                 if (modelSection) {
@@ -575,7 +547,6 @@ export class RadiusControls {
                     const sectionDisplays = modelSection.querySelectorAll('.distance-display');
                     if (sectionDisplays.length > 0) {
                         displayElement = sectionDisplays[0];
-                        console.log(`Found display in model section ${modelIndex}`);
                     }
                 }
             }
@@ -584,69 +555,7 @@ export class RadiusControls {
         // Update the display element if found
         if (displayElement) {
             displayElement.textContent = `${Math.round(distance)} meters`;
-            console.log(`Updated distance for ${modelType} (index: ${modelIndex}) to ${Math.round(distance)} meters`);
-        } else {
-            console.warn(`⚠️ Failed to find distance display for ${modelType} (index: ${modelIndex})`);
-            
-            // Debug: list all distance displays
-            const allDisplays = document.querySelectorAll('.distance-display');
-            console.log(`All distance displays (${allDisplays.length}):`);
-            allDisplays.forEach(display => {
-                console.log(`- Type: ${display.dataset.modelType}, Index: ${display.dataset.modelIndex}, ID: ${display.id}`);
-            });
         }
-    }
-    
-    /**
-     * Handle changes to outer radius for a specific model
-     * @param {Object} model - The model to update
-     * @param {number} value - New outer radius value
-     */
-    onOuterRadiusChange(model, value) {
-        if (!model) return;
-        
-        const modelType = model.constructor ? model.constructor.name : "unknown";
-        const modelIndex = model.options && model.options.modelIndex !== undefined ? 
-                          model.options.modelIndex : 
-                          "unknown";
-        
-        console.log(`Outer radius change: model=${modelType} (index: ${modelIndex}), value=${value}`);
-        
-        // Get current innerRadius if available
-        let innerRadius = 21; // Default
-        if (model.options && model.options.innerRadius !== undefined) {
-            innerRadius = model.options.innerRadius;
-        }
-        
-        // Update the model's radius
-        if (model && typeof model.updateRadiusSettings === 'function') {
-            model.updateRadiusSettings(value, innerRadius);
-            
-            // Update the distance display
-            this.updateDistanceDisplay(model);
-        }
-    }
-    
-    /**
-     * Handle changes to inner radius for inner-outer radius models
-     * @param {Object} model - The model to update
-     * @param {Number} value - The new inner radius value
-     */
-    onInnerRadiusChange(model, value) {
-        if (!model || typeof model.updateInnerRadius !== 'function') {
-            console.warn('Model does not support inner radius updates');
-            return;
-        }
-        
-        // Format the value to have 2 decimal places for display consistency
-        const formattedValue = parseFloat(value.toFixed(2));
-        
-        // Update the model with the new inner radius value
-        console.log(`Updating inner radius to ${formattedValue}`);
-        model.updateInnerRadius(formattedValue);
-        
-        // Update the distance display if needed
-        this.updateDistanceDisplay(model);
     }
     
     /**
