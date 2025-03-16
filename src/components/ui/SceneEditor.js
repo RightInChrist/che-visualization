@@ -563,7 +563,8 @@ export class SceneEditor {
         // Add all SingleCUTs
         if (compositeModel.model && compositeModel.model.singleCuts && compositeModel.model.singleCuts.length > 0) {
             compositeModel.model.singleCuts.forEach((singleCut, index) => {
-                const singleCutName = `Single CUT #${index + 1}`;
+                // Use fully qualified name that includes the complete parent path
+                const singleCutName = parentName ? `${parentName}/Single CUT #${index + 1}` : `Single CUT #${index + 1}`;
                 const singleCutItem = this.createObjectListItem(singleCutName, singleCut, compositeModel);
                 parentElement.appendChild(singleCutItem);
             });
@@ -813,6 +814,10 @@ export class SceneEditor {
     toggleObjectVisibility(path, object, isVisible) {
         console.log(`[SceneEditor] Toggling visibility of "${path}" to ${isVisible ? 'visible' : 'hidden'}`);
         
+        // Extract root model type from path (either "Ring Model" or "Star Model")
+        const rootModelType = path.startsWith('Ring Model') ? 'Ring Model' : 
+                             path.startsWith('Star Model') ? 'Star Model' : null;
+        
         // Handle the Star Model and its children explicitly
         if (path === 'Star Model' || path.startsWith('Star Model/')) {
             console.log(`[SceneEditor] Special handling for Star Model path: ${path}`);
@@ -907,6 +912,13 @@ export class SceneEditor {
             }
         }
         
+        // Handle the Ring Model children explicitly for path clarity
+        if (path === 'Ring Model' || path.startsWith('Ring Model/')) {
+            console.log(`[SceneEditor] Applying Ring Model-specific handling for ${path}`);
+            
+            // Nothing special needed here yet, just ensuring separation between models
+        }
+        
         // Set visibility on object using the normal path
         this.setObjectVisibility(object, isVisible, path);
         
@@ -945,40 +957,22 @@ export class SceneEditor {
         // Check if parent has SingleCUTs (composite model like Layer One Ring)
         const hasChildModels = parentObj.model && parentObj.model.singleCuts && parentObj.model.singleCuts.length > 0;
         
-        // For composite models with SingleCUTs
-        if (hasChildModels) {
-            for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
-                // Skip permanently hidden elements
-                if (checkboxInfo.isPermanentlyHidden) {
-                    continue;
-                }
-                
-                // Match any path that starts with "Single CUT #" (indicates it's part of a composite model)
-                if (path.startsWith('Single CUT #')) {
-                    console.log(`Setting child checkbox for ${path} to ${isChecked}`);
-                    checkboxInfo.element.checked = isChecked;
-                    
-                    // Also update the actual object visibility
-                    this.toggleObjectVisibility(path, checkboxInfo.object, isChecked);
-                }
+        // For all cases, update any checkbox whose path starts with the parent path and a slash
+        // This ensures we only select direct children of this parent
+        for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
+            // Skip permanently hidden elements
+            if (checkboxInfo.isPermanentlyHidden) {
+                continue;
             }
-        }
-        // For SingleCUT model or other model with direct pipes/panels
-        else if (parentObj.pipes || parentObj.panels) {
-            for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
-                // Skip permanently hidden elements
-                if (checkboxInfo.isPermanentlyHidden) {
-                    continue;
-                }
+            
+            // Match only paths that are direct children of this parent
+            // This works for both fully qualified paths and relative paths
+            if (path.startsWith(parentPath + '/')) {
+                console.log(`Setting child checkbox for ${path} to ${isChecked}`);
+                checkboxInfo.element.checked = isChecked;
                 
-                // Match only paths that are direct children (pipes/panels) of this parent
-                if (path.startsWith(parentPath + '/')) {
-                    console.log(`Setting child checkbox for ${path} to ${isChecked}`);
-                    checkboxInfo.element.checked = isChecked;
-                    
-                    // Also update the actual object visibility
-                    this.toggleObjectVisibility(path, checkboxInfo.object, isChecked);
-                }
+                // Also update the actual object visibility
+                this.toggleObjectVisibility(path, checkboxInfo.object, isChecked);
             }
         }
     }
