@@ -383,6 +383,66 @@ class CHEVisualization {
                 this.scene.render();
             }
         });
+        
+        // Add global access to models for console debugging
+        window.cheDebug = {
+            app: this,
+            models: {
+                ringModel: this.ringModel,
+                starModel: this.starModel,
+                layerOneRing: this.ringModel?.models?.layerOneRing,
+                layerTwoRing: this.ringModel?.models?.layerTwoRing,
+                layerOneStar: this.starModel?.models?.layerOneStar,
+                layerTwoStar: this.starModel?.models?.layerTwoStar,
+            },
+            // Helper functions
+            getStats: () => {
+                if (window.cheDebug.models.layerTwoRing) {
+                    console.log("Getting LayerTwoRing stats:");
+                    return window.cheDebug.models.layerTwoRing.getRepositionStats();
+                } else {
+                    console.error("LayerTwoRing model not accessible");
+                    return null;
+                }
+            },
+            repositionLayerTwo: () => {
+                if (window.cheDebug.models.layerTwoRing) {
+                    console.log("Manually triggering LayerTwoRing repositioning...");
+                    window.cheDebug.models.layerTwoRing.updateChildPositions();
+                    return "Repositioning complete";
+                } else {
+                    console.error("LayerTwoRing model not accessible");
+                    return null;
+                }
+            },
+            // Get a specific child model by index
+            getSingleCut: (index) => {
+                if (window.cheDebug.models.layerTwoRing && 
+                    window.cheDebug.models.layerTwoRing.childModels && 
+                    index < window.cheDebug.models.layerTwoRing.childModels.length) {
+                    return window.cheDebug.models.layerTwoRing.childModels[index];
+                } else {
+                    console.error(`SingleCUT model at index ${index} not found`);
+                    return null;
+                }
+            },
+            // Helper to explain how to use debug functions
+            help: () => {
+                console.log(`
+CHE Visualization Debug Console Commands:
+----------------------------------------
+cheDebug.getStats() - Get debugging statistics for LayerTwoRing
+cheDebug.repositionLayerTwo() - Manually trigger repositioning
+cheDebug.getSingleCut(index) - Get a specific SingleCUT model by index (0-11)
+cheDebug.models - Access all models directly
+cheDebug.app - Access the main application instance
+`);
+            }
+        };
+        
+        // Log help information in console for debugging
+        console.log("%c CHE Visualization Debug Tools Available", "background: #222; color: #bada55; font-size: 14px; padding: 5px;");
+        console.log("%c Use cheDebug.help() for available commands", "color: #bada55;");
     }
     
     /**
