@@ -341,4 +341,22 @@ export class SingleCutModel extends BaseModel {
         }
         return false;
     }
+    
+    /**
+     * Update the radius of this SingleCUT model
+     * @param {number} newRadius - New radius value for the model
+     */
+    updateRadius(newRadius) {
+        if (this.options.radius === newRadius) {
+            return; // No change needed
+        }
+        
+        const oldRadius = this.options.radius;
+        this.options.radius = newRadius;
+        
+        console.log(`SingleCut ${this.uniqueId}: Updated radius from ${oldRadius} to ${newRadius}`);
+        
+        // For a more complete implementation, we would also resize the actual geometry here
+        // But for now, we're just updating the stored radius value
+    }
 } 

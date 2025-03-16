@@ -290,19 +290,92 @@ export class LayerTwoModel extends CompositeModel {
             this.debugLog(`Updating radius settings - outer: ${this.options.outerRadius}, calculated inner: ${this.options.innerRadius}, singleCut: ${this.options.singleCutRadius}`);
         }
         
-        // First dispose of all existing children
-        this.disposeChildren();
+        // Check if we have existing children to update
+        if (this.childModels && this.childModels.length > 0) {
+            // Update positions of existing children instead of recreating them
+            this.updateChildPositions();
+            
+            // Update SingleCUT radius for all children
+            this.childModels.forEach(singleCut => {
+                if (singleCut && typeof singleCut.updateRadius === 'function') {
+                    singleCut.updateRadius(this.options.singleCutRadius);
+                }
+            });
+        } else {
+            // No existing children, create them from scratch
+            this.createModels();
+        }
+        
+        // Clear and redraw radius lines
         this.clearRadiusLines();
-        
-        // Recreate all models with new settings
-        this.createModels();
-        
-        // Redraw radius lines
         if (this.options.showRadiusLines) {
             this.drawRadiusLines();
         }
         
-        this.debugLog('Radius settings updated and models recreated');
+        this.debugLog('Radius settings updated');
+    }
+    
+    /**
+     * Update positions of existing SingleCUT model instances
+     * This avoids recreating the models when only their positions need to change
+     */
+    updateChildPositions() {
+        this.debugLog('Updating positions of existing SingleCUT models');
+        
+        if (!this.childModels || this.childModels.length === 0) {
+            this.debugLog('No child models to update positions for');
+            return;
+        }
+        
+        const numModels = this.childModels.length;
+        const outerRadius = this.options.outerRadius;
+        const innerRadius = this.options.innerRadius;
+        
+        this.debugLog(`Updating positions using outer radius: ${outerRadius.toFixed(4)}, inner radius: ${innerRadius.toFixed(4)}`);
+        
+        // Store positions for verification
+        const positions = [];
+        const distances = [];
+        
+        // Update the position of each child model
+        for (let i = 0; i < numModels; i++) {
+            // Using consistent angle calculation
+            const angle = (i * 2 * Math.PI) / numModels;
+            
+            // Alternate between inner and outer radius
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            
+            // Calculate the position with high precision
+            const x = exactMultiply(radius, Math.cos(angle));
+            const z = exactMultiply(radius, Math.sin(angle));
+            
+            const position = new Vector3(x, 0, z);
+            positions.push(position);
+            
+            // Verify distance from center with high precision
+            const distanceFromCenter = Math.sqrt(x * x + z * z);
+            distances.push(distanceFromCenter);
+            
+            // Update the position of the existing SingleCUT model
+            const singleCut = this.childModels[i];
+            if (singleCut && singleCut.rootNode) {
+                // Store the previous position for logging
+                const prevPos = singleCut.rootNode.position.clone();
+                
+                // Update the position
+                singleCut.rootNode.position = position;
+                
+                this.debugLog(`SingleCUT #${i+1}: Updated position from (${prevPos.x.toFixed(2)}, ${prevPos.y.toFixed(2)}, ${prevPos.z.toFixed(2)}) ` +
+                             `to (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+            } else {
+                this.debugLog(`Warning: Could not update position for SingleCUT #${i+1} - model or rootNode missing`);
+            }
+        }
+        
+        // Verify that distances match the expected pattern
+        this.verifyDistances(distances);
+        
+        this.debugLog('Position update complete for all SingleCUT models');
     }
     
     /**
