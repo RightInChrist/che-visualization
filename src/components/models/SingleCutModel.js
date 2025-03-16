@@ -224,32 +224,15 @@ export class SingleCutModel extends HexagonModel {
         // Apply base rotation from the angle between pipes
         panel.rootNode.rotation = rotation.clone();
         
-        this.debugLog(`Panel ${index+1}: Initial rotation from pipe angle: ` +
+        this.debugLog(`Panel ${index+1}: Initial pipe-to-pipe rotation: ` +
                      `X: ${this.radToDeg(rotation.x)}, Y: ${this.radToDeg(rotation.y)}, Z: ${this.radToDeg(rotation.z)}`);
         
-        // Apply panel-specific rotations
-        // For most panels, a 90-degree rotation works
-        // For panels 2 and 5, we need a different rotation
-        let rotationAngle;
-        
-        if (index === 1 || index === 4) { // Panels 2 and 5
-            rotationAngle = 0; // No additional rotation for these panels
-            this.debugLog(`Panel ${index+1}: No additional rotation (panel 2 or 5)`);
-        } else if (index === 2 || index === 5) {
-            rotationAngle = 120 * Math.PI / 180; // radians
-            this.debugLog(`Panel ${index+1}: Adding ${this.radToDeg(rotationAngle)} rotation`);
-        } else {
-            rotationAngle = 60 * Math.PI / 180; // radians
-            this.debugLog(`Panel ${index+1}: Adding ${this.radToDeg(rotationAngle)} rotation`);
-        }
-        
-        // Apply the rotation
-        panel.rootNode.rotate(BABYLON.Axis.Y, rotationAngle, BABYLON.Space.LOCAL);
+        // We now use the applyPanelDefaultRotations method for applying the specific rotations
+        // during initialization, rather than applying them here.
         
         // Log final rotation
         const finalRotation = panel.rootNode.rotation;
-        this.debugLog(`Panel ${index+1}: Final position and rotation: ` +
-                     `Position (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}), ` +
+        this.debugLog(`Panel ${index+1}: Position (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}), ` +
                      `Rotation X: ${this.radToDeg(finalRotation.x)}, ` + 
                      `Y: ${this.radToDeg(finalRotation.y)}, ` + 
                      `Z: ${this.radToDeg(finalRotation.z)}`);
@@ -398,32 +381,28 @@ export class SingleCutModel extends HexagonModel {
                     panel.storeInitialRotation();
                 }
                 
-                // Get the default rotation angle for this panel (in radians)
+                // Get the default rotation angle for this panel
                 const defaultAngle = this.getDefaultPanelRotation(i);
                 const defaultAngleDegrees = defaultAngle * 180 / Math.PI;
                 
-                this.debugLog(`Panel #${i+1}: Ensuring default angle of ${defaultAngleDegrees.toFixed(1)}° is applied`);
+                this.debugLog(`Panel #${i+1}: Applying default angle of ${defaultAngleDegrees.toFixed(1)}°`);
                 
-                // Skip calling panel.applyRotationDelta() as it may try to render the scene
-                // Instead, apply rotation transformation directly
-                if (panel.rootNode && panel.initialRotation) {
-                    // Reset to initial rotation
-                    panel.rootNode.rotation = panel.initialRotation.clone();
-                    
-                    // Apply delta if any
-                    if (currentDelta !== 0) {
-                        const deltaRadians = (currentDelta * Math.PI) / 180;
-                        panel.rootNode.rotate(BABYLON.Axis.Y, deltaRadians, BABYLON.Space.LOCAL);
-                    }
-                    
-                    // Update the matrices without rendering
-                    panel.rootNode.computeWorldMatrix(true);
-                    if (panel.panelMesh) {
-                        panel.panelMesh.markAsDirty();
-                        panel.panelMesh.refreshBoundingInfo();
-                        panel.panelMesh.computeWorldMatrix(true);
-                    }
+                // Apply rotation directly to panel's rotation property
+                // We explicitly use the rotation property instead of rotate() method to avoid issues
+                const totalAngleRadians = defaultAngle + ((currentDelta * Math.PI) / 180);
+                
+                // Apply rotation and update the root node's world matrix
+                panel.rootNode.rotation.y = totalAngleRadians;
+                panel.rootNode.computeWorldMatrix(true);
+                
+                // Update the panel mesh
+                if (panel.panelMesh) {
+                    panel.panelMesh.markAsDirty();
+                    panel.panelMesh.refreshBoundingInfo();
+                    panel.panelMesh.computeWorldMatrix(true);
                 }
+                
+                this.debugLog(`Panel #${i+1} rotation set to: ${(totalAngleRadians * 180 / Math.PI).toFixed(1)}° (default: ${defaultAngleDegrees.toFixed(1)}° + delta: ${currentDelta}°)`);
             }
         });
         

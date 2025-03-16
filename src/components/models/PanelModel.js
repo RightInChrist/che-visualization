@@ -76,7 +76,10 @@ export class PanelModel extends BaseModel {
      */
     storeInitialRotation() {
         if (!this.initialRotation && this.rootNode) {
+            // Store base rotation without any added delta
+            // This should only include the pipe-to-pipe angle rotation
             this.initialRotation = this.rootNode.rotation.clone();
+            
             console.log(`Stored initial rotation for panel ${this.panelIndex+1}: (${this.radToDeg(this.initialRotation.x)}°, ${this.radToDeg(this.initialRotation.y)}°, ${this.radToDeg(this.initialRotation.z)}°)`);
             
             // For SingleCutModel panels, log the default rotation
@@ -111,17 +114,40 @@ export class PanelModel extends BaseModel {
             }
         }
         
-        // Reset to initial rotation
-        this.rootNode.rotation = this.initialRotation.clone();
+        // Reset to initial rotation first
+        if (this.initialRotation) {
+            this.rootNode.rotation = this.initialRotation.clone();
+            
+            // Log the initial rotation value for debugging
+            console.log(`Panel ${this.panelIndex+1} initial rotation: (${this.radToDeg(this.initialRotation.y)}°)`);
+        } else {
+            console.warn(`Panel ${this.panelIndex+1} missing initial rotation, creating one`);
+            // If no initial rotation stored, create one now
+            this.initialRotation = new BABYLON.Vector3(0, 0, 0);
+            this.rootNode.rotation = this.initialRotation.clone();
+        }
         
         // Apply new delta
         const deltaRadians = (deltaRotation * Math.PI) / 180;
         
-        // Rotate the panel using the Babylon.js rotate method
-        this.rootNode.rotate(Axis.Y, deltaRadians, Space.LOCAL);
+        // Apply rotation directly to the rotation property rather than using rotate()
+        // This seems to be more reliable for panel rotations
+        let targetAngle = deltaRadians;
         
-        // Log the current rotation after applying delta
-        console.log(`Panel ${this.panelIndex+1} rotation after delta: (${this.radToDeg(this.rootNode.rotation.y)}°)`);
+        // If we have a default angle from the shared state, incorporate it
+        if (this.rotationState && this.rotationState.defaultAngles && this.panelIndex >= 0) {
+            const defaultAngleDegrees = this.rotationState.defaultAngles[this.panelIndex] || 0;
+            const defaultAngleRadians = (defaultAngleDegrees * Math.PI) / 180;
+            targetAngle = defaultAngleRadians + deltaRadians;
+            
+            console.log(`Panel ${this.panelIndex+1} applying total rotation of ${this.radToDeg(targetAngle)}° (default ${defaultAngleDegrees}° + delta ${deltaRotation}°)`);
+        }
+        
+        // Set the Y rotation directly
+        this.rootNode.rotation.y = targetAngle;
+        
+        // Log the current rotation after applying
+        console.log(`Panel ${this.panelIndex+1} rotation after update: Y=${this.radToDeg(this.rootNode.rotation.y)}°`);
         
         // Force update of world matrix and rendering (with optional scene rendering)
         this.forceUpdate(renderScene);
