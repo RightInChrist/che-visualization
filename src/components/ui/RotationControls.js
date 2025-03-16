@@ -108,31 +108,168 @@ export class RotationControls {
     createModelSection(config, modelIndex, level) {
         // Create model section container
         const modelSection = document.createElement('div');
-        modelSection.className = 'model-rotation-section';
-        modelSection.dataset.modelIndex = modelIndex;
-        modelSection.dataset.level = level;
+        modelSection.className = 'model-section';
+        modelSection.style.marginBottom = '15px';
+        modelSection.style.marginLeft = `${level * this.options.defaultIndentation}px`;
+        modelSection.style.paddingLeft = level > 0 ? '10px' : '0';
+        modelSection.style.borderLeft = level > 0 ? '1px solid #444' : 'none';
         
-        // Log the configuration for debugging
-        console.log(`Creating rotation controls for ${config.name}:`, config);
+        // Create header with model name
+        const header = document.createElement('div');
+        header.className = 'model-header';
+        header.style.marginBottom = '10px';
+        header.style.display = 'flex';
+        header.style.justifyContent = 'space-between';
+        header.style.alignItems = 'center';
         
-        // Apply indentation based on level
-        if (level > 0) {
-            modelSection.style.paddingLeft = (this.options.defaultIndentation * level) + 'px';
-            modelSection.style.borderLeft = '2px solid #555';
-            modelSection.style.marginLeft = '10px';
+        const modelName = document.createElement('h4');
+        modelName.textContent = config.name;
+        modelName.style.margin = '0';
+        modelName.style.color = '#eee';
+        
+        header.appendChild(modelName);
+        modelSection.appendChild(header);
+        
+        // Check if this is a LayerTwoModel
+        const isLayerTwoModel = config.model && config.model.constructor && 
+                               config.model.constructor.name === 'LayerTwoModel';
+        
+        // Special handling for LayerTwoModel - add master delta rotation control
+        if (isLayerTwoModel) {
+            // Get the model
+            const layerTwoModel = config.model;
+            
+            // Create container for the master delta control
+            const masterDeltaContainer = document.createElement('div');
+            masterDeltaContainer.className = 'master-delta-container';
+            masterDeltaContainer.style.border = '1px solid #555';
+            masterDeltaContainer.style.borderRadius = '5px';
+            masterDeltaContainer.style.padding = '10px';
+            masterDeltaContainer.style.marginBottom = '15px';
+            masterDeltaContainer.style.backgroundColor = 'rgba(0, 50, 100, 0.2)';
+            
+            // Create header for master control
+            const masterHeader = document.createElement('div');
+            masterHeader.style.marginBottom = '8px';
+            masterHeader.style.display = 'flex';
+            masterHeader.style.justifyContent = 'space-between';
+            masterHeader.style.alignItems = 'center';
+            
+            const masterTitle = document.createElement('h5');
+            masterTitle.textContent = 'Master Rotation Delta Control';
+            masterTitle.style.margin = '0';
+            masterTitle.style.color = '#4CAF50';
+            masterTitle.style.fontWeight = 'bold';
+            
+            masterHeader.appendChild(masterTitle);
+            masterDeltaContainer.appendChild(masterHeader);
+            
+            // Create slider row using our existing method but customize for delta
+            const min = layerTwoModel.getMinSingleCutDeltaRotation ? 
+                layerTwoModel.getMinSingleCutDeltaRotation() : -180;
+            const max = layerTwoModel.getMaxSingleCutDeltaRotation ? 
+                layerTwoModel.getMaxSingleCutDeltaRotation() : 180;
+            const defaultValue = layerTwoModel.getDefaultSingleCutDeltaRotation ? 
+                layerTwoModel.getDefaultSingleCutDeltaRotation() : 0;
+            const currentValue = layerTwoModel.getCurrentSingleCutDeltaRotation ? 
+                layerTwoModel.getCurrentSingleCutDeltaRotation() : 0;
+            
+            const deltaSlider = this.createSliderRow(
+                "Global SingleCUT Delta",
+                min,
+                max,
+                currentValue || defaultValue,
+                (value) => {
+                    console.log(`Setting global delta rotation to ${value}°`);
+                    if (layerTwoModel && typeof layerTwoModel.updateAllSingleCutRotations === 'function') {
+                        layerTwoModel.updateAllSingleCutRotations(value);
+                    }
+                }
+            );
+            
+            // Add some styling to make it stand out
+            deltaSlider.style.backgroundColor = 'rgba(0, 100, 0, 0.1)';
+            deltaSlider.style.padding = '5px';
+            deltaSlider.style.borderRadius = '3px';
+            
+            masterDeltaContainer.appendChild(deltaSlider);
+            
+            // Add dropdown to view all SingleCUT rotation values
+            const dropdownContainer = document.createElement('div');
+            dropdownContainer.style.marginTop = '10px';
+            
+            const dropdownToggle = document.createElement('button');
+            dropdownToggle.textContent = 'Show SingleCUT Rotation Values ▼';
+            dropdownToggle.style.backgroundColor = '#444';
+            dropdownToggle.style.color = '#fff';
+            dropdownToggle.style.border = '1px solid #555';
+            dropdownToggle.style.borderRadius = '3px';
+            dropdownToggle.style.padding = '5px 10px';
+            dropdownToggle.style.cursor = 'pointer';
+            dropdownToggle.style.width = '100%';
+            dropdownToggle.style.textAlign = 'left';
+            
+            const rotationValuesList = document.createElement('div');
+            rotationValuesList.style.display = 'none';
+            rotationValuesList.style.marginTop = '5px';
+            rotationValuesList.style.border = '1px solid #555';
+            rotationValuesList.style.borderRadius = '3px';
+            rotationValuesList.style.padding = '5px';
+            rotationValuesList.style.backgroundColor = '#333';
+            rotationValuesList.style.maxHeight = '200px';
+            rotationValuesList.style.overflowY = 'auto';
+            
+            // Function to update rotation values in the dropdown
+            const updateRotationValues = () => {
+                rotationValuesList.innerHTML = '';
+                
+                if (layerTwoModel && layerTwoModel.childModels) {
+                    layerTwoModel.childModels.forEach((singleCut, index) => {
+                        if (singleCut) {
+                            const valueRow = document.createElement('div');
+                            valueRow.style.display = 'flex';
+                            valueRow.style.justifyContent = 'space-between';
+                            valueRow.style.padding = '3px 0';
+                            valueRow.style.borderBottom = index < layerTwoModel.childModels.length - 1 ? 
+                                '1px solid #444' : 'none';
+                            
+                            const label = document.createElement('span');
+                            label.textContent = `CUT #${index + 1}:`;
+                            label.style.fontWeight = 'bold';
+                            
+                            const value = document.createElement('span');
+                            const rotation = singleCut.options?.rotationAngle || 0;
+                            const originalRotation = singleCut.originalRotation || 0;
+                            value.textContent = `${rotation.toFixed(0)}° (Base: ${originalRotation.toFixed(0)}°)`;
+                            
+                            valueRow.appendChild(label);
+                            valueRow.appendChild(value);
+                            rotationValuesList.appendChild(valueRow);
+                        }
+                    });
+                }
+            };
+            
+            // Toggle dropdown visibility
+            dropdownToggle.addEventListener('click', () => {
+                const isVisible = rotationValuesList.style.display !== 'none';
+                rotationValuesList.style.display = isVisible ? 'none' : 'block';
+                dropdownToggle.textContent = isVisible ? 
+                    'Show SingleCUT Rotation Values ▼' : 'Hide SingleCUT Rotation Values ▲';
+                
+                if (!isVisible) {
+                    // Update values when showing
+                    updateRotationValues();
+                }
+            });
+            
+            dropdownContainer.appendChild(dropdownToggle);
+            dropdownContainer.appendChild(rotationValuesList);
+            masterDeltaContainer.appendChild(dropdownContainer);
+            
+            // Add the master container to the model section
+            modelSection.appendChild(masterDeltaContainer);
         }
-        
-        if (modelIndex > 0 && level === 0) {
-            modelSection.style.marginTop = '20px';
-            modelSection.style.borderTop = '1px solid #444';
-            modelSection.style.paddingTop = '15px';
-        }
-        
-        // Create model name header
-        const modelNameHeader = document.createElement('h4');
-        modelNameHeader.textContent = config.name;
-        modelNameHeader.style.margin = '0 0 10px 0';
-        modelSection.appendChild(modelNameHeader);
         
         // Create X rotation control if available
         if (config.rotation.x !== undefined) {
@@ -182,47 +319,20 @@ export class RotationControls {
             modelSection.appendChild(zRotationContainer);
         }
         
-        // Add a separator before SingleCut rotation control if available
-        if (config.singleCutRotation) {
-            const separator = document.createElement('div');
-            separator.style.margin = '15px 0';
-            separator.style.borderTop = '1px dashed #444';
-            modelSection.appendChild(separator);
+        // If model has children and recursive option is true, create sections for child models
+        if (config.children && config.children.length > 0 && this.options.recursive) {
+            // Create container for child models
+            const childrenContainer = document.createElement('div');
+            childrenContainer.className = 'children-container';
+            childrenContainer.style.marginTop = '10px';
+            childrenContainer.style.marginLeft = `${this.options.defaultIndentation}px`;
             
-            // Create SingleCut rotation control for all child SingleCUT models
-            console.log(`Creating All SingleCUTs rotation slider for ${config.name} with value ${config.singleCutRotation.default}`);
+            // Special case: Don't show child SingleCUTs for LayerTwoModel since we have the dropdown
+            const shouldHideChildren = isLayerTwoModel;
             
-            const singleCutRotationContainer = this.createSliderRow(
-                "All SingleCUTs Rotation",
-                config.singleCutRotation.min,
-                config.singleCutRotation.max,
-                config.singleCutRotation.default,
-                (value) => this.onSingleCutRotationChange(config.model, value)
-            );
-            
-            // Style the SingleCut rotation control differently
-            singleCutRotationContainer.style.paddingLeft = '10px';
-            singleCutRotationContainer.style.borderLeft = '3px solid #3399ff';
-            singleCutRotationContainer.style.backgroundColor = 'rgba(51, 153, 255, 0.1)';
-            
-            modelSection.appendChild(singleCutRotationContainer);
-        }
-        
-        // Recursively create sections for children if enabled
-        // BUT skip child SingleCutModel controls if parent has singleCutRotation
-        if (this.options.recursive && config.children && config.children.length > 0) {
-            // If parent has singleCutRotation control, filter out SingleCutModel children
-            const childrenToShow = config.singleCutRotation 
-                ? config.children.filter(child => child.name !== 'SingleCutModel')
-                : config.children;
-            
-            // Only create container if we have children to show
-            if (childrenToShow.length > 0) {
-                const childrenContainer = document.createElement('div');
-                childrenContainer.className = 'children-container';
-                childrenContainer.style.marginTop = '15px';
-                
-                childrenToShow.forEach((childConfig, childIndex) => {
+            if (!shouldHideChildren) {
+                // Create sections for each child model
+                config.children.forEach((childConfig, childIndex) => {
                     const childSection = this.createModelSection(childConfig, childIndex, level + 1);
                     childrenContainer.appendChild(childSection);
                 });

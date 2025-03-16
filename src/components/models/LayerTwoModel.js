@@ -98,6 +98,26 @@ export class LayerTwoModel extends CompositeModel {
         // IMPORTANT: Setup hidden elements BEFORE creating child models
         this.setupHiddenElements();
         
+        // Define initial rotation values for each model based on the provided pattern
+        // These are the base rotations for each model
+        this.initialRotations = [
+            210, // Cut 1
+            150, // Cut 2
+            150, // Cut 3
+            90,  // Cut 4
+            90,  // Cut 5
+            30,  // Cut 6
+            30,  // Cut 7
+            330, // Cut 8
+            330, // Cut 9
+            270, // Cut 10
+            270, // Cut 11
+            210  // Cut 12
+        ];
+        
+        // Store the current rotation delta (will be applied on top of initial rotations)
+        this.rotationDelta = 0;
+        
         // Create a dodecagon with alternating distances from center
         for (let i = 0; i < numModels; i++) {
             // Calculate angle with consistent precision
@@ -123,21 +143,22 @@ export class LayerTwoModel extends CompositeModel {
                          `position=(${x.toFixed(2)}, 0, ${z.toFixed(2)}), ` +
                          `distance=${distanceFromCenter.toFixed(2)}`);
             
-            // Calculate additional rotation for this SingleCUT based on its position
-            // Rotate by 60 degrees per position to ensure the hidden pipes/panels are correctly positioned
-            const additionalRotation = i * 60;
-            const totalRotation = (this.options.singleCutRotationAngle + additionalRotation) % 360;
+            // Get the initial rotation for this SingleCUT
+            // Use modulo 12 to handle case where we might have less than 12 models
+            const rotationIndex = i % this.initialRotations.length;
+            const initialRotation = this.initialRotations[rotationIndex];
             
-            this.debugLog(`SingleCUT #${i+1}: base rotation=${this.options.singleCutRotationAngle}°, ` +
-                         `additional rotation=${additionalRotation}°, ` +
-                         `total rotation=${totalRotation}°`);
+            this.debugLog(`SingleCUT #${i+1}: initial rotation=${initialRotation}°`);
             
             // Create a SingleCUT with its own panels and rotation angle
             const singleCut = new SingleCutModel(this.scene, position, {
                 radius: singleCutRadius,
-                rotationAngle: totalRotation, // Apply the calculated rotation
+                rotationAngle: initialRotation,
                 parent: this
             });
+            
+            // Store original rotation value for reference
+            singleCut.originalRotation = initialRotation;
             
             // Add to the model children
             this.addChild(singleCut);
@@ -1014,6 +1035,73 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
      */
     getMaxInnerRadius() {
         return 100; // Maximum sensible inner radius for LayerTwo
+    }
+    
+    /**
+     * Update all SingleCUT rotations with a delta value applied to their initial rotations
+     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
+     */
+    updateAllSingleCutRotations(deltaRotation) {
+        if (!this.childModels || this.childModels.length === 0) {
+            this.debugLog('No child models to update rotations for');
+            return;
+        }
+        
+        // Store the current rotation delta
+        this.rotationDelta = deltaRotation;
+        
+        console.log(`Updating all SingleCUT rotations with delta: ${deltaRotation}°`);
+        
+        // Update each child model with its initial rotation + the delta
+        this.childModels.forEach((singleCut, i) => {
+            if (singleCut && typeof singleCut.updateRotation === 'function') {
+                // Get the original rotation value (or use the initialRotations array as fallback)
+                const originalRotation = singleCut.originalRotation || this.initialRotations[i % this.initialRotations.length];
+                
+                // Calculate new rotation by adding delta
+                let newRotation = originalRotation + deltaRotation;
+                
+                // Normalize to 0-360 range
+                newRotation = ((newRotation % 360) + 360) % 360;
+                
+                console.log(`SingleCUT #${i+1}: Updating rotation from ${originalRotation}° to ${newRotation}° (delta: ${deltaRotation}°)`);
+                
+                // Update the rotation
+                singleCut.updateRotation(newRotation);
+            }
+        });
+    }
+    
+    /**
+     * Get min delta rotation value for SingleCUTs
+     * @returns {number} - Minimum delta rotation in degrees
+     */
+    getMinSingleCutDeltaRotation() {
+        return -180;
+    }
+    
+    /**
+     * Get max delta rotation value for SingleCUTs
+     * @returns {number} - Maximum delta rotation in degrees
+     */
+    getMaxSingleCutDeltaRotation() {
+        return 180;
+    }
+    
+    /**
+     * Get default delta rotation value for SingleCUTs
+     * @returns {number} - Default delta rotation in degrees
+     */
+    getDefaultSingleCutDeltaRotation() {
+        return 0;
+    }
+    
+    /**
+     * Get current delta rotation value for SingleCUTs
+     * @returns {number} - Current delta rotation in degrees
+     */
+    getCurrentSingleCutDeltaRotation() {
+        return this.rotationDelta || 0;
     }
 }
 
