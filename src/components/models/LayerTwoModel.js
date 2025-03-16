@@ -123,10 +123,19 @@ export class LayerTwoModel extends CompositeModel {
                          `position=(${x.toFixed(2)}, 0, ${z.toFixed(2)}), ` +
                          `distance=${distanceFromCenter.toFixed(2)}`);
             
+            // Calculate additional rotation for this SingleCUT based on its position
+            // Rotate by 60 degrees per position to ensure the hidden pipes/panels are correctly positioned
+            const additionalRotation = i * 60;
+            const totalRotation = (this.options.singleCutRotationAngle + additionalRotation) % 360;
+            
+            this.debugLog(`SingleCUT #${i+1}: base rotation=${this.options.singleCutRotationAngle}°, ` +
+                         `additional rotation=${additionalRotation}°, ` +
+                         `total rotation=${totalRotation}°`);
+            
             // Create a SingleCUT with its own panels and rotation angle
             const singleCut = new SingleCutModel(this.scene, position, {
                 radius: singleCutRadius,
-                rotationAngle: this.options.singleCutRotationAngle,
+                rotationAngle: totalRotation, // Apply the calculated rotation
                 parent: this
             });
             
@@ -154,36 +163,21 @@ export class LayerTwoModel extends CompositeModel {
         // Format: modelIndex (0-based) => { pipes: [indices to hide], panels: [indices to hide] }
         this.hiddenElementsMap = {};
         
-        // Based on the provided examples, create a rotating pattern:
-        // Cut 12 (index 11): Hide pipes 4,5,6 and panels 4,5
-        // Cut 11 (index 10): Hide pipes 3,4,5 and panels 3,4
+        // Simplified approach: hide the same pipes (1,2,3) and panels (1,2) for all SingleCUTs
+        // The rotation of each SingleCUT will create the visual pattern
         
+        // Convert to 0-based indices for internal use
+        const hiddenPipes = [0, 1, 2]; // Pipes 1, 2, 3 (0-indexed)
+        const hiddenPanels = [0, 1];   // Panels 1, 2 (0-indexed)
+        
+        // Apply the same hiding pattern to all SingleCUTs
         for (let i = 0; i < 12; i++) {
-            // Calculate the "window" of pipes to hide (3 consecutive pipes)
-            // We shift this window as we move around the ring
-            const startPipe = ((i + 3) % 6) + 1; // Range: 1-6
-            
-            // Calculate pipe indices to hide (3 consecutive pipes)
-            const pipesToHide = [
-                startPipe % 6 || 6, // Handle wrap around from 6 to 1
-                (startPipe + 1) % 6 || 6,
-                (startPipe + 2) % 6 || 6
-            ];
-            
-            // Calculate panel indices to hide (2 consecutive panels)
-            // Panels share index with the pipe they follow
-            const panelsToHide = [
-                startPipe % 6 || 6,
-                (startPipe + 1) % 6 || 6
-            ];
-            
-            // Store in the map (convert to 0-based indices for internal use)
             this.hiddenElementsMap[i] = {
-                pipes: pipesToHide.map(idx => idx - 1),
-                panels: panelsToHide.map(idx => idx - 1)
+                pipes: hiddenPipes,
+                panels: hiddenPanels
             };
             
-            this.debugLog(`SingleCUT #${i+1}: Hidden pipes: ${pipesToHide.join(', ')}, Hidden panels: ${panelsToHide.join(', ')}`);
+            this.debugLog(`SingleCUT #${i+1}: Hidden pipes: 1, 2, 3, Hidden panels: 1, 2`);
         }
     }
     
