@@ -18,7 +18,7 @@ export class LayerOneRingModel extends HexagonModel {
             debug: false,
             singleCutRadius: 21,    // Radius for the SingleCUT instances
             cornerRotationAngle: 30, // Default rotation angle for corner SingleCUTs
-            outerRingRadius: 36.4,   // Default outer ring radius
+            radius: 36.37,   // Default outer ring radius
             visibility: {
                 all: true
             }
