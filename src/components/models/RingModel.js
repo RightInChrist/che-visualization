@@ -3,9 +3,12 @@ import { CompositeModel } from './CompositeModel';
 import { SingleCutModel } from './SingleCutModel';
 import { LayerOneRingModel } from './LayerOneRingModel';
 import { LayerTwoRingModel } from './LayerTwoRingModel';
+import { LayerThreeRingModel } from './LayerThreeRingModel';
+import { LayerFourRingModel } from './LayerFourRingModel';
+import { LayerFiveRingModel } from './LayerFiveRingModel';
 
 /**
- * RingModel - A model with a central CUT and two rings of SingleCUTs
+ * RingModel - A model with a central CUT and five rings of SingleCUTs
  */
 export class RingModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
@@ -46,7 +49,7 @@ export class RingModel extends CompositeModel {
         this.centralCut = centralCut;
         this.addChild(centralCut);
         
-        // Create the Layer One Ring with 6 SingleCUTs
+        // Create the Layer One Ring with 6 SingleCUTs at corners
         const layerOneRing = new LayerOneRingModel(this.scene, new Vector3(0, 0, 0), {
             singleCutRadius: singleCutRadius,
             cornerRotationAngle: rotationAngle,
@@ -70,6 +73,45 @@ export class RingModel extends CompositeModel {
         // Store reference to the layer two ring for direct access
         this.layerTwoRing = layerTwoRing;
         this.addChild(layerTwoRing);
+        
+        // Create the Layer Three Ring with 18 SingleCUTs (6 corners, 12 sides)
+        const layerThreeRing = new LayerThreeRingModel(this.scene, new Vector3(0, 0, 0), {
+            singleCutRadius: singleCutRadius,
+            cornerRotationAngle: rotationAngle,
+            sideRotationAngle: rotationAngle,
+            parent: this,
+            debug: this.options.debug
+        });
+        
+        // Store reference to the layer three ring for direct access
+        this.layerThreeRing = layerThreeRing;
+        this.addChild(layerThreeRing);
+        
+        // Create the Layer Four Ring with 24 SingleCUTs (6 corners, 18 sides)
+        const layerFourRing = new LayerFourRingModel(this.scene, new Vector3(0, 0, 0), {
+            singleCutRadius: singleCutRadius,
+            cornerRotationAngle: rotationAngle,
+            sideRotationAngle: rotationAngle,
+            parent: this,
+            debug: this.options.debug
+        });
+        
+        // Store reference to the layer four ring for direct access
+        this.layerFourRing = layerFourRing;
+        this.addChild(layerFourRing);
+        
+        // Create the Layer Five Ring with 30 SingleCUTs (6 corners, 24 sides)
+        const layerFiveRing = new LayerFiveRingModel(this.scene, new Vector3(0, 0, 0), {
+            singleCutRadius: singleCutRadius,
+            cornerRotationAngle: rotationAngle,
+            sideRotationAngle: rotationAngle,
+            parent: this,
+            debug: this.options.debug
+        });
+        
+        // Store reference to the layer five ring for direct access
+        this.layerFiveRing = layerFiveRing;
+        this.addChild(layerFiveRing);
         
         this.debugLog('Ring Model creation complete');
     }
@@ -106,6 +148,21 @@ export class RingModel extends CompositeModel {
             this.layerTwoRing.onRender();
         }
         
+        // Propagate to layer three ring
+        if (this.layerThreeRing && typeof this.layerThreeRing.onRender === 'function') {
+            this.layerThreeRing.onRender();
+        }
+        
+        // Propagate to layer four ring
+        if (this.layerFourRing && typeof this.layerFourRing.onRender === 'function') {
+            this.layerFourRing.onRender();
+        }
+        
+        // Propagate to layer five ring
+        if (this.layerFiveRing && typeof this.layerFiveRing.onRender === 'function') {
+            this.layerFiveRing.onRender();
+        }
+        
         this.debugLog('Ring Model initialization complete');
     }
     
@@ -117,22 +174,56 @@ export class RingModel extends CompositeModel {
     updateRadiusSettings(outerRadius, singleCutRadius) {
         this.options.singleCutRadius = singleCutRadius;
         
-        // Update layer one ring radius - keep default radius for layer one
+        // Calculate proportional radiuses based on the outerRadius (layer five radius)
+        const layerOneDefaultRadius = this.layerOneRing ? this.layerOneRing.getDefaultRadius() : 36.4;
+        const layerTwoDefaultRadius = this.layerTwoRing ? this.layerTwoRing.getDefaultRadius() : 72.8;
+        const layerThreeDefaultRadius = this.layerThreeRing ? this.layerThreeRing.getDefaultRadius() : 109.2;
+        const layerFourDefaultRadius = this.layerFourRing ? this.layerFourRing.getDefaultRadius() : 145.6;
+        const layerFiveDefaultRadius = this.layerFiveRing ? this.layerFiveRing.getDefaultRadius() : 182.0;
+        
+        // Use proportional scaling if outerRadius differs from default
+        const scaleFactor = outerRadius / layerFiveDefaultRadius;
+        
+        // Update layer one ring radius
         if (this.layerOneRing) {
             const layerOneRadius = this.layerOneRing.getRadius();
             if (layerOneRadius) {
-                layerOneRadius.value = this.layerOneRing.getDefaultRadius();
+                layerOneRadius.value = layerOneDefaultRadius * scaleFactor;
             }
         }
 
-        // Update layer two ring radius - use the provided outer radius
+        // Update layer two ring radius
         if (this.layerTwoRing) {
             const layerTwoRadius = this.layerTwoRing.getRadius();
             if (layerTwoRadius) {
-                layerTwoRadius.value = outerRadius;
+                layerTwoRadius.value = layerTwoDefaultRadius * scaleFactor;
             }
         }
         
-        this.debugLog(`Updated radius settings: outerRadius=${outerRadius}, singleCutRadius=${singleCutRadius}`);
+        // Update layer three ring radius
+        if (this.layerThreeRing) {
+            const layerThreeRadius = this.layerThreeRing.getRadius();
+            if (layerThreeRadius) {
+                layerThreeRadius.value = layerThreeDefaultRadius * scaleFactor;
+            }
+        }
+        
+        // Update layer four ring radius
+        if (this.layerFourRing) {
+            const layerFourRadius = this.layerFourRing.getRadius();
+            if (layerFourRadius) {
+                layerFourRadius.value = layerFourDefaultRadius * scaleFactor;
+            }
+        }
+        
+        // Update layer five ring radius
+        if (this.layerFiveRing) {
+            const layerFiveRadius = this.layerFiveRing.getRadius();
+            if (layerFiveRadius) {
+                layerFiveRadius.value = outerRadius;
+            }
+        }
+        
+        this.debugLog(`Updated radius settings: outerRadius=${outerRadius}, singleCutRadius=${singleCutRadius}, scaleFactor=${scaleFactor}`);
     }
 } 

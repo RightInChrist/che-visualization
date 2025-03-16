@@ -154,9 +154,15 @@ class CHEVisualization {
                     ringModel: {
                         childCount: this.ringModel.childModels ? this.ringModel.childModels.length : 0,
                         layerOneRadius: this.ringModel.layerOneRing && this.ringModel.layerOneRing.options ? 
-                            this.ringModel.layerOneRing.options.radius : 'unknown',
+                            this.ringModel.layerOneRing.options.radius.toFixed(1) : 'unknown',
                         layerTwoRadius: this.ringModel.layerTwoRing && this.ringModel.layerTwoRing.options ? 
-                            this.ringModel.layerTwoRing.options.radius : 'unknown'
+                            this.ringModel.layerTwoRing.options.radius.toFixed(1) : 'unknown',
+                        layerThreeRadius: this.ringModel.layerThreeRing && this.ringModel.layerThreeRing.options ? 
+                            this.ringModel.layerThreeRing.options.radius.toFixed(1) : 'unknown',
+                        layerFourRadius: this.ringModel.layerFourRing && this.ringModel.layerFourRing.options ? 
+                            this.ringModel.layerFourRing.options.radius.toFixed(1) : 'unknown',
+                        layerFiveRadius: this.ringModel.layerFiveRing && this.ringModel.layerFiveRing.options ? 
+                            this.ringModel.layerFiveRing.options.radius.toFixed(1) : 'unknown'
                     },
                     starModel: {
                         childCount: this.starModel.childModels ? this.starModel.childModels.length : 0,
@@ -170,8 +176,8 @@ class CHEVisualization {
                 
                 // Update Ring Model positions
                 if (this.ringModel && typeof this.ringModel.updateRadiusSettings === 'function') {
-                    const outerRadius = this.ringModel.layerTwoRing && this.ringModel.layerTwoRing.options ? 
-                        this.ringModel.layerTwoRing.options.radius : 72.8;
+                    const outerRadius = this.ringModel.layerFiveRing && this.ringModel.layerFiveRing.options ? 
+                        this.ringModel.layerFiveRing.options.radius : 182.0;
                     const singleCutRadius = this.ringModel.options ? this.ringModel.options.singleCutRadius : 21;
                     this.ringModel.updateRadiusSettings(outerRadius, singleCutRadius);
                     console.log(`Updated Ring Model positions with outer radius=${outerRadius}`);
