@@ -53,10 +53,6 @@ class CHEVisualization {
             // Create ground
             this.ground = new GroundModel(scene, 5000);
             
-            // Create Central CUT model separately
-            this.centralCutModel = new SingleCutModel(scene, new Vector3(0, 0, 0));
-            this.centralCutModel.friendlyName = "Central CUT";
-            
             // Create Ring Model (contains Layer One Ring and Layer Two Ring)
             this.ringModel = new RingModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
@@ -65,10 +61,9 @@ class CHEVisualization {
                 }
             });
             
-            // Create Star Model (contains Central CUT, Layer One Star, and Layer Two Star)
+            // Create Star Model (contains Layer One Star, and Layer Two Star)
             this.starModel = new StarModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
-                    centralCut: true,
                     layerOne: true,
                     layerTwo: true  // Layer Two Star visible at startup
                 }
@@ -77,7 +72,6 @@ class CHEVisualization {
             // Make sure both models are visible
             this.ringModel.setVisible(true);
             this.starModel.setVisible(true);
-            this.centralCutModel.setVisible(true);
             
             // Apply a 30-degree global rotation to all SingleCUTs in the Star models for better appearance
             console.log('Applying 30-degree global rotation to all SingleCUTs in the Star models...');
@@ -98,13 +92,6 @@ class CHEVisualization {
             }
             
             // Add shadows to all pipes in the scene
-            // For Central CUT
-            if (this.centralCutModel && this.centralCutModel.pipes) {
-                this.centralCutModel.pipes.forEach(pipe => {
-                    shadowGenerator.addShadowCaster(pipe.pipeMesh);
-                });
-            }
-            
             // For Ring Model
             const allRingPipes = this.ringModel.getAllPipes();
             allRingPipes.forEach(pipe => {
@@ -118,10 +105,9 @@ class CHEVisualization {
             });
             
             // Combine all pipe meshes for collision detection
-            const centralCutPipeMeshes = this.centralCutModel.pipes ? this.centralCutModel.pipes.map(pipe => pipe.pipeMesh) : [];
             const ringPipeMeshes = allRingPipes.map(pipe => pipe.pipeMesh);
             const starPipeMeshes = allStarPipes.map(pipe => pipe.pipeMesh);
-            const pipeMeshes = [...centralCutPipeMeshes, ...ringPipeMeshes, ...starPipeMeshes];
+            const pipeMeshes = [...ringPipeMeshes, ...starPipeMeshes];
             
             // Create camera controller
             this.cameraController = new CameraController(
@@ -142,12 +128,8 @@ class CHEVisualization {
             const starModelSingleCuts = this.starModel.getAllSingleCuts();
             
             // Prepare SingleCUTs for the scene editor
-            const ringCentralSingleCutObjects = {};
             const ringLayerOneSingleCutObjects = {};
             const ringLayerTwoSingleCutObjects = {};
-            
-            // Add Central CUT directly
-            ringCentralSingleCutObjects['Central CUT'] = this.centralCutModel;
             
             // Add each Layer One SingleCUT from Ring Model
             ringModelSingleCuts.layerOne.forEach((singleCut, index) => {
@@ -160,16 +142,8 @@ class CHEVisualization {
             });
             
             // Prepare Star Model SingleCUTs for the scene editor
-            const starCentralSingleCutObjects = {};
             const starLayerOneSingleCutObjects = {};
             const starLayerTwoSingleCutObjects = {};
-            
-            // Add Central CUT from Star Model
-            if (starModelSingleCuts.central.length > 0) {
-                starModelSingleCuts.central.forEach((singleCut, index) => {
-                    starCentralSingleCutObjects['Central CUT'] = singleCut;
-                });
-            }
             
             // Add each Layer One SingleCUT from Star Model
             starModelSingleCuts.layerOne.forEach((singleCut, index) => {
@@ -187,10 +161,6 @@ class CHEVisualization {
                 'Ring Model': {
                     model: this.ringModel,
                     children: {
-                        'Central CUT': {
-                            model: this.centralCutModel,
-                            children: ringCentralSingleCutObjects
-                        },
                         'Layer One Ring': {
                             model: this.ringModel.models.layerOneRing,
                             children: ringLayerOneSingleCutObjects
@@ -204,10 +174,6 @@ class CHEVisualization {
                 'Star Model': {
                     model: this.starModel,
                     children: {
-                        'Star Central CUT': {
-                            model: this.starModel.models.centralCut,
-                            children: starCentralSingleCutObjects
-                        },
                         'Layer One Star': {
                             model: this.starModel.models.layerOneStar,
                             children: starLayerOneSingleCutObjects
@@ -332,10 +298,8 @@ class CHEVisualization {
             
             // Get all layers from both models for radius and rotation controls
             const layerModels = [
-                this.centralCutModel,
                 this.ringModel.models.layerOneRing,
                 this.ringModel.models.layerTwoRing,
-                this.starModel.models.centralCut,
                 this.starModel.models.layerOneStar,
                 this.starModel.models.layerTwoStar
             ];
@@ -346,7 +310,7 @@ class CHEVisualization {
                 layerModels,
                 {
                     isVisible: false,
-                    modelNames: ["Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
+                    modelNames: ["Layer One Ring", "Layer Two Ring", "Layer One Star", "Layer Two Star"]
                 }
             );
             
@@ -356,7 +320,7 @@ class CHEVisualization {
                 layerModels, 
                 {
                     isVisible: false,
-                    modelNames: ["Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
+                    modelNames: ["Layer One Ring", "Layer Two Ring", "Layer One Star", "Layer Two Star"]
                 }
             );
             
@@ -421,7 +385,6 @@ class CHEVisualization {
         window.cheDebug = {
             app: this,
             models: {
-                centralCutModel: this.centralCutModel,
                 ringModel: this.ringModel,
                 starModel: this.starModel,
                 layerOneRing: this.ringModel?.models?.layerOneRing,
@@ -565,11 +528,6 @@ cheDebug.app - Access the main application instance
             }
         };
         
-        // Apply to Central CUT
-        if (this.centralCutModel) {
-            processModel(this.centralCutModel);
-        }
-        
         // Apply to Ring Model and all its children
         if (this.ringModel) {
             processModel(this.ringModel);
@@ -587,7 +545,6 @@ cheDebug.app - Access the main application instance
             
             // Also process each main component directly
             if (this.starModel.models) {
-                if (this.starModel.models.centralCut) processModel(this.starModel.models.centralCut);
                 if (this.starModel.models.layerOneStar) processModel(this.starModel.models.layerOneStar);
                 if (this.starModel.models.layerTwoStar) processModel(this.starModel.models.layerTwoStar);
             }
