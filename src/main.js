@@ -7,7 +7,6 @@ import { createScene } from './core/scene';
 import { GroundModel } from './components/models/GroundModel';
 import { StarModel } from './components/models/StarModel';
 import { RingModel } from './components/models/RingModel';
-import { LayerOneRingModel } from './components/models/LayerOneRingModel';
 import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
@@ -63,16 +62,11 @@ class CHEVisualization {
                 debug: true
             });
             
-            // Create LayerOneRingModel
-            this.layerOneRingModel = new LayerOneRingModel(scene, new Vector3(0, 0, 0), {
-                debug: true
-            });
-            
             // Apply initializations that require a fully set up scene
             this.onRender();
             
             // Create an array of models for the scene editor
-            const models = [this.ringModel, this.starModel, this.layerOneRingModel];
+            const models = [this.ringModel, this.starModel];
             
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, models);
@@ -82,7 +76,7 @@ class CHEVisualization {
                 this.cameraController,
                 {
                     scene: this.scene,
-                    models: [this.ringModel, this.starModel, this.layerOneRingModel],
+                    models: [this.ringModel, this.starModel],
                     sceneEditor: this.sceneEditor,
                     showDebugInfo: true,
                     app: this,
@@ -104,7 +98,6 @@ class CHEVisualization {
                 // Update LOD for both models
                 this.ringModel.updateLOD(cameraPosition);
                 this.starModel.updateLOD(cameraPosition);
-                this.layerOneRingModel.updateLOD(cameraPosition);
                 
                 // Update scene editor if needed
                 if (this.sceneEditor) {
@@ -144,8 +137,7 @@ class CHEVisualization {
             app: this,
             models: {
                 ringModel: this.ringModel,
-                starModel: this.starModel,
-                layerOneRingModel: this.layerOneRingModel
+                starModel: this.starModel
             },
             // Helper functions
             getStats: () => {
@@ -158,10 +150,6 @@ class CHEVisualization {
                     starModel: {
                         childCount: this.starModel.childModels ? this.starModel.childModels.length : 0,
                         radius: this.starModel.options ? this.starModel.options.outerRadius : 'unknown'
-                    },
-                    layerOneRingModel: {
-                        childCount: this.layerOneRingModel.childModels ? this.layerOneRingModel.childModels.length : 0,
-                        radius: this.layerOneRingModel.options ? this.layerOneRingModel.options.outerRadius : 'unknown'
                     }
                 };
             },
@@ -183,14 +171,6 @@ class CHEVisualization {
                     const singleCutRadius = this.starModel.options ? this.starModel.options.singleCutRadius : 21;
                     this.starModel.updateRadiusSettings(outerRadius, singleCutRadius);
                     console.log(`Updated Star Model positions with radius=${outerRadius}`);
-                }
-                
-                // Update LayerOneRingModel positions
-                if (this.layerOneRingModel && typeof this.layerOneRingModel.updateRadiusSettings === 'function') {
-                    const outerRadius = this.layerOneRingModel.options ? this.layerOneRingModel.options.outerRadius : 72.52;
-                    const singleCutRadius = this.layerOneRingModel.options ? this.layerOneRingModel.options.singleCutRadius : 21;
-                    this.layerOneRingModel.updateRadiusSettings(outerRadius, singleCutRadius);
-                    console.log(`Updated LayerOneRingModel positions with radius=${outerRadius}`);
                 }
                 
                 return "Force updated all model positions";
@@ -285,11 +265,6 @@ cheDebug.app - Access the main application instance
         // Apply to Star Model and all its children
         if (this.starModel) {
             processModel(this.starModel);
-        }
-        
-        // Apply to LayerOneRingModel and all its children
-        if (this.layerOneRingModel) {
-            processModel(this.layerOneRingModel);
         }
         
         console.log('Model initialization complete');
