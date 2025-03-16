@@ -62,7 +62,7 @@ export class RadiusControls {
             this.panel = document.createElement('div');
             this.panel.id = 'radiusControlPanel';
             this.panel.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            this.panel.style.padding = '10px';
+            this.panel.style.padding = '6px';  // Reduced from 10px to match RotationControls
             this.panel.style.borderRadius = '5px';
             this.panel.style.color = this.options.textColor;
             this.panel.style.display = this.options.isVisible ? 'block' : 'none';
@@ -76,7 +76,8 @@ export class RadiusControls {
             // Create title
             const title = document.createElement('h3');
             title.textContent = 'Radius Controls';
-            title.style.margin = '0 0 10px 0';
+            title.style.margin = '0 0 5px 0'; // Reduced from 10px to match RotationControls
+            title.style.fontSize = '14px'; // Reduced font size to match RotationControls
             this.panel.appendChild(title);
             
             // Create model sections for each model
@@ -121,23 +122,18 @@ export class RadiusControls {
             config.model.options.modelIndex = modelIndex;
         }
         
-        // Apply indentation based on level
-        if (level > 0) {
-            modelSection.style.paddingLeft = (this.options.defaultIndentation * level) + 'px';
-            modelSection.style.borderLeft = '2px solid #555';
-            modelSection.style.marginLeft = '10px';
-        }
+        // Apply indentation and styling to match RotationControls
+        modelSection.style.marginBottom = '8px'; // Reduced from 15px
+        modelSection.style.marginLeft = `${level * (this.options.defaultIndentation - 5)}px`; // Reduced indentation
+        modelSection.style.paddingLeft = level > 0 ? '5px' : '0'; // Reduced padding
+        modelSection.style.borderLeft = level > 0 ? '1px solid #444' : 'none';
         
-        if (modelIndex > 0 && level === 0) {
-            modelSection.style.marginTop = '20px';
-            modelSection.style.borderTop = '1px solid #444';
-            modelSection.style.paddingTop = '15px';
-        }
-        
-        // Create model name header
+        // Create model name header with reduced size
         const modelNameHeader = document.createElement('h4');
         modelNameHeader.textContent = config.name;
-        modelNameHeader.style.margin = '0 0 10px 0';
+        modelNameHeader.style.margin = '0 0 5px 0'; // Reduced from 10px
+        modelNameHeader.style.fontSize = '13px'; // Reduced font size to match RotationControls
+        modelNameHeader.style.color = '#eee';
         modelSection.appendChild(modelNameHeader);
 
         const model = config.model;
@@ -167,19 +163,20 @@ export class RadiusControls {
                 const childRadii = model.getChildrenRadii();
                 
                 if (childRadii && childRadii.length > 0) {
-                    // Create a container for element width controls
+                    // Create a container for element width controls - more compact styling
                     const elemWidthsContainer = document.createElement('div');
                     elemWidthsContainer.className = 'element-widths-container';
-                    elemWidthsContainer.style.marginTop = '15px';
-                    elemWidthsContainer.style.padding = '10px';
+                    elemWidthsContainer.style.marginTop = '5px'; // Reduced from 15px
+                    elemWidthsContainer.style.padding = '5px'; // Reduced from 10px
                     elemWidthsContainer.style.backgroundColor = 'rgba(0, 0, 100, 0.1)';
-                    elemWidthsContainer.style.borderLeft = '3px solid #5599ff';
+                    elemWidthsContainer.style.borderLeft = '2px solid #5599ff'; // Reduced from 3px
                     
-                    // Add header for element widths section
+                    // Add header for element widths section - smaller font
                     const elemWidthsHeader = document.createElement('h5');
                     elemWidthsHeader.textContent = 'Element Widths';
-                    elemWidthsHeader.style.margin = '0 0 10px 0';
+                    elemWidthsHeader.style.margin = '0 0 5px 0'; // Reduced from 10px
                     elemWidthsHeader.style.fontWeight = 'bold';
+                    elemWidthsHeader.style.fontSize = '11px'; // Reduced font size
                     elemWidthsContainer.appendChild(elemWidthsHeader);
                     
                     // Add a global control to adjust all element widths
@@ -195,10 +192,10 @@ export class RadiusControls {
                         0.1 // Allow tenths precision
                     );
                     
-                    // Style the global control
+                    // Style the global control - reduced spacing
                     allElemsContainer.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
-                    allElemsContainer.style.paddingBottom = '10px';
-                    allElemsContainer.style.marginBottom = '10px';
+                    allElemsContainer.style.paddingBottom = '5px'; // Reduced from 10px
+                    allElemsContainer.style.marginBottom = '5px'; // Reduced from 10px
                     
                     elemWidthsContainer.appendChild(allElemsContainer);
                     
@@ -216,8 +213,8 @@ export class RadiusControls {
                             0.1 // Allow tenths precision
                         );
                         
-                        // Style individual element controls
-                        elemContainer.style.paddingLeft = '15px';
+                        // Style individual element controls - reduced padding
+                        elemContainer.style.paddingLeft = '8px'; // Reduced from 15px
                         elemContainer.style.fontSize = '0.9em';
                         
                         elemWidthsContainer.appendChild(elemContainer);
@@ -227,7 +224,7 @@ export class RadiusControls {
                 }
             }
             
-            // Create distance indicator
+            // Create distance indicator with compact styling
             this.createDistanceIndicator(modelSection, model);
         }
         // Create outer radius control for models with updateRadiusSettings
@@ -315,7 +312,7 @@ export class RadiusControls {
             if (childrenToShow.length > 0) {
                 const childrenContainer = document.createElement('div');
                 childrenContainer.className = 'children-container';
-                childrenContainer.style.marginTop = '15px';
+                childrenContainer.style.marginTop = '5px'; // Reduced from 15px
                 
                 childrenToShow.forEach((childConfig, childIndex) => {
                     const childSection = this.createModelSection(childConfig, childIndex, level + 1);
@@ -341,23 +338,24 @@ export class RadiusControls {
      */
     createSliderRow(label, min, max, value, onChange, step = 1) {
         const container = document.createElement('div');
-        container.style.marginBottom = '15px';
-        container.style.padding = '8px';
+        container.style.marginBottom = '8px'; // Reduced from 15px to match RotationControls
+        container.style.padding = '5px'; // Reduced from 8px to match RotationControls
         container.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
-        container.style.borderRadius = '4px';
+        container.style.borderRadius = '3px'; // Reduced from 4px to match RotationControls
         
-        // Create label
+        // Create label with smaller font
         const labelElement = document.createElement('div');
         labelElement.textContent = label;
-        labelElement.style.marginBottom = '8px';
+        labelElement.style.marginBottom = '4px'; // Reduced from 8px to match RotationControls
         labelElement.style.fontWeight = 'bold';
+        labelElement.style.fontSize = '11px'; // Reduced font size to match RotationControls
         container.appendChild(labelElement);
         
-        // Create slider row
+        // Create slider row with reduced spacing
         const sliderRow = document.createElement('div');
         sliderRow.style.display = 'flex';
         sliderRow.style.alignItems = 'center';
-        sliderRow.style.gap = '10px';
+        sliderRow.style.gap = '5px'; // Reduced from 10px to match RotationControls
         
         // Format display value based on step precision
         const formatValue = (v) => {
@@ -368,7 +366,7 @@ export class RadiusControls {
             return Math.round(v);
         };
         
-        // Create slider
+        // Create slider with reduced height
         const slider = document.createElement('input');
         slider.type = 'range';
         slider.min = min;
@@ -376,31 +374,32 @@ export class RadiusControls {
         slider.step = step;
         slider.value = formatValue(value);
         slider.style.flex = '1';
-        slider.style.height = '20px';
+        slider.style.height = '16px'; // Reduced from 20px to match RotationControls
         slider.style.accentColor = '#00aaff';
         
-        // Create value display
+        // Create value display with smaller size
         const valueDisplay = document.createElement('span');
         valueDisplay.textContent = formatValue(value);
-        valueDisplay.style.minWidth = '50px';
+        valueDisplay.style.minWidth = '40px'; // Reduced from 50px to match RotationControls
         valueDisplay.style.textAlign = 'right';
         valueDisplay.style.fontWeight = 'bold';
-        valueDisplay.style.fontSize = '14px';
+        valueDisplay.style.fontSize = '11px'; // Reduced from 14px to match RotationControls
         
-        // Create precise input field
+        // Create precise input field with smaller size
         const preciseInput = document.createElement('input');
         preciseInput.type = 'number';
         preciseInput.min = min;
         preciseInput.max = max;
         preciseInput.step = step;
         preciseInput.value = formatValue(value);
-        preciseInput.style.width = '60px';
-        preciseInput.style.padding = '3px 5px';
-        preciseInput.style.marginLeft = '5px';
-        preciseInput.style.borderRadius = '3px';
+        preciseInput.style.width = '45px'; // Reduced from 60px to match RotationControls
+        preciseInput.style.padding = '2px 3px'; // Reduced from 3px 5px to match RotationControls
+        preciseInput.style.marginLeft = '3px'; // Reduced from 5px to match RotationControls
+        preciseInput.style.borderRadius = '2px'; // Reduced from 3px to match RotationControls
         preciseInput.style.border = '1px solid #555';
         preciseInput.style.backgroundColor = '#333';
         preciseInput.style.color = '#fff';
+        preciseInput.style.fontSize = '10px'; // Reduced font size to match RotationControls
         
         // Add event listener for slider
         slider.addEventListener('input', () => {
@@ -451,12 +450,12 @@ export class RadiusControls {
      * @param {Object} model - The model
      */
     createDistanceIndicator(container, model) {
-        // Create container
+        // Create container with reduced spacing
         const indicatorContainer = document.createElement('div');
-        indicatorContainer.style.marginTop = '10px';
-        indicatorContainer.style.padding = '8px';
+        indicatorContainer.style.marginTop = '5px'; // Reduced from 10px
+        indicatorContainer.style.padding = '4px'; // Reduced from 8px
         indicatorContainer.style.borderTop = '1px solid rgba(255,255,255,0.2)';
-        indicatorContainer.style.fontSize = '12px'; // Smaller font size
+        indicatorContainer.style.fontSize = '10px'; // Reduced from 12px to match RotationControls style
         
         // Create a single row containing both label and value
         const row = document.createElement('div');
@@ -465,16 +464,17 @@ export class RadiusControls {
         row.style.alignItems = 'center';
         row.style.whiteSpace = 'nowrap'; // Prevent wrapping
         
-        // Create label
+        // Create label with smaller font
         const label = document.createElement('span');
         label.textContent = 'Distance across model:';
-        label.style.marginRight = '8px';
+        label.style.marginRight = '5px'; // Reduced from 8px
         
-        // Create value display
+        // Create value display with smaller size
         const distanceDisplay = document.createElement('span');
         distanceDisplay.style.fontWeight = 'bold';
-        distanceDisplay.style.minWidth = '65px';
+        distanceDisplay.style.minWidth = '50px'; // Reduced from 65px
         distanceDisplay.style.textAlign = 'right';
+        distanceDisplay.style.fontSize = '10px'; // Reduced font size
         
         // Get model type and index for more specific identification
         const modelType = model.constructor ? model.constructor.name : "unknown";
@@ -494,9 +494,6 @@ export class RadiusControls {
         
         // Store original model reference as a data attribute for debugging
         distanceDisplay.dataset.originalModel = model.rootNode ? model.rootNode.id : "none";
-        
-        // Log what we're creating
-        console.log(`Creating distance display for ${modelType} (index: ${modelIndex})`);
         
         // Add label and value to the row
         row.appendChild(label);
@@ -696,14 +693,15 @@ export class RadiusControls {
             button.style.backgroundColor = this.options.isVisible ? '#4CAF50' : '#444444';
             button.style.color = '#fff';
             button.style.border = 'none';
-            button.style.padding = '8px 16px';
-            button.style.borderRadius = '4px';
+            button.style.padding = '6px 12px'; // Reduced from 8px 16px
+            button.style.borderRadius = '3px'; // Reduced from 4px
             button.style.cursor = 'pointer';
             button.style.fontWeight = 'bold';
-            button.style.width = '120px';
+            button.style.width = '100px'; // Reduced from 120px
+            button.style.fontSize = '12px'; // Add smaller font size
             button.style.textAlign = 'center';
             button.style.transition = 'background-color 0.3s';
-            button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
+            button.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)'; // Reduced shadow
             
             button.addEventListener('mouseover', () => {
                 button.style.backgroundColor = this.options.isVisible ? '#4CAF50' : '#666666';
@@ -757,7 +755,6 @@ export class RadiusControls {
         console.log("Toggling radius controls visibility");
         
         const newVisibility = !this.isVisible();
-        console.log(`Setting radius controls visibility to: ${newVisibility}`);
         
         if (this.panel) {
             this.panel.style.display = newVisibility ? 'block' : 'none';
@@ -773,14 +770,9 @@ export class RadiusControls {
         // Toggle radius lines visibility in the models
         this.models.forEach(model => {
             if (model && typeof model.setRadiusLinesVisible === 'function') {
-                console.log(`Calling setRadiusLinesVisible(${newVisibility}) on model type: ${model.constructor.name}`);
                 model.setRadiusLinesVisible(newVisibility);
-            } else {
-                console.warn(`Model does not have setRadiusLinesVisible method:`, model);
             }
         });
-        
-        console.log(`Radius controls visibility set to: ${this.isVisible()}`);
     }
     
     /**
