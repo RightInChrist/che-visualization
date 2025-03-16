@@ -2,7 +2,9 @@ import {
     MeshBuilder, 
     StandardMaterial, 
     Color3, 
-    Vector3
+    Vector3,
+    Axis,
+    Space
 } from '@babylonjs/core';
 import { BaseModel } from './BaseModel';
 
@@ -22,6 +24,10 @@ export class PanelModel extends BaseModel {
         
         // Call parent constructor
         super(scene, position, { ...defaultOptions, ...options });
+        
+        // Initialize rotation tracking
+        this.initialRotation = null;
+        this.currentDelta = 0;
         
         // Create panel
         this.createPanel();
@@ -61,6 +67,69 @@ export class PanelModel extends BaseModel {
         panelMesh.parent = this.rootNode;
         
         this.panelMesh = panelMesh;
+    }
+    
+    /**
+     * Store the initial rotation state of the panel
+     * This is needed for proper delta rotations
+     */
+    storeInitialRotation() {
+        if (!this.initialRotation && this.rootNode) {
+            this.initialRotation = this.rootNode.rotation.clone();
+            console.log(`Stored initial rotation for panel: (${this.radToDeg(this.initialRotation.x)}°, ${this.radToDeg(this.initialRotation.y)}°, ${this.radToDeg(this.initialRotation.z)}°)`);
+        }
+    }
+    
+    /**
+     * Apply a rotation delta to the panel
+     * @param {number} deltaRotation - Delta angle in degrees
+     */
+    applyRotationDelta(deltaRotation) {
+        if (!this.rootNode) return;
+        
+        // Store initial rotation if not already stored
+        this.storeInitialRotation();
+        
+        // Update current delta
+        this.currentDelta = deltaRotation;
+        
+        // Reset to initial rotation
+        this.rootNode.rotation = this.initialRotation.clone();
+        
+        // Apply new delta
+        const deltaRadians = (deltaRotation * Math.PI) / 180;
+        this.rootNode.rotate(Axis.Y, deltaRadians, Space.LOCAL);
+        
+        // Force updates
+        this.rootNode.computeWorldMatrix(true);
+        
+        if (this.panelMesh) {
+            this.panelMesh.markAsDirty();
+            this.panelMesh.refreshBoundingInfo();
+            this.panelMesh.computeWorldMatrix(true);
+        }
+        
+        // Force scene update
+        if (this.scene) {
+            this.scene.render();
+        }
+    }
+    
+    /**
+     * Get the current rotation delta
+     * @returns {number} - Current delta in degrees
+     */
+    getCurrentDelta() {
+        return this.currentDelta;
+    }
+    
+    /**
+     * Helper function to convert radians to degrees
+     * @param {number} rad - Angle in radians
+     * @returns {number} - Angle in degrees
+     */
+    radToDeg(rad) {
+        return (rad * 180 / Math.PI).toFixed(1);
     }
     
     /**

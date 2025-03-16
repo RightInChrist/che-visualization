@@ -336,42 +336,14 @@ export class SingleCutModel extends HexagonModel {
         
         console.log(`Updating all panels with delta rotation: ${deltaRotation}°`);
         
-        // Update each panel
+        // Update each panel using its direct rotation methods
         this.panels.forEach((panel, i) => {
-            if (panel && panel.rootNode) {
-                // If we don't have the base transform stored yet, store it now
-                if (!panel.baseTransform) {
-                    // Create a fresh transform that doesn't include any previous delta rotations
-                    panel.baseTransform = {
-                        position: panel.rootNode.position.clone(),
-                        rotation: panel.rootNode.rotation.clone(),
-                        defaultRotationAngle: panel.defaultRotationAngle || this.getDefaultPanelRotation(i)
-                    };
-                    console.log(`Stored base transform for Panel #${i+1}, default angle: ${(panel.baseTransform.defaultRotationAngle * 180 / Math.PI).toFixed(0)}°`);
-                }
+            if (panel) {
+                // Use the panel's own rotation method to handle the delta
+                panel.applyRotationDelta(deltaRotation);
                 
-                // Reset the panel to its base transform
-                panel.rootNode.position = panel.baseTransform.position.clone();
-                panel.rootNode.rotation = panel.baseTransform.rotation.clone();
-                
-                // Calculate delta in radians
-                const deltaRadians = (deltaRotation * Math.PI) / 180;
-                
-                // Apply the delta rotation on top of the original transform
-                panel.rootNode.rotate(BABYLON.Axis.Y, deltaRadians, BABYLON.Space.LOCAL);
-                
-                // Force Babylon to update the world matrix
-                panel.rootNode.computeWorldMatrix(true);
-                
-                // Force mesh update
-                if (panel.panelMesh) {
-                    panel.panelMesh.markAsDirty();
-                    panel.panelMesh.refreshBoundingInfo();
-                    panel.panelMesh.computeWorldMatrix(true);
-                }
-                
-                const defaultAngleDeg = (panel.baseTransform.defaultRotationAngle * 180 / Math.PI).toFixed(0);
-                console.log(`Panel #${i+1}: Updated rotation with delta: ${deltaRotation}° (default: ${defaultAngleDeg}°)`);
+                const currentDelta = panel.getCurrentDelta();
+                console.log(`Panel #${i+1}: Applied rotation delta: ${deltaRotation}° (current: ${currentDelta}°)`);
             }
         });
         
