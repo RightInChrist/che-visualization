@@ -180,6 +180,10 @@ export class RotationControls {
                 // Calculate current delta (if any)
                 const currentDelta = rotations.length > 0 ? rotations[0].delta : 0;
                 
+                // Create rotation values dropdown and get the update function
+                const { container: rotationValuesDropdown, update: updateRotationValuesDisplay } = 
+                    this.addChildRotationValuesDropdown(childRotationContainer, model);
+                
                 // Create slider for global delta
                 const deltaSlider = this.createSliderRow(
                     "Delta Rotation",
@@ -195,12 +199,15 @@ export class RotationControls {
                         
                         // Apply rotations to the actual panels
                         this.applyRotationsToModel(model, rotations);
+                        
+                        // Update the rotation values display
+                        updateRotationValuesDisplay();
                     }
                 );
                 childRotationContainer.appendChild(deltaSlider);
                 
-                // Add dropdown to show all child rotation values
-                this.addChildRotationValuesDropdown(childRotationContainer, model);
+                // Add the rotation values dropdown to the container
+                childRotationContainer.appendChild(rotationValuesDropdown);
                 
                 modelSection.appendChild(childRotationContainer);
             }
@@ -534,7 +541,24 @@ export class RotationControls {
             
             // Apply the rotations to the model panels
             this.applyRotationsToModel(model, rotations);
+            
+            // Force update of any rotation values dropdowns that might be visible
+            this.updateRotationDisplays();
         }
+    }
+    
+    /**
+     * Update all visible rotation value displays
+     * This is useful when rotation changes happen outside of the direct UI interactions
+     */
+    updateRotationDisplays() {
+        // Find all visible rotation value lists and update them
+        const rotationLists = document.querySelectorAll('.child-rotation-container .rotation-values-list');
+        rotationLists.forEach(list => {
+            if (list.style.display !== 'none' && list.updateFunction) {
+                list.updateFunction();
+            }
+        });
     }
     
     /**
@@ -554,17 +578,19 @@ export class RotationControls {
      * Add a dropdown to show all child rotation values
      * @param {HTMLElement} container - The container to add the dropdown to
      * @param {Object} model - The model to get child rotations from
+     * @returns {Object} - An object containing the dropdown container and update function
      */
     addChildRotationValuesDropdown(container, model) {
         // Get child rotations - this is an array of rotation objects passed by reference
         const rotations = model.getChildrenRotations();
         
         if (!rotations || rotations.length === 0) {
-            return;
+            return { container: document.createElement('div'), update: () => {} };
         }
         
         // Add dropdown to view all rotation values
         const dropdownContainer = document.createElement('div');
+        dropdownContainer.className = 'rotation-dropdown-container';
         dropdownContainer.style.marginTop = '10px';
         
         const dropdownToggle = document.createElement('button');
@@ -579,6 +605,7 @@ export class RotationControls {
         dropdownToggle.style.textAlign = 'left';
         
         const rotationValuesList = document.createElement('div');
+        rotationValuesList.className = 'rotation-values-list';
         rotationValuesList.style.display = 'none';
         rotationValuesList.style.marginTop = '5px';
         rotationValuesList.style.border = '1px solid #555';
@@ -590,6 +617,9 @@ export class RotationControls {
         
         // Function to update rotation values in the dropdown
         const updateRotationValues = () => {
+            // Only update if the list is visible
+            if (rotationValuesList.style.display === 'none') return;
+            
             rotationValuesList.innerHTML = '';
             
             // Display information for each rotation object
@@ -615,6 +645,9 @@ export class RotationControls {
             });
         };
         
+        // Store update function directly on the element for later access
+        rotationValuesList.updateFunction = updateRotationValues;
+        
         // Toggle dropdown visibility
         dropdownToggle.addEventListener('click', () => {
             const isVisible = rotationValuesList.style.display !== 'none';
@@ -630,6 +663,11 @@ export class RotationControls {
         
         dropdownContainer.appendChild(dropdownToggle);
         dropdownContainer.appendChild(rotationValuesList);
-        container.appendChild(dropdownContainer);
+        
+        // Return both the container and the update function
+        return { 
+            container: dropdownContainer, 
+            update: updateRotationValues 
+        };
     }
 } 
