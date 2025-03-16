@@ -19,11 +19,21 @@ export class SceneEditor {
                         children: {}
                     };
                     
-                    // Add central cut if it exists
-                    if (model.centralCut) {
-                        this.sceneObjects[name].children[`${name} Central CUT`] = {
-                            model: model.centralCut
-                        };
+                    // Get children from model if it's a composite model or has getChildren method
+                    if (model.getChildren && typeof model.getChildren === 'function') {
+                        const children = model.getChildren();
+                        
+                        // Add each child to the hierarchy
+                        children.forEach(child => {
+                            if (child) {
+                                const childName = child.getName ? child.getName() : 
+                                            (child.constructor ? child.constructor.name : 'Unknown Child');
+                                            
+                                this.sceneObjects[name].children[childName] = {
+                                    model: child
+                                };
+                            }
+                        });
                     }
                 }
             });
