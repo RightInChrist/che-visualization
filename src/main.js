@@ -75,6 +75,17 @@ class CHEVisualization {
             this.ringModel.setVisible(true);
             this.starModel.setVisible(true);
             
+            // Apply a 30-degree global rotation to all SingleCUTs in the Star models for better appearance
+            console.log('Applying 30-degree global rotation to all SingleCUTs in the Star models...');
+            if (this.starModel.models.layerOneStar) {
+                this.starModel.models.layerOneStar.updateAllSingleCutRotations(30);
+                console.log('Applied 30-degree rotation to all SingleCUTs in LayerOneStar');
+            }
+            if (this.starModel.models.layerTwoStar) {
+                this.starModel.models.layerTwoStar.updateAllSingleCutRotations(30);
+                console.log('Applied 30-degree rotation to all SingleCUTs in LayerTwoStar');
+            }
+            
             // Force specific visibility checks on LayerTwoStar
             console.log('Ensuring LayerTwoStar is visible...');
             if (this.starModel.models.layerTwoStar) {
