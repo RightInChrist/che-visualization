@@ -39,12 +39,8 @@ export class SingleCutModel extends HexagonModel {
         this.pipes = [];
         this.panels = [];
         
-        // Initialize panel rotation state that can be shared by reference
-        this.panelRotations = {
-            currentDelta: 0,
-            defaultAngles: [],
-            currentAngles: []
-        };
+        // Initialize panel rotation state with good values
+        this.initializePanelRotations();
         
         // Debug log
         this.debugLog('Creating SingleCUT model with', this.options.cornerCount, 'pipes and panels');
@@ -66,6 +62,47 @@ export class SingleCutModel extends HexagonModel {
         
         // Log the rotation state after initialization
         this.debugLog('Panel rotation state after initialization:', JSON.stringify(this.panelRotations));
+    }
+    
+    /**
+     * Initialize panel rotations with correct values
+     */
+    initializePanelRotations() {
+        const cornerCount = this.options.cornerCount || 6;
+        
+        // Initialize panel rotation state that can be shared by reference
+        this.panelRotations = {
+            currentDelta: 0,
+            defaultAngles: [],
+            currentAngles: []
+        };
+        
+        // Create an array of panel rotation data
+        this.panelRotationData = [];
+        
+        for (let i = 0; i < cornerCount; i++) {
+            // Calculate good default values for this panel
+            const defaultAngle = this.getDefaultPanelRotation(i);  // In radians
+            const defaultAngleDegrees = defaultAngle * 180 / Math.PI;
+            
+            // Store in both formats for compatibility
+            this.panelRotations.defaultAngles[i] = defaultAngleDegrees;
+            this.panelRotations.currentAngles[i] = defaultAngleDegrees;
+            
+            // Store in the new panel rotation data array
+            this.panelRotationData.push({
+                id: `panel-${i}`,
+                name: `Panel ${i + 1}`,
+                index: i,
+                baseRotation: defaultAngleDegrees,
+                rotation: defaultAngleDegrees,
+                delta: 0
+            });
+        }
+        
+        this.debugLog('Panel rotations initialized:');
+        this.debugLog(`- Created ${this.panelRotationData.length} panel rotation entries`);
+        this.debugLog(`- Default angles: ${this.panelRotations.defaultAngles.map(a => a.toFixed(1) + '°').join(', ')}`);
     }
     
     /**
@@ -110,12 +147,10 @@ export class SingleCutModel extends HexagonModel {
     createPanels() {
         const cornerCount = this.options.cornerCount;
         
-        // Initialize default and current angle arrays if they don't exist
-        if (!this.panelRotations.defaultAngles) {
-            this.panelRotations.defaultAngles = [];
-        }
-        if (!this.panelRotations.currentAngles) {
-            this.panelRotations.currentAngles = [];
+        // Verify that panel rotation data is initialized
+        if (!this.panelRotationData || this.panelRotationData.length === 0) {
+            this.debugLog('Panel rotation data not initialized, doing it now');
+            this.initializePanelRotations();
         }
         
         for (let i = 0; i < cornerCount; i++) {
@@ -130,15 +165,10 @@ export class SingleCutModel extends HexagonModel {
             // Calculate position and orientation for the panel
             const transform = this.calculatePanelTransform(i, currentPipePos, nextPipePos);
             
-            // Get default rotation angle for this panel
-            const defaultAngle = this.getDefaultPanelRotation(i);
-            const defaultAngleDegrees = defaultAngle * 180 / Math.PI; // Convert to degrees
+            // Get rotation data for this panel
+            const panelData = this.panelRotationData[i];
             
-            // Store default and current angles in the shared state
-            this.panelRotations.defaultAngles[i] = defaultAngleDegrees;
-            this.panelRotations.currentAngles[i] = defaultAngleDegrees; // Initialize current to default
-            
-            this.debugLog(`Panel #${i+1} default angle: ${defaultAngleDegrees.toFixed(1)}°`);
+            this.debugLog(`Panel #${i+1} default angle: ${panelData.baseRotation.toFixed(1)}°`);
             
             // Create panel with calculated transform
             const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
@@ -146,6 +176,7 @@ export class SingleCutModel extends HexagonModel {
             // Share rotation state with the panel
             panel.rotationState = this.panelRotations;
             panel.panelIndex = i;
+            panel.rotationData = panelData;  // Link the specific panel data
             
             this.panels.push(panel);
             
@@ -381,16 +412,22 @@ export class SingleCutModel extends HexagonModel {
                     panel.storeInitialRotation();
                 }
                 
-                // Get the default rotation angle for this panel
-                const defaultAngle = this.getDefaultPanelRotation(i);
-                const defaultAngleDegrees = defaultAngle * 180 / Math.PI;
+                // Get the rotation data for this panel
+                const panelData = this.panelRotationData[i];
                 
-                this.debugLog(`Panel #${i+1}: Applying default angle of ${defaultAngleDegrees.toFixed(1)}°`);
+                this.debugLog(`Panel #${i+1}: Applying base angle of ${panelData.baseRotation.toFixed(1)}° with delta ${currentDelta}°`);
                 
-                // Apply rotation directly to panel's rotation property
-                if (panel.setRotation) {
-                    panel.setRotation(defaultAngle + currentDelta);
-                }
+                // Apply rotation using the panel data
+                const baseAngleRad = panelData.baseRotation * Math.PI / 180;
+                const deltaRad = currentDelta * Math.PI / 180;
+                const totalAngle = baseAngleRad + deltaRad;
+                
+                // Update the panel rotation data
+                panelData.delta = currentDelta;
+                panelData.rotation = panelData.baseRotation + currentDelta;
+                
+                // Apply rotation to the panel
+                panel.rootNode.rotation.y = totalAngle;
                 
                 // Apply visibility if needed
                 if (panel.setVisible) {
@@ -462,50 +499,29 @@ export class SingleCutModel extends HexagonModel {
             
             this.debugLog(`Updating all panels in ${this.getName()} with rotation: ${deltaRotation}°`);
             
-            // Update each panel using its direct rotation methods
-            this.panels.forEach((panel, i) => {
-                if (panel) {
-                    // Use the panel's own rotation method to handle the delta
-                    if (typeof panel.applyRotationDelta === 'function') {
-                        panel.applyRotationDelta(deltaRotation);
-                    } else {
-                        // Fallback if panel doesn't have applyRotationDelta method
-                        const defaultAngle = this.getDefaultPanelRotation(i);
-                        const totalAngle = defaultAngle + (deltaRotation * Math.PI / 180);
-                        
-                        if (panel.rootNode) {
-                            panel.rootNode.rotation.y = totalAngle;
-                        }
-                    }
-                }
-            });
-        }
-        
-        // For SingleCutModel, children are the panels
-        const panelRotations = [];
-        
-        // Gather rotation information from each panel
-        if (this.panels && this.panels.length > 0) {
-            this.panels.forEach((panel, index) => {
+            // Update the panel rotation data and apply to panels
+            this.panelRotationData.forEach((panelData, i) => {
+                panelData.delta = deltaRotation;
+                panelData.rotation = panelData.baseRotation + deltaRotation;
+                
+                const panel = this.panels[i];
                 if (panel && panel.rootNode) {
-                    const rotation = panel.rootNode.rotation.y * 180 / Math.PI; // Convert to degrees
-                    const defaultAngle = this.getDefaultPanelRotation(index) * 180 / Math.PI; // Convert to degrees
+                    // Calculate the rotation in radians
+                    const baseAngleRad = panelData.baseRotation * Math.PI / 180;
+                    const deltaRad = deltaRotation * Math.PI / 180;
+                    const totalAngle = baseAngleRad + deltaRad;
                     
-                    panelRotations.push({
-                        id: `panel-${index}`,
-                        name: `Panel ${index + 1}`,
-                        rotation: rotation,
-                        baseRotation: defaultAngle,
-                        delta: this.panelRotations.currentDelta || 0
-                    });
+                    // Apply rotation to the panel
+                    panel.rootNode.rotation.y = totalAngle;
                 }
             });
         }
         
+        // Return the panel rotation data
         return {
             type: 'panels',
             currentDelta: this.panelRotations.currentDelta || 0,
-            children: panelRotations
+            children: this.panelRotationData
         };
     }
     
