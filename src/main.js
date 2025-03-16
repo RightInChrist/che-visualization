@@ -11,6 +11,7 @@ import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
 import { DebugInfoView } from './components/ui/DebugInfoView';
+import { RadiusControl } from './components/ui/RadiusControl';
 
 /**
  * Main application entry point
@@ -79,12 +80,14 @@ class CHEVisualization {
                     models: [this.ringModel, this.starModel],
                     sceneEditor: this.sceneEditor,
                     showDebugInfo: true,
+                    showRadiusControl: true,
                     app: this,
                     controlClasses: {
-                        DebugInfoView: DebugInfoView
+                        DebugInfoView: DebugInfoView,
+                        RadiusControl: RadiusControl
                     },
-                    // Only show debug toggle, no other controls
-                    showOnlyDebugToggle: true
+                    // Show toggle buttons for debug and radius controls
+                    showOnlyDebugToggle: false
                 }
             );
             

@@ -25,15 +25,19 @@ export class UIController {
         if (options.showDebugInfo) {
             this.createDebugInfoView();
         }
+        
+        // Create radius control if needed
+        if (options.showRadiusControl) {
+            this.createRadiusControl();
+        }
     }
     
     /**
      * Initializes UI elements and event listeners
      */
     initUI() {
-        // If showOnlyDebugToggle is true, only create debug info view
+        // If showOnlyDebugToggle is true, only create essential UI elements
         if (this.options.showOnlyDebugToggle) {
-            // Skip creating other UI elements
             return;
         }
         
@@ -58,23 +62,25 @@ export class UIController {
      * Creates containers for UI elements
      */
     createContainers() {
-        // Only create the toggle buttons container if showOnlyDebugToggle is true
+        // Create toggle buttons container always
+        if (!document.getElementById('toggleButtons')) {
+            const toggleButtons = document.createElement('div');
+            toggleButtons.id = 'toggleButtons';
+            toggleButtons.style.position = 'absolute';
+            toggleButtons.style.bottom = '20px';
+            toggleButtons.style.right = '20px';
+            toggleButtons.style.display = 'flex';
+            toggleButtons.style.flexDirection = 'row';
+            toggleButtons.style.gap = '10px';
+            toggleButtons.style.zIndex = '100';
+            document.body.appendChild(toggleButtons);
+            this.toggleButtonsContainer = toggleButtons;
+        } else {
+            this.toggleButtonsContainer = document.getElementById('toggleButtons');
+        }
+        
+        // If we're only showing specific toggles, don't create other containers
         if (this.options.showOnlyDebugToggle) {
-            if (!document.getElementById('toggleButtons')) {
-                const toggleButtons = document.createElement('div');
-                toggleButtons.id = 'toggleButtons';
-                toggleButtons.style.position = 'absolute';
-                toggleButtons.style.bottom = '20px';
-                toggleButtons.style.right = '20px';
-                toggleButtons.style.display = 'flex';
-                toggleButtons.style.flexDirection = 'row';
-                toggleButtons.style.gap = '10px';
-                toggleButtons.style.zIndex = '100';
-                document.body.appendChild(toggleButtons);
-                this.toggleButtonsContainer = toggleButtons;
-            } else {
-                this.toggleButtonsContainer = document.getElementById('toggleButtons');
-            }
             return;
         }
         
@@ -93,23 +99,6 @@ export class UIController {
             this.controlPanelsContainer = controlPanels;
         } else {
             this.controlPanelsContainer = document.getElementById('controlPanels');
-        }
-        
-        // Create toggle buttons container if it doesn't exist
-        if (!document.getElementById('toggleButtons')) {
-            const toggleButtons = document.createElement('div');
-            toggleButtons.id = 'toggleButtons';
-            toggleButtons.style.position = 'absolute';
-            toggleButtons.style.bottom = '20px';
-            toggleButtons.style.right = '20px';
-            toggleButtons.style.display = 'flex';
-            toggleButtons.style.flexDirection = 'row';
-            toggleButtons.style.gap = '10px';
-            toggleButtons.style.zIndex = '100';
-            document.body.appendChild(toggleButtons);
-            this.toggleButtonsContainer = toggleButtons;
-        } else {
-            this.toggleButtonsContainer = document.getElementById('toggleButtons');
         }
     }
     
@@ -143,6 +132,20 @@ export class UIController {
             this.debugInfoView = new DebugInfoView({
                 isVisible: true,
                 cameraController: this.cameraController,
+                app: this.options.app
+            });
+        }
+    }
+    
+    /**
+     * Creates radius control for models
+     */
+    createRadiusControl() {
+        const { RadiusControl } = this.options.controlClasses || {};
+        
+        if (RadiusControl) {
+            this.radiusControl = new RadiusControl(this.models, {
+                isVisible: true,
                 app: this.options.app
             });
         }
@@ -262,6 +265,11 @@ export class UIController {
         // Update debug info if available
         if (this.debugInfoView) {
             this.debugInfoView.update();
+        }
+        
+        // Update radius control if available
+        if (this.radiusControl) {
+            this.radiusControl.update();
         }
     }
 } 
