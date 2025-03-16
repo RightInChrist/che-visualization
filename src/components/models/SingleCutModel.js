@@ -302,4 +302,71 @@ export class SingleCutModel extends HexagonModel {
     getChildren() {
         return [];
     }
+    
+    /**
+     * Updates all panel rotations with a delta value applied to their original positions
+     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
+     */
+    updateAllPanelRotations(deltaRotation) {
+        if (!this.panels || this.panels.length === 0) {
+            this.debugLog('No panels to update rotations for');
+            return;
+        }
+        
+        // Store the current panel rotation delta
+        this.panelRotationDelta = deltaRotation;
+        
+        console.log(`Updating all panels with delta rotation: ${deltaRotation}°`);
+        
+        // Update each panel
+        this.panels.forEach((panel, i) => {
+            if (panel && panel.rootNode) {
+                // Get original panel rotation - if not already stored, calculate and store it
+                if (!panel.originalRotation) {
+                    panel.originalRotation = panel.rootNode.rotation.clone();
+                }
+                
+                // Calculate new Y rotation by adding delta
+                const originalY = panel.originalRotation.y;
+                let newY = originalY + (deltaRotation * Math.PI / 180); // Convert delta to radians
+                
+                // Apply the new rotation
+                panel.rootNode.rotation.y = newY;
+                
+                console.log(`Panel #${i+1}: Updated rotation from ${(originalY * 180 / Math.PI).toFixed(0)}° to ${(newY * 180 / Math.PI).toFixed(0)}° (delta: ${deltaRotation}°)`);
+            }
+        });
+    }
+    
+    /**
+     * Get min delta rotation value for panels
+     * @returns {number} - Minimum delta rotation in degrees
+     */
+    getMinPanelDeltaRotation() {
+        return -180;
+    }
+    
+    /**
+     * Get max delta rotation value for panels
+     * @returns {number} - Maximum delta rotation in degrees
+     */
+    getMaxPanelDeltaRotation() {
+        return 180;
+    }
+    
+    /**
+     * Get default delta rotation value for panels
+     * @returns {number} - Default delta rotation in degrees
+     */
+    getDefaultPanelDeltaRotation() {
+        return 0;
+    }
+    
+    /**
+     * Get current delta rotation value for panels
+     * @returns {number} - Current delta rotation in degrees
+     */
+    getCurrentPanelDeltaRotation() {
+        return this.panelRotationDelta || 0;
+    }
 } 

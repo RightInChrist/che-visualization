@@ -318,6 +318,145 @@ export class RotationControls {
                 yRotationContainer.style.padding = '5px';
                 yRotationContainer.style.borderRadius = '3px';
                 yRotationContainer.style.marginBottom = '10px';
+                
+                // Check if model supports panel rotation functionality
+                if (typeof config.model.updateAllPanelRotations === 'function') {
+                    // Create container for the panel delta control
+                    const panelDeltaContainer = document.createElement('div');
+                    panelDeltaContainer.className = 'panel-delta-container';
+                    panelDeltaContainer.style.border = '1px solid #555';
+                    panelDeltaContainer.style.borderRadius = '5px';
+                    panelDeltaContainer.style.padding = '10px';
+                    panelDeltaContainer.style.marginBottom = '15px';
+                    panelDeltaContainer.style.backgroundColor = 'rgba(100, 50, 0, 0.2)';
+                    
+                    // Create header for panel control
+                    const panelHeader = document.createElement('div');
+                    panelHeader.style.marginBottom = '8px';
+                    panelHeader.style.display = 'flex';
+                    panelHeader.style.justifyContent = 'space-between';
+                    panelHeader.style.alignItems = 'center';
+                    
+                    const panelTitle = document.createElement('h5');
+                    panelTitle.textContent = `Panel Rotation Controls`;
+                    panelTitle.style.margin = '0';
+                    panelTitle.style.color = '#ff9900';
+                    panelTitle.style.fontWeight = 'bold';
+                    
+                    panelHeader.appendChild(panelTitle);
+                    panelDeltaContainer.appendChild(panelHeader);
+                    
+                    // Get min/max/default values using methods if available, otherwise use sensible defaults
+                    const min = typeof config.model.getMinPanelDeltaRotation === 'function' ? 
+                        config.model.getMinPanelDeltaRotation() : -180;
+                    const max = typeof config.model.getMaxPanelDeltaRotation === 'function' ? 
+                        config.model.getMaxPanelDeltaRotation() : 180;
+                    const defaultValue = typeof config.model.getDefaultPanelDeltaRotation === 'function' ? 
+                        config.model.getDefaultPanelDeltaRotation() : 0;
+                    const currentValue = typeof config.model.getCurrentPanelDeltaRotation === 'function' ? 
+                        config.model.getCurrentPanelDeltaRotation() : 0;
+                    
+                    // Create the global delta rotation slider
+                    const deltaSlider = this.createSliderRow(
+                        "Global Panel Delta",
+                        min,
+                        max,
+                        currentValue || defaultValue,
+                        (value) => {
+                            console.log(`Setting global panel delta rotation for ${config.model.constructor.name} to ${value}°`);
+                            config.model.updateAllPanelRotations(value);
+                        }
+                    );
+                    
+                    // Add some styling to make it stand out
+                    deltaSlider.style.backgroundColor = 'rgba(200, 100, 0, 0.1)';
+                    deltaSlider.style.padding = '5px';
+                    deltaSlider.style.borderRadius = '3px';
+                    
+                    panelDeltaContainer.appendChild(deltaSlider);
+                    
+                    // Add dropdown to view all panel rotation values
+                    const dropdownContainer = document.createElement('div');
+                    dropdownContainer.style.marginTop = '10px';
+                    
+                    const dropdownToggle = document.createElement('button');
+                    dropdownToggle.textContent = 'Show Panel Rotation Values ▼';
+                    dropdownToggle.style.backgroundColor = '#444';
+                    dropdownToggle.style.color = '#fff';
+                    dropdownToggle.style.border = '1px solid #555';
+                    dropdownToggle.style.borderRadius = '3px';
+                    dropdownToggle.style.padding = '5px 10px';
+                    dropdownToggle.style.cursor = 'pointer';
+                    dropdownToggle.style.width = '100%';
+                    dropdownToggle.style.textAlign = 'left';
+                    
+                    const rotationValuesList = document.createElement('div');
+                    rotationValuesList.style.display = 'none';
+                    rotationValuesList.style.marginTop = '5px';
+                    rotationValuesList.style.border = '1px solid #555';
+                    rotationValuesList.style.borderRadius = '3px';
+                    rotationValuesList.style.padding = '5px';
+                    rotationValuesList.style.backgroundColor = '#333';
+                    rotationValuesList.style.maxHeight = '200px';
+                    rotationValuesList.style.overflowY = 'auto';
+                    
+                    // Function to update rotation values in the dropdown
+                    const updateRotationValues = () => {
+                        rotationValuesList.innerHTML = '';
+                        
+                        if (config.model && config.model.panels) {
+                            config.model.panels.forEach((panel, index) => {
+                                if (panel && panel.rootNode) {
+                                    const valueRow = document.createElement('div');
+                                    valueRow.style.display = 'flex';
+                                    valueRow.style.justifyContent = 'space-between';
+                                    valueRow.style.padding = '3px 0';
+                                    valueRow.style.borderBottom = index < config.model.panels.length - 1 ? 
+                                        '1px solid #444' : 'none';
+                                    
+                                    const label = document.createElement('span');
+                                    label.textContent = `Panel #${index + 1}:`;
+                                    label.style.fontWeight = 'bold';
+                                    
+                                    const value = document.createElement('span');
+                                    const rotation = panel.rootNode.rotation.y * 180 / Math.PI; // Convert radians to degrees
+                                    
+                                    // Show original rotation if available
+                                    if (panel.originalRotation) {
+                                        const originalRotation = panel.originalRotation.y * 180 / Math.PI;
+                                        value.textContent = `${rotation.toFixed(0)}° (Base: ${originalRotation.toFixed(0)}°)`;
+                                    } else {
+                                        value.textContent = `${rotation.toFixed(0)}°`;
+                                    }
+                                    
+                                    valueRow.appendChild(label);
+                                    valueRow.appendChild(value);
+                                    rotationValuesList.appendChild(valueRow);
+                                }
+                            });
+                        }
+                    };
+                    
+                    // Toggle dropdown visibility
+                    dropdownToggle.addEventListener('click', () => {
+                        const isVisible = rotationValuesList.style.display !== 'none';
+                        rotationValuesList.style.display = isVisible ? 'none' : 'block';
+                        dropdownToggle.textContent = isVisible ? 
+                            'Show Panel Rotation Values ▼' : 'Hide Panel Rotation Values ▲';
+                        
+                        if (!isVisible) {
+                            // Update values when showing
+                            updateRotationValues();
+                        }
+                    });
+                    
+                    dropdownContainer.appendChild(dropdownToggle);
+                    dropdownContainer.appendChild(rotationValuesList);
+                    panelDeltaContainer.appendChild(dropdownContainer);
+                    
+                    // Add the panel container after the main rotation slider
+                    modelSection.appendChild(panelDeltaContainer);
+                }
             }
             
             modelSection.appendChild(yRotationContainer);
