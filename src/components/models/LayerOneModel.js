@@ -1,16 +1,17 @@
 import { Vector3, Color3, MeshBuilder, StandardMaterial, Axis, Space, Mesh } from '@babylonjs/core';
 import { SingleCutModel } from './SingleCutModel';
-import { CompositeModel } from './CompositeModel';
+import { HexagonModel } from './HexagonModel';
 
 /**
  * Creates a Layer One Ring with 6 SingleCUT models arranged in a hexagonal pattern
  * This model has shared panels between adjacent SingleCUTs
  */
-export class LayerOneModel extends CompositeModel {
+export class LayerOneModel extends HexagonModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 36.4,
+            cornerCount: 6, // Number of corners in the hexagon
+            radius: 36.4, // Using outerRadius as the hexagon radius
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
@@ -32,9 +33,8 @@ export class LayerOneModel extends CompositeModel {
             this.drawRadiusLines();
         }
         
-        // Rotate the entire model by the specified angle around the Y axis
-        this.updateRotation(this.options.rotationAngle);
-        this.debugLog(`Rotated Layer One Ring by ${this.options.rotationAngle} degrees`);
+        // Rotation is now handled by the HexagonModel parent class
+        this.debugLog(`Layer One Ring model created with radius: ${this.options.radius}, rotation: ${this.options.rotationAngle} degrees`);
     }
     
     /**
@@ -47,20 +47,16 @@ export class LayerOneModel extends CompositeModel {
         this.permanentlyHiddenElements = [];
         
         // Use consistent precision for radius values
-        const radius = parseFloat(this.options.outerRadius.toFixed(2));
+        const radius = parseFloat(this.options.radius.toFixed(2));
         const singleCutRadius = parseFloat(this.options.singleCutRadius.toFixed(2));
         
         this.debugLog(`Using radius: ${radius.toFixed(2)}, SingleCUT radius: ${singleCutRadius.toFixed(2)}`);
 
-        // Store positions for verification
-        const positions = [];
+        // Store distances for verification
         const distances = [];
         
         // Create 6 SingleCUTs in a regular hexagon
-        const numModels = 6;
-        
-        // Store calculated positions for resetting
-        this.calculatedPositions = [];
+        const numModels = this.options.cornerCount;
         
         // IMPORTANT: Setup hidden elements BEFORE creating child models
         this.setupHiddenElements();
@@ -79,26 +75,16 @@ export class LayerOneModel extends CompositeModel {
         // Store the current rotation delta (will be applied on top of initial rotations)
         this.rotationDelta = 0;
         
-        // Create a hexagon with equal distances from center
+        // Create a SingleCUT at each corner node position
         for (let i = 0; i < numModels; i++) {
-            // Calculate angle with consistent precision
-            const angle = parseFloat(((i * 2 * Math.PI) / numModels).toFixed(6));
-            
-            // Calculate the position with consistent precision
-            const x = exactMultiply(radius, Math.cos(angle));
-            const z = exactMultiply(radius, Math.sin(angle));
-            
-            const position = new Vector3(x, 0, z);
-            positions.push(position);
-            this.calculatedPositions.push(position.clone()); // Clone to avoid reference issues
+            // Get the position from the cornerNode
+            const position = this.cornerNodes[i].position.clone();
             
             // Verify distance from center with consistent precision
-            const distanceFromCenter = parseFloat(Math.sqrt(x * x + z * z).toFixed(2));
+            const distanceFromCenter = parseFloat(Vector3.Distance(position, Vector3.Zero()).toFixed(2));
             distances.push(distanceFromCenter);
             
-            this.debugLog(`SingleCUT #${i+1}: angle=${(angle * 180 / Math.PI).toFixed(2)}°, ` +
-                         `radius=${radius.toFixed(2)}, ` +
-                         `position=(${x.toFixed(2)}, 0, ${z.toFixed(2)}), ` +
+            this.debugLog(`SingleCUT #${i+1}: Using corner node position=(${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}), ` +
                          `distance=${distanceFromCenter.toFixed(2)}`);
             
             // Get the initial rotation for this SingleCUT
@@ -159,7 +145,7 @@ export class LayerOneModel extends CompositeModel {
         
         // Create circle for the standard radius
         const standardCircle = MeshBuilder.CreateDisc("standardRadiusLine", {
-            radius: this.options.outerRadius,
+            radius: this.options.radius,
             tessellation: 64,
             sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
@@ -185,8 +171,8 @@ export class LayerOneModel extends CompositeModel {
         for (let i = 0; i < 6; i++) {
             const angle = (i * 2 * Math.PI) / 6;
             
-            const x = this.options.outerRadius * Math.cos(angle);
-            const z = this.options.outerRadius * Math.sin(angle);
+            const x = this.options.radius * Math.cos(angle);
+            const z = this.options.radius * Math.sin(angle);
             
             // Create a line from center to the SingleCUT position
             const line = MeshBuilder.CreateLines("radiusLine_" + i, {
@@ -227,9 +213,12 @@ export class LayerOneModel extends CompositeModel {
     updateRadiusSettings(outerRadius, singleCutRadius) {
         this.debugLog(`Updating radius settings - outer: ${outerRadius}, singleCut: ${singleCutRadius}`);
         
-        // Store the new settings
-        this.options.outerRadius = outerRadius;
+        // Store the singleCutRadius
         this.options.singleCutRadius = singleCutRadius;
+        
+        // Use the parent HexagonModel's updateRadius method to update the main radius
+        // This will reposition all cornerNodes
+        super.updateRadius(outerRadius);
         
         // First dispose of all existing children
         this.disposeChildren();
@@ -337,38 +326,11 @@ export class LayerOneModel extends CompositeModel {
     }
     
     /**
-     * Update rotation of the entire model
-     * @param {number} rotationAngleDegrees - Rotation angle in degrees
-     */
-    updateRotation(rotationAngleDegrees) {
-        // Convert to radians
-        const rotationAngle = (rotationAngleDegrees * Math.PI) / 180;
-        
-        // Update root node rotation
-        this.rootNode.rotation = new Vector3(0, rotationAngle, 0);
-        
-        // Store the current angle
-        this.options.rotationAngle = rotationAngleDegrees;
-        
-        // Update all SingleCUT rotations to match their own internal rotation
-        // This is necessary for when SingleCUT controls are used separately
-        if (this.childModels && this.childModels.length > 0) {
-            this.childModels.forEach(singleCut => {
-                if (singleCut && typeof singleCut.updateRotation === 'function') {
-                    // Each SingleCut model maintains its own rotation, 
-                    // independent of the parent model rotation
-                    singleCut.updateRotation(singleCut.options.rotationAngle);
-                }
-            });
-        }
-    }
-    
-    /**
      * Get the default outer radius value for this model
      * @returns {number} - Default outer radius
      */
     getDefaultRadius() {
-        return this.options.outerRadius;
+        return this.options.radius;
     }
     
     /**
@@ -499,7 +461,7 @@ export class LayerOneModel extends CompositeModel {
         }
         // For a regular hexagon, the distance between opposite panels (sides)
         // is outerRadius * √3, not outerRadius * 2 (which would be the distance between opposite corners)
-        const distanceBetweenPanels = this.options.outerRadius * Math.sqrt(3);
+        const distanceBetweenPanels = this.options.radius * Math.sqrt(3);
         return distanceBetweenPanels;
     }
     
