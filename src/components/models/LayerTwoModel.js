@@ -95,6 +95,9 @@ export class LayerTwoModel extends CompositeModel {
         // Store calculated positions for resetting
         this.calculatedPositions = [];
         
+        // IMPORTANT: Setup hidden elements BEFORE creating child models
+        this.setupHiddenElements();
+        
         // Create a dodecagon with alternating distances from center
         for (let i = 0; i < numModels; i++) {
             // Calculate angle with consistent precision
@@ -131,8 +134,8 @@ export class LayerTwoModel extends CompositeModel {
             this.addChild(singleCut);
         }
         
-        // Setup hidden elements for each SingleCUT model
-        this.setupHiddenElements();
+        // Apply the hiding after all models are created to ensure everything is properly set up
+        this.applyHiddenElements();
         
         // Verify that distances match the expected pattern
         this.verifyDistances(distances);
@@ -182,6 +185,48 @@ export class LayerTwoModel extends CompositeModel {
             
             this.debugLog(`SingleCUT #${i+1}: Hidden pipes: ${pipesToHide.join(', ')}, Hidden panels: ${panelsToHide.join(', ')}`);
         }
+    }
+    
+    /**
+     * Forcefully apply hiding to all child model elements based on hidden elements map
+     * This ensures all elements are properly hidden even if the initial hiding didn't work
+     */
+    applyHiddenElements() {
+        if (!this.childModels || !this.hiddenElementsMap) {
+            return;
+        }
+        
+        console.log("Forcefully applying hidden elements to all SingleCUTs");
+        
+        // For each SingleCUT model
+        this.childModels.forEach((singleCut, modelIndex) => {
+            const hiddenElements = this.hiddenElementsMap[modelIndex];
+            if (!hiddenElements) return;
+            
+            // Hide pipes
+            hiddenElements.pipes.forEach(pipeIndex => {
+                if (singleCut.pipes && singleCut.pipes[pipeIndex]) {
+                    const pipe = singleCut.pipes[pipeIndex];
+                    pipe.pipeMesh.isVisible = false;
+                    pipe.rootNode.setEnabled(false);
+                    // Mark the pipe as permanently hidden for SceneEditor
+                    pipe.isPermanentlyHidden = true;
+                    console.log(`Hiding SingleCUT #${modelIndex+1} Pipe #${pipeIndex+1}`);
+                }
+            });
+            
+            // Hide panels
+            hiddenElements.panels.forEach(panelIndex => {
+                if (singleCut.panels && singleCut.panels[panelIndex]) {
+                    const panel = singleCut.panels[panelIndex];
+                    panel.panelMesh.isVisible = false;
+                    panel.rootNode.setEnabled(false);
+                    // Mark the panel as permanently hidden for SceneEditor
+                    panel.isPermanentlyHidden = true;
+                    console.log(`Hiding SingleCUT #${modelIndex+1} Panel #${panelIndex+1}`);
+                }
+            });
+        });
     }
     
     /**
