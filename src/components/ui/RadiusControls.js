@@ -145,10 +145,12 @@ export class RadiusControls {
             // Get current values or defaults
             let outerRadius = 42; // Default
             let singleCutRadius = 21; // Default
+            let innerRadius; // For LayerTwoModel
             
             if (config.model.options) {
                 outerRadius = config.model.options.outerRadius || outerRadius;
                 singleCutRadius = config.model.options.singleCutRadius || singleCutRadius;
+                innerRadius = config.model.options.innerRadius;
             }
             
             // Create outer radius slider
@@ -157,14 +159,39 @@ export class RadiusControls {
                 30,
                 100,
                 outerRadius,
-                (value) => this.onOuterRadiusChange(config.model, value)
+                (value) => this.onOuterRadiusChange(config.model, value),
+                0.01 // Allow hundredths precision
             );
             modelSection.appendChild(outerRadiusContainer);
+            
+            // Add inner radius control for LayerTwoModel
+            if (config.model.constructor && config.model.constructor.name === 'LayerTwoModel' && 
+                typeof config.model.updateInnerRadius === 'function' && innerRadius !== undefined) {
+                
+                // Create inner radius slider with precision to hundredths
+                const innerRadiusContainer = this.createSliderRow(
+                    "Inner Radius",
+                    30,
+                    100,
+                    innerRadius,
+                    (value) => this.onInnerRadiusChange(config.model, value),
+                    0.01 // Allow hundredths precision
+                );
+                
+                // Style the inner radius control differently
+                innerRadiusContainer.style.paddingLeft = '10px';
+                innerRadiusContainer.style.borderLeft = '3px solid #5599ff';
+                innerRadiusContainer.style.backgroundColor = 'rgba(85, 153, 255, 0.1)';
+                
+                modelSection.appendChild(innerRadiusContainer);
+            }
             
             // Create SingleCut radius control
             const hasSingleCutControl = config.model && (
                 (config.model.constructor.name === 'LayerOneStarModel') ||
                 (config.model.constructor.name === 'LayerOneModel') ||
+                (config.model.constructor.name === 'LayerTwoModel') ||
+                (config.model.constructor.name === 'LayerTwoStarModel') ||
                 (config.model.children && config.model.children.some(child => 
                     child.constructor.name === 'SingleCutModel'))
             );
@@ -175,7 +202,8 @@ export class RadiusControls {
                     10,
                     40,
                     singleCutRadius,
-                    (value) => this.onSingleCutRadiusChange(config.model, value)
+                    (value) => this.onSingleCutRadiusChange(config.model, value),
+                    0.01 // Allow hundredths precision
                 );
                 
                 // Style the SingleCut radius control differently
@@ -215,15 +243,16 @@ export class RadiusControls {
     }
     
     /**
-     * Create a slider row with label, value display, and precise input
+     * Creates a slider row with label, value display, and precise input
      * @param {string} label - Label for the slider
      * @param {number} min - Minimum value
      * @param {number} max - Maximum value
      * @param {number} value - Initial value
      * @param {Function} onChange - Callback for value changes
+     * @param {number} [step=1] - Step size for the slider and input
      * @returns {HTMLElement} - The slider row container
      */
-    createSliderRow(label, min, max, value, onChange) {
+    createSliderRow(label, min, max, value, onChange, step = 1) {
         const container = document.createElement('div');
         container.style.marginBottom = '15px';
         container.style.padding = '8px';
@@ -243,19 +272,29 @@ export class RadiusControls {
         sliderRow.style.alignItems = 'center';
         sliderRow.style.gap = '10px';
         
+        // Format display value based on step precision
+        const formatValue = (v) => {
+            if (step < 1) {
+                const decimals = String(step).split('.')[1].length;
+                return Number(v).toFixed(decimals);
+            }
+            return Math.round(v);
+        };
+        
         // Create slider
         const slider = document.createElement('input');
         slider.type = 'range';
         slider.min = min;
         slider.max = max;
-        slider.value = Math.round(value);
+        slider.step = step;
+        slider.value = formatValue(value);
         slider.style.flex = '1';
         slider.style.height = '20px';
         slider.style.accentColor = '#00aaff';
         
         // Create value display
         const valueDisplay = document.createElement('span');
-        valueDisplay.textContent = Math.round(value);
+        valueDisplay.textContent = formatValue(value);
         valueDisplay.style.minWidth = '50px';
         valueDisplay.style.textAlign = 'right';
         valueDisplay.style.fontWeight = 'bold';
@@ -266,8 +305,8 @@ export class RadiusControls {
         preciseInput.type = 'number';
         preciseInput.min = min;
         preciseInput.max = max;
-        preciseInput.step = '1';
-        preciseInput.value = value;
+        preciseInput.step = step;
+        preciseInput.value = formatValue(value);
         preciseInput.style.width = '60px';
         preciseInput.style.padding = '3px 5px';
         preciseInput.style.marginLeft = '5px';
@@ -278,9 +317,9 @@ export class RadiusControls {
         
         // Add event listener for slider
         slider.addEventListener('input', () => {
-            const newValue = parseInt(slider.value);
-            valueDisplay.textContent = newValue;
-            preciseInput.value = newValue;
+            const newValue = parseFloat(slider.value);
+            valueDisplay.textContent = formatValue(newValue);
+            preciseInput.value = formatValue(newValue);
             if (onChange) {
                 onChange(newValue);
             }
@@ -288,18 +327,21 @@ export class RadiusControls {
         
         // Add event listener for precise input
         preciseInput.addEventListener('change', () => {
-            let newValue = parseInt(preciseInput.value);
+            let newValue = parseFloat(preciseInput.value);
             
             // Enforce min/max bounds
             if (newValue < min) newValue = min;
             if (newValue > max) newValue = max;
             
-            // Update the precise input to the bounded value
-            preciseInput.value = newValue;
+            // Format the value 
+            const formattedValue = formatValue(newValue);
             
-            // Update slider and value display (slider can only handle integers)
-            slider.value = Math.round(newValue);
-            valueDisplay.textContent = Math.round(newValue);
+            // Update the precise input to the bounded value
+            preciseInput.value = formattedValue;
+            
+            // Update slider and value display
+            slider.value = newValue;
+            valueDisplay.textContent = formattedValue;
             
             // Call the callback with the precise value
             if (onChange) {
@@ -527,6 +569,30 @@ export class RadiusControls {
             model.updateRadiusSettings(outerRadius, value);
             
             // Update only this model's panel distance display
+            this.updatePanelDistanceDisplay(model);
+        }
+    }
+    
+    /**
+     * Handle changes to inner radius for LayerTwoModel
+     * @param {Object} model - The model to update
+     * @param {number} value - New inner radius value
+     */
+    onInnerRadiusChange(model, value) {
+        if (!model) return;
+        
+        const modelType = model.constructor ? model.constructor.name : "unknown";
+        const modelIndex = model.options && model.options.modelIndex !== undefined ? 
+                          model.options.modelIndex : 
+                          "unknown";
+        
+        console.log(`Inner radius change: model=${modelType} (index: ${modelIndex}), value=${value}`);
+        
+        // Update the model's inner radius
+        if (model && typeof model.updateInnerRadius === 'function') {
+            model.updateInnerRadius(value);
+            
+            // Update the panel distance display
             this.updatePanelDistanceDisplay(model);
         }
     }

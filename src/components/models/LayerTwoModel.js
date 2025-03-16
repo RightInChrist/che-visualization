@@ -10,7 +10,7 @@ export class LayerTwoModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 75, // Larger radius for Layer Two
+            outerRadius: 72, // Larger radius for Layer Two
             innerRadius: 65, // Inner radius for alternating pattern (NEW)
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
@@ -267,18 +267,23 @@ export class LayerTwoModel extends CompositeModel {
      * Update the model with new radius settings
      * @param {number} outerRadius - New radius for outer SingleCUTs
      * @param {number} singleCutRadius - New radius for each SingleCUT's internal structure
+     * @param {number} [innerRadius] - Optional. New radius for inner SingleCUTs. If not provided, 
+     *                               it will be calculated as 0.866 * outerRadius.
      */
-    updateRadiusSettings(outerRadius, singleCutRadius) {
-        this.debugLog(`Updating radius settings - outer: ${outerRadius}, singleCut: ${singleCutRadius}`);
+    updateRadiusSettings(outerRadius, singleCutRadius, innerRadius) {
+        // Store the new settings with precision to two decimal places
+        this.options.outerRadius = parseFloat(outerRadius.toFixed(2));
+        this.options.singleCutRadius = parseFloat(singleCutRadius.toFixed(2));
         
-        // Store the new settings
-        this.options.outerRadius = outerRadius;
-        this.options.singleCutRadius = singleCutRadius;
-        
-        // Calculate new inner radius proportional to outer radius
-        this.options.innerRadius = Math.round(outerRadius * 0.866); // Approximately cos(30°)
-        
-        this.debugLog(`Calculated new inner radius: ${this.options.innerRadius}`);
+        // Use provided innerRadius or calculate it from outerRadius
+        if (innerRadius !== undefined) {
+            this.options.innerRadius = parseFloat(innerRadius.toFixed(2));
+            this.debugLog(`Updating radius settings - outer: ${this.options.outerRadius}, inner: ${this.options.innerRadius}, singleCut: ${this.options.singleCutRadius}`);
+        } else {
+            // Calculate new inner radius proportional to outer radius
+            this.options.innerRadius = parseFloat((outerRadius * 0.866).toFixed(2)); // Approximately cos(30°)
+            this.debugLog(`Updating radius settings - outer: ${this.options.outerRadius}, calculated inner: ${this.options.innerRadius}, singleCut: ${this.options.singleCutRadius}`);
+        }
         
         // First dispose of all existing children
         this.disposeChildren();
@@ -293,6 +298,24 @@ export class LayerTwoModel extends CompositeModel {
         }
         
         this.debugLog('Radius settings updated and models recreated');
+    }
+    
+    /**
+     * Update just the inner radius setting
+     * @param {number} innerRadius - New radius for inner SingleCUTs
+     */
+    updateInnerRadius(innerRadius) {
+        // Set inner radius with precision to two decimal places
+        const preciseInnerRadius = parseFloat(innerRadius.toFixed(2));
+        
+        this.debugLog(`Updating inner radius to ${preciseInnerRadius} (outer: ${this.options.outerRadius})`);
+        
+        // Call the main update method with current outer radius and singleCutRadius
+        this.updateRadiusSettings(
+            this.options.outerRadius,
+            this.options.singleCutRadius,
+            preciseInnerRadius
+        );
     }
     
     /**
@@ -562,6 +585,30 @@ export class LayerTwoModel extends CompositeModel {
             return this.rootNode.isEnabled();
         }
         return false;
+    }
+    
+    /**
+     * Get the default inner radius value for this model
+     * @returns {number} - Default inner radius
+     */
+    getDefaultInnerRadius() {
+        return this.options.innerRadius;
+    }
+    
+    /**
+     * Get the min inner radius value for this model
+     * @returns {number} - Minimum inner radius
+     */
+    getMinInnerRadius() {
+        return 50; // Minimum sensible inner radius for LayerTwo
+    }
+    
+    /**
+     * Get the max inner radius value for this model
+     * @returns {number} - Maximum inner radius
+     */
+    getMaxInnerRadius() {
+        return 100; // Maximum sensible inner radius for LayerTwo
     }
 }
 
