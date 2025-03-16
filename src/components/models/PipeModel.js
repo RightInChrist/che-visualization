@@ -120,8 +120,7 @@ export class PipeModel extends BaseModel {
         // Create material
         const ringMaterial = new StandardMaterial('ringMaterial', this.scene);
         ringMaterial.diffuseColor = color;
-        ringMaterial.emissiveColor = color.scale(0.5); // Make it glow a bit
-        ringMaterial.specularColor = new Color3(1, 1, 1);
+        ringMaterial.specularColor = new Color3(0.1, 0.1, 0.1); // Reduce specular
         
         // Apply material
         ring.material = ringMaterial;
@@ -148,9 +147,9 @@ export class PipeModel extends BaseModel {
         
         // Create material
         const textMaterial = new StandardMaterial('textMaterial', this.scene);
-        textMaterial.diffuseColor = new Color3(1, 1, 1);
-        textMaterial.emissiveColor = new Color3(1, 1, 1);
+        textMaterial.diffuseColor = new Color3(0.8, 0.8, 0.8); // Gray instead of white
         textMaterial.backFaceCulling = false;
+        textMaterial.specularColor = new Color3(0, 0, 0); // No specular
         
         // Apply material
         plane.material = textMaterial;

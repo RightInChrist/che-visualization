@@ -41,11 +41,10 @@ export class GroundModel extends BaseModel {
         // Parent to root node
         this.mesh.parent = this.rootNode;
         
-        // Create a simple ground material
+        // Create a simple ground material with no reflections
         const groundMaterial = new StandardMaterial('groundMaterial', this.scene);
         groundMaterial.diffuseColor = new Color3(0.2, 0.5, 0.2);
-        groundMaterial.specularColor = new Color3(0.1, 0.1, 0.1);
-        groundMaterial.specularPower = 64; // Reduce specular reflection
+        groundMaterial.specularColor = new Color3(0, 0, 0); // No specular reflection at all
         
         // Create a simple grid texture
         const textureSize = 1024;
@@ -60,7 +59,7 @@ export class GroundModel extends BaseModel {
         textureContext.lineWidth = 2;
         textureContext.strokeStyle = "#488A48";
         
-        // Draw major grid lines
+        // Draw only major grid lines, skip minor ones
         textureContext.lineWidth = 4;
         const majorGridSize = textureSize / 10;
         for (let i = 0; i <= 10; i++) {
@@ -79,34 +78,16 @@ export class GroundModel extends BaseModel {
             textureContext.stroke();
         }
         
-        // Draw minor grid lines
-        textureContext.lineWidth = 1;
-        const minorGridSize = majorGridSize / 10;
-        for (let i = 0; i <= 100; i++) {
-            if (i % 10 === 0) continue; // Skip major lines
-            
-            const pos = i * minorGridSize;
-            
-            // Horizontal lines
-            textureContext.beginPath();
-            textureContext.moveTo(0, pos);
-            textureContext.lineTo(textureSize, pos);
-            textureContext.stroke();
-            
-            // Vertical lines
-            textureContext.beginPath();
-            textureContext.moveTo(pos, 0);
-            textureContext.lineTo(pos, textureSize);
-            textureContext.stroke();
-        }
-        
         // Update the texture
         gridTexture.update();
         
-        // Set texture parameters
+        // Set texture parameters with lower tiling for better performance
         gridTexture.uScale = this.size / 100;
         gridTexture.vScale = this.size / 100;
         groundMaterial.diffuseTexture = gridTexture;
+        
+        // Set material with no reflection
+        groundMaterial.useSpecularOverAlpha = false;
         
         // Apply material to mesh
         this.mesh.material = groundMaterial;

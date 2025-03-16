@@ -10,6 +10,11 @@ export const createScene = (engine) => {
     // Create a new scene
     const scene = new Scene(engine);
     
+    // Disable caching and frustum culling which can cause artifacts
+    scene.autoClear = true;  // Clear the scene each frame
+    scene.autoClearDepthAndStencil = true;  // Clear depth and stencil each frame
+    scene.skipFrustumClipping = true;  // Skip frustum clipping (may help with artifacts)
+    
     // Set scene clear color (sky blue)
     scene.clearColor = new Color4(0.5, 0.75, 0.95, 1.0);
     
