@@ -11,7 +11,7 @@ export class LayerTwoModel extends CompositeModel {
         // Default options
         const defaultOptions = {
             outerRadius: 72.7, // Updated to 72.7 as requested
-            innerRadius: 65, // Inner radius for alternating pattern (NEW)
+            innerRadius: 65, // Inner radius for alternating pattern
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
@@ -21,6 +21,11 @@ export class LayerTwoModel extends CompositeModel {
 
         // Call parent constructor
         super(scene, position, { ...defaultOptions, ...options });
+        
+        // Ensure precision is handled consistently for radius values
+        this.options.outerRadius = parseFloat(this.options.outerRadius.toFixed(2));
+        this.options.innerRadius = parseFloat(this.options.innerRadius.toFixed(2));
+        this.options.singleCutRadius = parseFloat(this.options.singleCutRadius.toFixed(2));
         
         // Store references to radius visualization elements
         this.radiusLines = [];
@@ -51,7 +56,7 @@ export class LayerTwoModel extends CompositeModel {
         const innerRadius = this.options.innerRadius;
         
         this.debugLog(`Using outer radius: ${outerRadius.toFixed(4)}, inner radius: ${innerRadius.toFixed(4)}, SingleCUT radius: ${this.options.singleCutRadius.toFixed(4)}`);
-        
+
         // Store positions for verification
         const positions = [];
         const distances = [];
