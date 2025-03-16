@@ -48,29 +48,21 @@ class CHEVisualization {
             // Create ground
             this.ground = new GroundModel(scene, 5000);
             
-            // Create Ring Model (contains just a central CUT)
-            this.ringModel = new RingModel(scene, new Vector3(0, 0, 0), {
-                visibility: {
-                    ring: true
-                }
-            });
+            // Create Ring Model
+            this.ringModel = new RingModel(scene, new Vector3(0, 0, 0));
             
-            // Create Star Model (contains just a central CUT)
-            this.starModel = new StarModel(scene, new Vector3(0, 0, 0), {
-                visibility: {
-                    centralCut: true
-                }
-            });
+            // Create Star Model
+            this.starModel = new StarModel(scene, new Vector3(0, 0, 0));
             
             // Make sure all models are visible
             this.ringModel.setVisible(true);
             this.starModel.setVisible(true);
             
-            // Apply a 30-degree rotation to the star model's central CUT
-            console.log('Applying 30-degree rotation to the Star Model central CUT...');
+            // Apply a 30-degree rotation to the star model
+            console.log('Applying 30-degree rotation to the Star Model...');
             if (this.starModel.updateAllSingleCutRotations) {
                 this.starModel.updateAllSingleCutRotations(30);
-                console.log('Applied 30-degree rotation to Star Model central CUT');
+                console.log('Applied 30-degree rotation to Star Model');
             }
             
             // Add shadows to all pipes in the scene
@@ -115,11 +107,9 @@ class CHEVisualization {
             // Create UI controller
             this.uiController = new UIController(this.cameraController);
             
-            // Get all SingleCUT models for scene editor organization
+            // Get all models for scene editor organization
             const ringModelSingleCuts = this.ringModel.getAllSingleCuts();
             const starModelSingleCuts = this.starModel.getAllSingleCuts();
-            
-            // No need to prepare arrays of SingleCUTs as we only have central CUTs
             
             // Organize scene objects for the scene editor
             const sceneObjects = {
