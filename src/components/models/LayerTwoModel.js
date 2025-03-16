@@ -163,70 +163,44 @@ export class LayerTwoModel extends HexagonModel {
      * This defines the pattern of hidden elements to create a clean aesthetic
      */
     setupHiddenElements() {
-        this.debugLog('Setting up permanently hidden elements for SingleCUTs');
+        this.debugLog('Setting up hidden elements map (no elements will be hidden)');
         
         // Define hidden elements mapping
         // Format: modelIndex (0-based) => { pipes: [indices to hide], panels: [indices to hide] }
         this.hiddenElementsMap = {};
         
-        // Simplified approach: hide the same pipes (1,2,3) and panels (1,2) for all SingleCUTs
-        // The rotation of each SingleCUT will create the visual pattern
+        // Empty arrays since we don't want to hide any pipes or panels
+        const hiddenPipes = [];  // No pipes to hide
+        const hiddenPanels = []; // No panels to hide
         
-        // Convert to 0-based indices for internal use
-        const hiddenPipes = [0, 1, 2]; // Pipes 1, 2, 3 (0-indexed)
-        const hiddenPanels = [0, 1];   // Panels 1, 2 (0-indexed)
-        
-        // Apply the same hiding pattern to all SingleCUTs
+        // Apply empty hiding pattern to all SingleCUTs
         for (let i = 0; i < 12; i++) {
             this.hiddenElementsMap[i] = {
                 pipes: hiddenPipes,
                 panels: hiddenPanels
             };
             
-            this.debugLog(`SingleCUT #${i+1}: Hidden pipes: 1, 2, 3, Hidden panels: 1, 2`);
+            this.debugLog(`SingleCUT #${i+1}: No hidden pipes or panels`);
         }
     }
     
     /**
-     * Forcefully apply hiding to all child model elements based on hidden elements map
-     * This ensures all elements are properly hidden even if the initial hiding didn't work
+     * Apply hiding to elements based on hidden elements map
+     * This method is now configured to not hide any elements since we want to show all pipes and panels
      */
     applyHiddenElements() {
         if (!this.childModels || !this.hiddenElementsMap) {
             return;
         }
         
-        console.log("Forcefully applying hidden elements to all SingleCUTs");
+        console.log("No elements are being hidden - all pipes and panels will be visible");
         
-        // For each SingleCUT model
-        this.childModels.forEach((singleCut, modelIndex) => {
-            const hiddenElements = this.hiddenElementsMap[modelIndex];
-            if (!hiddenElements) return;
-            
-            // Hide pipes
-            hiddenElements.pipes.forEach(pipeIndex => {
-                if (singleCut.pipes && singleCut.pipes[pipeIndex]) {
-                    const pipe = singleCut.pipes[pipeIndex];
-                    pipe.pipeMesh.isVisible = false;
-                    pipe.rootNode.setEnabled(false);
-                    // Mark the pipe as permanently hidden for SceneEditor
-                    pipe.isPermanentlyHidden = true;
-                    console.log(`Hiding SingleCUT #${modelIndex+1} Pipe #${pipeIndex+1}`);
-                }
-            });
-            
-            // Hide panels
-            hiddenElements.panels.forEach(panelIndex => {
-                if (singleCut.panels && singleCut.panels[panelIndex]) {
-                    const panel = singleCut.panels[panelIndex];
-                    panel.panelMesh.isVisible = false;
-                    panel.rootNode.setEnabled(false);
-                    // Mark the panel as permanently hidden for SceneEditor
-                    panel.isPermanentlyHidden = true;
-                    console.log(`Hiding SingleCUT #${modelIndex+1} Panel #${panelIndex+1}`);
-                }
-            });
-        });
+        // Since we're not hiding any elements, this is mostly a placeholder method
+        // The hiddenElementsMap now contains empty arrays for pipes and panels
+        
+        // In case any elements were previously hidden, we could re-enable them here
+        // But for now, we'll just log that all elements should be visible
+        this.debugLog('All pipes and panels are set to be visible');
     }
     
     /**
