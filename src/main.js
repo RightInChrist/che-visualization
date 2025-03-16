@@ -119,6 +119,9 @@ class CHEVisualization {
                 pipeMeshes
             );
             
+            // Now that cameras are set up, apply default panel rotations to ensure they're properly displayed
+            this.applyDefaultPanelRotations();
+            
             // Create UI controller
             this.uiController = new UIController(this.cameraController);
             
@@ -528,6 +531,55 @@ cheDebug.app - Access the main application instance
         } catch (e) {
             webglInfo.innerHTML = `<p>Could not get WebGL information: ${e.message}</p>`;
         }
+    }
+    
+    /**
+     * Apply default panel rotations to all models after scene is initialized
+     * This ensures panels have the correct default rotations (60°, 0°, 120°)
+     */
+    applyDefaultPanelRotations() {
+        console.log('Applying default panel rotations to all models after scene initialization');
+        
+        // Function to process a model and its children
+        const processModel = (model) => {
+            // Apply to this model if it has the method
+            if (model && typeof model.applyPanelDefaultRotations === 'function') {
+                model.applyPanelDefaultRotations();
+            }
+            
+            // Apply to child models
+            if (model && model.childModels && Array.isArray(model.childModels)) {
+                model.childModels.forEach(childModel => {
+                    processModel(childModel);
+                });
+            }
+        };
+        
+        // Apply to Ring Model and all its children
+        if (this.ringModel) {
+            processModel(this.ringModel);
+            
+            // Also process each main component directly
+            if (this.ringModel.models) {
+                if (this.ringModel.models.centralCut) processModel(this.ringModel.models.centralCut);
+                if (this.ringModel.models.layerOneRing) processModel(this.ringModel.models.layerOneRing);
+                if (this.ringModel.models.layerTwoRing) processModel(this.ringModel.models.layerTwoRing);
+            }
+        }
+        
+        // Apply to Star Model and all its children
+        if (this.starModel) {
+            processModel(this.starModel);
+            
+            // Also process each main component directly
+            if (this.starModel.models) {
+                if (this.starModel.models.centralCut) processModel(this.starModel.models.centralCut);
+                if (this.starModel.models.layerOneStar) processModel(this.starModel.models.layerOneStar);
+                if (this.starModel.models.layerTwoStar) processModel(this.starModel.models.layerTwoStar);
+            }
+        }
+        
+        console.log('Default panel rotations successfully applied');
     }
 }
 

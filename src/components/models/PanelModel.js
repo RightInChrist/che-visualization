@@ -144,8 +144,14 @@ export class PanelModel extends BaseModel {
         }
         
         // Force scene update only if requested and if there's a camera
+        // This is critical during app initialization when there might not be a camera yet
         if (renderScene && this.scene && this.scene.activeCamera) {
-            this.scene.render();
+            try {
+                this.scene.render();
+            } catch (e) {
+                // Safely handle errors during initialization
+                console.warn(`PanelModel: Couldn't render scene, this is normal during initialization: ${e.message}`);
+            }
         }
     }
     

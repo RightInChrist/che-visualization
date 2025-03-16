@@ -56,8 +56,8 @@ export class SingleCutModel extends HexagonModel {
         if (!this.options.skipPanels) {
             this.createPanels();
             
-            // Ensure default rotations are properly applied
-            this.applyPanelDefaultRotations();
+            // We'll defer actual panel rotation application until the scene is ready
+            // The default rotations are already stored in panelRotations
         } else {
             this.debugLog('Skipping panel creation as requested by skipPanels option');
         }
@@ -188,7 +188,7 @@ export class SingleCutModel extends HexagonModel {
 
         // Calculate angle
         const angle = Math.atan2(direction.z, direction.x);
-        
+
         const rotation = new BABYLON.Vector3(0, angle, 0);
         
         // Calculate distance between pipes for panel width
@@ -377,8 +377,9 @@ export class SingleCutModel extends HexagonModel {
     /**
      * Apply default rotations to all panels
      * This ensures panels have their correct default rotations applied
+     * @param {boolean} [safeMode=true] - When true, skips scene rendering during rotation application
      */
-    applyPanelDefaultRotations() {
+    applyPanelDefaultRotations(safeMode = true) {
         if (!this.panels || this.panels.length === 0) {
             this.debugLog('No panels to apply default rotations to');
             return;
@@ -393,7 +394,7 @@ export class SingleCutModel extends HexagonModel {
         this.panels.forEach((panel, i) => {
             if (panel && panel.rootNode) {
                 // Store initial rotation if not already stored
-                if (!panel.initialRotation) {
+                if (!panel.initialRotation && panel.storeInitialRotation) {
                     panel.storeInitialRotation();
                 }
                 
@@ -403,22 +404,30 @@ export class SingleCutModel extends HexagonModel {
                 
                 this.debugLog(`Panel #${i+1}: Ensuring default angle of ${defaultAngleDegrees.toFixed(1)}° is applied`);
                 
-                // If there's a current delta, apply it without forcing render
-                if (currentDelta !== 0) {
-                    panel.applyRotationDelta(currentDelta, false); // Pass false to skip scene rendering
-                }
-                
-                // Force update matrices but not scene rendering
-                panel.rootNode.computeWorldMatrix(true);
-                if (panel.panelMesh) {
-                    panel.panelMesh.markAsDirty();
-                    panel.panelMesh.refreshBoundingInfo();
-                    panel.panelMesh.computeWorldMatrix(true);
+                // Skip calling panel.applyRotationDelta() as it may try to render the scene
+                // Instead, apply rotation transformation directly
+                if (panel.rootNode && panel.initialRotation) {
+                    // Reset to initial rotation
+                    panel.rootNode.rotation = panel.initialRotation.clone();
+                    
+                    // Apply delta if any
+                    if (currentDelta !== 0) {
+                        const deltaRadians = (currentDelta * Math.PI) / 180;
+                        panel.rootNode.rotate(BABYLON.Axis.Y, deltaRadians, BABYLON.Space.LOCAL);
+                    }
+                    
+                    // Update the matrices without rendering
+                    panel.rootNode.computeWorldMatrix(true);
+                    if (panel.panelMesh) {
+                        panel.panelMesh.markAsDirty();
+                        panel.panelMesh.refreshBoundingInfo();
+                        panel.panelMesh.computeWorldMatrix(true);
+                    }
                 }
             }
         });
         
-        // DO NOT call scene.render() here - it's too early in initialization
+        // DO NOT call scene.render() here during initialization
     }
     
     /**
@@ -481,7 +490,12 @@ export class SingleCutModel extends HexagonModel {
         this.panels.forEach((panel, i) => {
             if (panel) {
                 // Use the panel's own rotation method to handle the delta
-                panel.applyRotationDelta(deltaRotation);
+                // When called from user interaction, it's safe to render
+                if (typeof panel.applyRotationDelta === 'function') {
+                    panel.applyRotationDelta(deltaRotation);
+                } else {
+                    console.warn(`Panel #${i+1} does not have applyRotationDelta method`);
+                }
                 
                 // Update the current angle in our shared state
                 if (this.panelRotations.defaultAngles[i] !== undefined) {
@@ -497,14 +511,10 @@ export class SingleCutModel extends HexagonModel {
         this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
         this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
         
-        // At this point it's safe to render the scene since we're responding to user input
-        if (this.scene) {
+        // Only render if there's a camera (safe to assume we're past initialization)
+        if (this.scene && this.scene.activeCamera) {
             this.scene.markAllMaterialsAsDirty();
-            
-            // Only render if there's a camera (check if we're in initialization phase)
-            if (this.scene.activeCamera) {
-                this.scene.render();
-            }
+            this.scene.render();
         }
     }
 } 
