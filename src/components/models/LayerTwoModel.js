@@ -318,6 +318,9 @@ export class LayerTwoModel extends CompositeModel {
             this.drawRadiusLines();
         }
         
+        // Log a summary after updates
+        this.logLayerTwoSummary();
+        
         this.debugLog('Radius settings updated');
     }
     
@@ -374,6 +377,11 @@ export class LayerTwoModel extends CompositeModel {
                 
                 this.debugLog(`SingleCUT #${i+1}: Updated position from (${prevPos.x.toFixed(2)}, ${prevPos.y.toFixed(2)}, ${prevPos.z.toFixed(2)}) ` +
                              `to (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+                
+                // Log comprehensive details about the updated SingleCUT
+                if (typeof singleCut.logModelDetails === 'function') {
+                    singleCut.logModelDetails();
+                }
             } else {
                 this.debugLog(`Warning: Could not update position for SingleCUT #${i+1} - model or rootNode missing`);
             }
@@ -382,7 +390,31 @@ export class LayerTwoModel extends CompositeModel {
         // Verify that distances match the expected pattern
         this.verifyDistances(distances);
         
+        // Log a summary of the update
+        this.logLayerTwoSummary();
+        
         this.debugLog('Position update complete for all SingleCUT models');
+    }
+    
+    /**
+     * Log a summary of the LayerTwo model's configuration
+     * Useful for debugging
+     */
+    logLayerTwoSummary() {
+        console.log(`
+========== LayerTwo Model Summary ==========
+Configuration:
+  - Outer Radius: ${this.options.outerRadius.toFixed(2)}
+  - Inner Radius: ${this.options.innerRadius.toFixed(2)} (${(100 * this.options.innerRadius / this.options.outerRadius).toFixed(1)}% of outer)
+  - SingleCUT Radius: ${this.options.singleCutRadius.toFixed(2)}
+  - Rotation Angle: ${this.options.rotationAngle.toFixed(2)}°
+  - SingleCUT Rotation Angle: ${this.options.singleCutRotationAngle.toFixed(2)}°
+
+Child Models: ${this.childModels ? this.childModels.length : 0} SingleCUTs
+Position Pattern: Alternating at ${this.options.outerRadius.toFixed(2)} and ${this.options.innerRadius.toFixed(2)} units
+Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFixed(2)} units
+==============================================
+`);
     }
     
     /**
@@ -401,6 +433,8 @@ export class LayerTwoModel extends CompositeModel {
             this.options.singleCutRadius,
             preciseInnerRadius
         );
+        
+        // No need to call logLayerTwoSummary() here as updateRadiusSettings will do it
     }
     
     /**

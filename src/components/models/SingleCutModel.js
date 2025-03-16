@@ -29,6 +29,13 @@ export class SingleCutModel extends BaseModel {
         // Call parent constructor with merged options
         super(scene, position, { ...defaultOptions, ...options });
         
+        // Store initial position and radius values for logging comparisons
+        this.initialValues = {
+            position: position.clone(),
+            radius: this.options.radius,
+            rotationAngle: this.options.rotationAngle
+        };
+        
         // Create the models
         this.createModels();
         
@@ -239,6 +246,36 @@ export class SingleCutModel extends BaseModel {
     }
     
     /**
+     * Log detailed information about this model
+     * Useful for debugging when triggered from scene editor
+     */
+    logModelDetails() {
+        const currentPosition = this.rootNode.position;
+        const initialPosition = this.initialValues.position;
+        
+        console.log(`
+------ SingleCUT Model ${this.uniqueId} Details ------
+Initial values:
+  - Position: (${initialPosition.x.toFixed(2)}, ${initialPosition.y.toFixed(2)}, ${initialPosition.z.toFixed(2)})
+  - Radius: ${this.initialValues.radius.toFixed(2)}
+  - Rotation: ${this.initialValues.rotationAngle.toFixed(2)}° (${(this.initialValues.rotationAngle * Math.PI / 180).toFixed(4)} rad)
+
+Current values:
+  - Position: (${currentPosition.x.toFixed(2)}, ${currentPosition.y.toFixed(2)}, ${currentPosition.z.toFixed(2)})
+  - Radius: ${this.options.radius.toFixed(2)}
+  - Rotation: ${this.options.rotationAngle.toFixed(2)}° (${(this.options.rotationAngle * Math.PI / 180).toFixed(4)} rad)
+
+Changes:
+  - Position delta: (${(currentPosition.x - initialPosition.x).toFixed(2)}, ${(currentPosition.y - initialPosition.y).toFixed(2)}, ${(currentPosition.z - initialPosition.z).toFixed(2)})
+  - Radius delta: ${(this.options.radius - this.initialValues.radius).toFixed(2)}
+  - Rotation delta: ${(this.options.rotationAngle - this.initialValues.rotationAngle).toFixed(2)}°
+
+Distance from initial position: ${BABYLON.Vector3.Distance(initialPosition, currentPosition).toFixed(2)}
+------------------------------------------
+`);
+    }
+    
+    /**
      * Update rotation of this SingleCUT model
      * @param {number} rotationAngleDegrees - Rotation angle in degrees
      */
@@ -253,6 +290,9 @@ export class SingleCutModel extends BaseModel {
         this.options.rotationAngle = rotationAngleDegrees;
         
         this.debugLog(`Updated SingleCUT rotation to ${rotationAngleDegrees} degrees`);
+        
+        // Enhanced logging to compare with initial values
+        console.log(`SingleCut ${this.uniqueId}: Rotation updated from ${this.initialValues.rotationAngle.toFixed(2)}° to ${rotationAngleDegrees.toFixed(2)}° (delta: ${(rotationAngleDegrees - this.initialValues.rotationAngle).toFixed(2)}°)`);
         
         // If this model is part of a collection in a parent model, 
         // update the parent's reference to this model's rotation
@@ -354,7 +394,8 @@ export class SingleCutModel extends BaseModel {
         const oldRadius = this.options.radius;
         this.options.radius = newRadius;
         
-        console.log(`SingleCut ${this.uniqueId}: Updated radius from ${oldRadius} to ${newRadius}`);
+        // Enhanced logging to compare with initial values
+        console.log(`SingleCut ${this.uniqueId}: Updated radius from ${oldRadius.toFixed(2)} to ${newRadius.toFixed(2)} (initial: ${this.initialValues.radius.toFixed(2)}, total delta: ${(newRadius - this.initialValues.radius).toFixed(2)})`);
         
         // For a more complete implementation, we would also resize the actual geometry here
         // But for now, we're just updating the stored radius value
