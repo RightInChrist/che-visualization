@@ -29,7 +29,7 @@ export class SingleCutModel extends HexagonModel {
         // Create the pipes and panels
         this.createModels();
         
-        this.debugLog('SingleCUT model created');
+        this.debugLog('SingleCUT model created with ID:', this.id);
     }
     
     /**
@@ -290,7 +290,7 @@ export class SingleCutModel extends HexagonModel {
         // First call the parent method to update base geometry
         super.updateRadius(newRadius);
         
-        this.debugLog(`SingleCut ${this.uniqueId}: Updated radius from ${oldRadius.toFixed(2)} to ${newRadius.toFixed(2)} (initial: ${this.initialValues.radius.toFixed(2)}, total delta: ${(newRadius - this.initialValues.radius).toFixed(2)})`);
+        this.debugLog(`SingleCut ${this.id}: Updated radius from ${oldRadius.toFixed(2)} to ${newRadius.toFixed(2)} (initial: ${this.initialValues.radius.toFixed(2)}, total delta: ${(newRadius - this.initialValues.radius).toFixed(2)})`);
         
         // Now update our pipes and panels by recreating them
         // This ensures proper positioning and sizing

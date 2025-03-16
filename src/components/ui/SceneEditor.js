@@ -14,6 +14,9 @@ export class SceneEditor {
         
         // Store checkbox elements for updating
         this.checkboxElements = {};
+        
+        // Map to store object IDs for easier model reference
+        this.objectIdMap = {};
 
         // Flag to prevent update loops
         this.isUpdating = false;
@@ -307,22 +310,32 @@ export class SceneEditor {
             checkbox.checked = true;
         }
         
-        // Set the name attribute for tracking
+        // Get the object ID if available for more reliable identification
+        const objectId = object.id || (object.model && object.model.id) || null;
+        
+        // Set data attributes for tracking
         checkbox.setAttribute('data-object-path', name);
+        if (objectId) {
+            checkbox.setAttribute('data-object-id', objectId);
+            // Store the object in our ID map
+            this.objectIdMap[objectId] = object;
+        }
         
         // Add an event listener to toggle visibility
         checkbox.addEventListener('change', () => {
             const isChecked = checkbox.checked;
             const path = checkbox.getAttribute('data-object-path');
+            const objId = checkbox.getAttribute('data-object-id');
             
             // Store the checkbox for state tracking
             this.checkboxElements[path] = {
                 element: checkbox,
-                object: object
+                object: object,
+                objectId: objId
             };
             
             // Toggle visibility
-            this.toggleObjectVisibility(path, object, isChecked);
+            this.toggleObjectVisibility(path, object, isChecked, objId);
             
             // Also update nested checkboxes
             this.updateNestedCheckboxes(path, isChecked);
@@ -331,7 +344,8 @@ export class SceneEditor {
         // Store the checkbox for state tracking
         this.checkboxElements[name] = {
             element: checkbox,
-            object: object
+            object: object,
+            objectId: objectId
         };
         
         objectRow.appendChild(checkbox);
@@ -358,6 +372,11 @@ export class SceneEditor {
             label.style.color = '#999';
             label.style.textDecoration = 'line-through';
             label.title = 'This element is permanently hidden';
+        }
+        
+        // Add ID as tooltip if available
+        if (objectId) {
+            label.title = `ID: ${objectId}\n${label.title || ''}`;
         }
         
         // Add info button for debugging
@@ -390,6 +409,9 @@ export class SceneEditor {
                 console.log('Object:', object);
                 if (object && object.constructor) {
                     console.log('Type:', object.constructor.name);
+                }
+                if (objectId) {
+                    console.log('ID:', objectId);
                 }
                 console.groupEnd();
             }
@@ -642,9 +664,17 @@ export class SceneEditor {
      * @param {string} path - Path to the object
      * @param {Object} object - The object to toggle
      * @param {boolean} isVisible - Whether the object should be visible
+     * @param {string} objectId - Optional object ID for more reliable identification
      */
-    toggleObjectVisibility(path, object, isVisible) {
-        console.log(`[SceneEditor] Toggling visibility of "${path}" to ${isVisible ? 'visible' : 'hidden'}`);
+    toggleObjectVisibility(path, object, isVisible, objectId = null) {
+        console.log(`[SceneEditor] Toggling visibility of "${path}" ${objectId ? `(ID: ${objectId})` : ''} to ${isVisible ? 'visible' : 'hidden'}`);
+        
+        // If we have an object ID, use it to verify the correct object
+        if (objectId && this.objectIdMap[objectId]) {
+            // Use the object from our ID map to ensure we're using the correct reference
+            object = this.objectIdMap[objectId];
+            console.log(`[SceneEditor] Using object from ID map for ${objectId}`);
+        }
         
         // Check if this is a panel of a Central CUT
         const isCentralCutPanel = path.includes('/Central CUT/Panel #') || path.includes('/Star Central CUT/Panel #');
@@ -808,13 +838,16 @@ export class SceneEditor {
     updateNestedCheckboxes(parentPath, isChecked) {
         console.log(`Updating nested checkboxes for ${parentPath} to ${isChecked}`);
         
-        // Find the parent object
+        // Find the parent object and ID
         const parentObj = this.checkboxElements[parentPath]?.object;
+        const parentId = this.checkboxElements[parentPath]?.objectId;
         
         if (!parentObj) return;
         
-        // Check if parent has SingleCUTs (composite model like Layer One Ring)
-        const hasChildModels = parentObj.model && parentObj.model.singleCuts && parentObj.model.singleCuts.length > 0;
+        // Check if parent has children through its model property
+        const hasModelWithChildren = parentObj.model && 
+            ((parentObj.model.childModels && parentObj.model.childModels.length > 0) || 
+             (parentObj.model.children && Object.keys(parentObj.model.children).length > 0));
         
         // For all cases, update any checkbox whose path starts with the parent path and a slash
         // This ensures we only select direct children of this parent
@@ -824,14 +857,42 @@ export class SceneEditor {
                 continue;
             }
             
-            // Match only paths that are direct children of this parent
-            // This works for both fully qualified paths and relative paths
+            // Match paths that are direct children of this parent
             if (path.startsWith(parentPath + '/')) {
                 console.log(`Setting child checkbox for ${path} to ${isChecked}`);
                 checkboxInfo.element.checked = isChecked;
                 
                 // Also update the actual object visibility
-                this.toggleObjectVisibility(path, checkboxInfo.object, isChecked);
+                // Use object ID if available for more reliable identification
+                this.toggleObjectVisibility(
+                    path, 
+                    checkboxInfo.object, 
+                    isChecked, 
+                    checkboxInfo.objectId
+                );
+            }
+            
+            // Check for parent-child relationship using object IDs
+            // This catches cases where path-based checks might miss due to restructuring
+            if (parentId && parentObj.childModels) {
+                const childObj = checkboxInfo.object;
+                const isChild = childObj && parentObj.childModels.some(child => 
+                    child.id === childObj.id || 
+                    (childObj.model && child.id === childObj.model.id)
+                );
+                
+                if (isChild) {
+                    console.log(`Setting child checkbox for ${path} (matched by ID) to ${isChecked}`);
+                    checkboxInfo.element.checked = isChecked;
+                    
+                    // Also update the actual object visibility
+                    this.toggleObjectVisibility(
+                        path, 
+                        checkboxInfo.object, 
+                        isChecked, 
+                        checkboxInfo.objectId
+                    );
+                }
             }
         }
     }
@@ -847,7 +908,12 @@ export class SceneEditor {
             // Update the state of all checkboxes based on the actual visibility of objects
             for (const [path, checkboxInfo] of Object.entries(this.checkboxElements)) {
                 if (checkboxInfo.element && checkboxInfo.object) {
-                    const isVisible = this.getObjectVisibility(checkboxInfo.object);
+                    // Use the ID map object if available for more consistent references
+                    const objToCheck = (checkboxInfo.objectId && this.objectIdMap[checkboxInfo.objectId]) 
+                        ? this.objectIdMap[checkboxInfo.objectId] 
+                        : checkboxInfo.object;
+                    
+                    const isVisible = this.getObjectVisibility(objToCheck);
                     
                     // Only update if we don't have a desired state or if it matches
                     if (!this.desiredVisibilityState || this.desiredVisibilityState[path] === undefined) {
@@ -904,13 +970,16 @@ export class SceneEditor {
             return;
         }
         
+        // Get object ID if available
+        const objectId = object.id || (object.model && object.model.id);
+        
         // Skip if this is a permanently hidden element
         if (path && this.isElementPermanentlyHidden(path, object)) {
-            console.log(`[SceneEditor] Skipping permanently hidden element: ${path}`);
+            console.log(`[SceneEditor] Skipping permanently hidden element: ${path}${objectId ? ` (ID: ${objectId})` : ''}`);
             return;
         }
         
-        console.log(`[SceneEditor] Setting visibility for ${path} to ${isVisible ? 'visible' : 'hidden'}`);
+        console.log(`[SceneEditor] Setting visibility for ${path}${objectId ? ` (ID: ${objectId})` : ''} to ${isVisible ? 'visible' : 'hidden'}`);
         
         // For composite objects with model property
         if (object.model && typeof object.model.setVisible === 'function') {
@@ -980,7 +1049,20 @@ export class SceneEditor {
         }
         
         // Process children based on object type
-        console.log(`[SceneEditor] Processing children of ${path}`);
+        console.log(`[SceneEditor] Processing children of ${path}${objectId ? ` (ID: ${objectId})` : ''}`);
+        
+        // Process child models using IDs for more reliable identification
+        if (object.childModels && Array.isArray(object.childModels)) {
+            console.log(`[SceneEditor] Processing ${object.childModels.length} childModels for ${path}`);
+            object.childModels.forEach((childModel, index) => {
+                // Use ID in the child path for better identification
+                const childPath = childModel.id 
+                    ? `${path}/ChildModel_${childModel.id.substring(0, 8)}`
+                    : `${path}/ChildModel #${index + 1}`;
+                    
+                this.setObjectVisibility(childModel, isVisible, childPath);
+            });
+        }
         
         // 1. Handle LayerOneRing/LayerOneStarModel case
         if (object.model && object.model.singleCuts) {

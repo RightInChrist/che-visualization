@@ -1,6 +1,24 @@
 import { TransformNode, Vector3 } from '@babylonjs/core';
 
 /**
+ * Generates a simple UUID v4 format string
+ * @returns {string} A UUID string
+ */
+function generateUUID() {
+    // Use crypto.randomUUID() if available (modern browsers)
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    
+    // Fallback implementation for older browsers
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
+/**
  * Base model class that provides common functionality for all models
  * Intended to be extended by more specific model classes
  */
@@ -22,7 +40,10 @@ export class BaseModel {
         // Store instance counter value for identification
         this.instanceNumber = BaseModel.instanceCounter;
         
-        // Generate a unique ID for this model
+        // Generate a UUID for this model
+        this.id = generateUUID();
+        
+        // Generate a unique ID for this model (for backward compatibility)
         this.uniqueId = `${this.constructor.name}_${this.instanceNumber}`;
 
         // Store reference to the scene
