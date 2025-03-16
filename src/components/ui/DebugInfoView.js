@@ -164,10 +164,9 @@ export class DebugInfoView {
             if (!buttonContainer) {
                 console.error("Control buttons container not found, creating new one");
                 buttonContainer = document.createElement('div');
-                buttonContainer.id = 'controlButtons';
-                buttonContainer.className = 'control-buttons-container';
+                buttonContainer.id = 'toggleButtons';
                 buttonContainer.style.position = 'absolute';
-                buttonContainer.style.top = '10px';
+                buttonContainer.style.bottom = '20px';
                 buttonContainer.style.right = '20px';
                 buttonContainer.style.display = 'flex';
                 buttonContainer.style.flexDirection = 'row';

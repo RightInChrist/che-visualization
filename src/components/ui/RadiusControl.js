@@ -16,7 +16,8 @@ export class RadiusControl {
             backgroundColor: "rgba(0, 0, 0, 0.7)", // Background color
             position: "top",         // Position in the control panels stack
             sliderWidth: "200px",    // Width of the slider
-            inputWidth: "60px"       // Width of the input field
+            inputWidth: "60px",      // Width of the input field
+            includeChildren: true    // Include children of models
         };
         
         this.options = { ...defaultOptions, ...options };
@@ -45,25 +46,48 @@ export class RadiusControl {
         // Look for models that have a getRadius method
         if (Array.isArray(this.models)) {
             this.models.forEach(model => {
-                if (model && typeof model.getRadius === 'function') {
+                // Add the model itself if it has a getRadius method
+                this.addModelIfHasRadius(model);
+                
+                // If includeChildren is true and the model has children, check them too
+                if (this.options.includeChildren && model && typeof model.getChildren === 'function') {
                     try {
-                        // Test if getRadius returns a valid object with a value property
-                        const radius = model.getRadius();
-                        if (radius && typeof radius.value !== 'undefined') {
-                            this.radiusModels.push({
-                                model: model,
-                                name: model.getName ? model.getName() : model.constructor.name,
-                                radius: radius
+                        const children = model.getChildren();
+                        if (Array.isArray(children)) {
+                            children.forEach(child => {
+                                this.addModelIfHasRadius(child);
                             });
                         }
                     } catch (error) {
-                        console.error("Error checking radius for model:", error);
+                        console.error("Error getting children for model:", error);
                     }
                 }
             });
         }
         
         console.log("Found", this.radiusModels.length, "models with radius controls");
+    }
+    
+    /**
+     * Add a model to radiusModels if it has a valid getRadius method
+     * @param {Object} model - The model to check
+     */
+    addModelIfHasRadius(model) {
+        if (model && typeof model.getRadius === 'function') {
+            try {
+                // Test if getRadius returns a valid object with a value property
+                const radius = model.getRadius();
+                if (radius && typeof radius.value !== 'undefined') {
+                    this.radiusModels.push({
+                        model: model,
+                        name: model.getName ? model.getName() : model.constructor.name,
+                        radius: radius
+                    });
+                }
+            } catch (error) {
+                console.error("Error checking radius for model:", error);
+            }
+        }
     }
     
     /**

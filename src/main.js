@@ -43,7 +43,7 @@ class CHEVisualization {
                 scene, 
                 canvas, 
                 { 
-                    initialPosition: new Vector3(0, 100, 200),
+                    initialPosition: new Vector3(0, 1000, 200),
                     zoomScaling: 5,
                     minDistance: 20,
                     maxDistance: 1500
@@ -86,8 +86,8 @@ class CHEVisualization {
                         DebugInfoView: DebugInfoView,
                         RadiusControl: RadiusControl
                     },
-                    // Show toggle buttons for debug and radius controls
-                    showOnlyDebugToggle: false
+                    // Only show debug toggle in bottom right
+                    showOnlyDebugToggle: true
                 }
             );
             

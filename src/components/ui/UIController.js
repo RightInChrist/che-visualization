@@ -146,7 +146,8 @@ export class UIController {
         if (RadiusControl) {
             this.radiusControl = new RadiusControl(this.models, {
                 isVisible: true,
-                app: this.options.app
+                app: this.options.app,
+                includeChildren: true // Include direct children of models
             });
         }
     }
@@ -207,7 +208,7 @@ export class UIController {
                 return;
             }
             
-            // Create button
+            // Create button with a matching style to debug and radius buttons
             const button = document.createElement('button');
             button.textContent = 'Camera';
             button.className = 'control-button';
@@ -219,7 +220,10 @@ export class UIController {
             button.style.cursor = 'pointer';
             button.style.fontWeight = 'bold';
             button.style.fontSize = '14px';
-            button.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+            button.style.width = '120px';
+            button.style.textAlign = 'center';
+            button.style.transition = 'background-color 0.3s';
+            button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)';
             
             // Add hover effect
             button.addEventListener('mouseenter', () => {
