@@ -41,7 +41,37 @@ export class RotationControls {
         // Create the UI for the rotation controls
         this.createUI();
         
+        // Set up visibility observer
+        this.setupVisibilityObserver();
+        
         console.log("RotationControls initialized with", this.models.length, "models");
+    }
+    
+    /**
+     * Set up an observer to update section visibility when render occurs
+     * This will catch any model visibility changes that happen during runtime
+     */
+    setupVisibilityObserver() {
+        if (!this.scene) return;
+        
+        // Update visibility every second (not every frame to avoid performance issues)
+        this.visibilityInterval = setInterval(() => {
+            // Only update if panel is visible
+            if (this.isVisible()) {
+                this.updateSectionsVisibility();
+            }
+        }, 1000); // Check every second
+        
+        // Also listen for specific visibility change events from models
+        this.models.forEach(model => {
+            if (model && typeof model.onVisibilityChanged === 'function') {
+                model.onVisibilityChanged(() => {
+                    if (this.isVisible()) {
+                        this.updateSectionsVisibility();
+                    }
+                });
+            }
+        });
     }
     
     /**
@@ -109,10 +139,32 @@ export class RotationControls {
         // Create model section container
         const modelSection = document.createElement('div');
         modelSection.className = 'model-section';
+        modelSection.dataset.modelIndex = modelIndex;
+        modelSection.dataset.level = level;
+        
+        // Add model type data attribute if available
+        if (config.model && config.model.constructor) {
+            modelSection.dataset.modelType = config.model.constructor.name;
+        }
+        
+        // Store model index in the model's options for reference
+        if (config.model && config.model.options) {
+            config.model.options.modelIndex = modelIndex;
+        }
+        
         modelSection.style.marginBottom = '8px'; // Reduced from 15px
         modelSection.style.marginLeft = `${level * (this.options.defaultIndentation - 5)}px`; // Reduced indentation
         modelSection.style.paddingLeft = level > 0 ? '5px' : '0'; // Reduced from 10px
         modelSection.style.borderLeft = level > 0 ? '1px solid #444' : 'none';
+        
+        // Check if the model is visible - if not, hide this section
+        const model = config.model;
+        const isModelVisible = model && typeof model.isVisible === 'function' ? model.isVisible() : true;
+        
+        if (!isModelVisible) {
+            modelSection.style.display = 'none';
+            modelSection.dataset.hiddenByVisibility = 'true';
+        }
         
         // Create header with model name
         const header = document.createElement('div');
@@ -130,9 +182,6 @@ export class RotationControls {
         
         header.appendChild(modelName);
         modelSection.appendChild(header);
-        
-        // Get the model
-        const model = config.model;
         
         // Add Y rotation control if model supports getRotation
         if (model && typeof model.getRotation === 'function') {
@@ -448,13 +497,12 @@ export class RotationControls {
     }
     
     /**
-     * Toggle visibility of the rotation controls panel
+     * Toggle visibility of the rotation controls
      */
     toggleVisible() {
         console.log("Toggling rotation controls visibility");
         
         const newVisibility = !this.isVisible();
-        console.log(`Setting rotation controls visibility to: ${newVisibility}`);
         
         if (this.panel) {
             this.panel.style.display = newVisibility ? 'block' : 'none';
@@ -464,15 +512,23 @@ export class RotationControls {
             this.toggleButton.style.backgroundColor = newVisibility ? '#FF9800' : '#444444';
         }
         
-        // Store the visibility state
+        // Store the new visibility state
         this.options.isVisible = newVisibility;
         
-        console.log(`Rotation controls visibility set to: ${this.isVisible()}`);
+        // Call any visibility callbacks
+        if (typeof this.onVisibilityChanged === 'function') {
+            this.onVisibilityChanged(newVisibility);
+        }
+        
+        // Update section visibility based on model visibility
+        if (newVisibility) {
+            this.updateSectionsVisibility();
+        }
     }
     
     /**
-     * Get visibility state of the controls
-     * @returns {boolean} - Whether the controls are visible
+     * Return the current visibility state
+     * @returns {boolean} - Whether the controls are currently visible
      */
     isVisible() {
         return this.panel && this.panel.style.display === 'block';
@@ -546,9 +602,65 @@ export class RotationControls {
     }
     
     /**
+     * Update the visibility of model sections based on model visibility
+     * Should be called after model visibility changes
+     */
+    updateSectionsVisibility() {
+        // Get all model sections
+        const modelSections = this.panel.querySelectorAll('.model-section');
+        
+        // Loop through each section and check if its model is visible
+        modelSections.forEach(section => {
+            const modelIndex = section.dataset.modelIndex;
+            
+            // Find the corresponding model config
+            let modelConfig = null;
+            if (modelIndex !== undefined) {
+                // For top-level models
+                if (this.modelConfigs[modelIndex]) {
+                    modelConfig = this.modelConfigs[modelIndex];
+                } 
+                // For child models, search through all configs
+                else {
+                    this.modelConfigs.forEach(config => {
+                        if (config.children) {
+                            const childConfig = config.children.find(child => 
+                                child.model && child.model.options && 
+                                child.model.options.modelIndex === modelIndex);
+                            
+                            if (childConfig) {
+                                modelConfig = childConfig;
+                            }
+                        }
+                    });
+                }
+            }
+            
+            if (modelConfig && modelConfig.model) {
+                const model = modelConfig.model;
+                const isModelVisible = typeof model.isVisible === 'function' ? model.isVisible() : true;
+                
+                // Only update if visibility has changed
+                const wasHidden = section.dataset.hiddenByVisibility === 'true';
+                if (wasHidden === isModelVisible) {
+                    // Update section visibility based on model visibility
+                    section.style.display = isModelVisible ? 'block' : 'none';
+                    section.dataset.hiddenByVisibility = isModelVisible ? 'false' : 'true';
+                }
+            }
+        });
+    }
+    
+    /**
      * Destroy and clean up resources
      */
     dispose() {
+        // Clear the visibility interval if it exists
+        if (this.visibilityInterval) {
+            clearInterval(this.visibilityInterval);
+            this.visibilityInterval = null;
+        }
+    
         if (this.panel && this.panel.parentNode) {
             this.panel.parentNode.removeChild(this.panel);
         }

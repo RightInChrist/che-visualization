@@ -41,7 +41,37 @@ export class RadiusControls {
         // Create the UI for the radius controls
         this.createUI();
         
+        // Set up visibility observer
+        this.setupVisibilityObserver();
+        
         console.log("RadiusControls initialized with", this.models.length, "models");
+    }
+    
+    /**
+     * Set up an observer to update section visibility when render occurs
+     * This will catch any model visibility changes that happen during runtime
+     */
+    setupVisibilityObserver() {
+        if (!this.scene) return;
+        
+        // Update visibility every second (not every frame to avoid performance issues)
+        this.visibilityInterval = setInterval(() => {
+            // Only update if panel is visible
+            if (this.isVisible()) {
+                this.updateSectionsVisibility();
+            }
+        }, 1000); // Check every second
+        
+        // Also listen for specific visibility change events from models
+        this.models.forEach(model => {
+            if (model && typeof model.onVisibilityChanged === 'function') {
+                model.onVisibilityChanged(() => {
+                    if (this.isVisible()) {
+                        this.updateSectionsVisibility();
+                    }
+                });
+            }
+        });
     }
     
     /**
@@ -643,52 +673,6 @@ export class RadiusControls {
     }
     
     /**
-     * Update the visibility of model sections based on model visibility
-     * Should be called after model visibility changes
-     */
-    updateSectionsVisibility() {
-        // Get all model sections
-        const modelSections = this.panel.querySelectorAll('.model-radius-section');
-        
-        // Loop through each section and check if its model is visible
-        modelSections.forEach(section => {
-            const modelIndex = section.dataset.modelIndex;
-            
-            // Find the corresponding model config
-            let modelConfig = null;
-            if (modelIndex !== undefined) {
-                // For top-level models
-                if (this.modelConfigs[modelIndex]) {
-                    modelConfig = this.modelConfigs[modelIndex];
-                } 
-                // For child models, search through all configs
-                else {
-                    this.modelConfigs.forEach(config => {
-                        if (config.children) {
-                            const childConfig = config.children.find(child => 
-                                child.model && child.model.options && 
-                                child.model.options.modelIndex === modelIndex);
-                            
-                            if (childConfig) {
-                                modelConfig = childConfig;
-                            }
-                        }
-                    });
-                }
-            }
-            
-            if (modelConfig && modelConfig.model) {
-                const model = modelConfig.model;
-                const isModelVisible = typeof model.isVisible === 'function' ? model.isVisible() : true;
-                
-                // Update section visibility based on model visibility
-                section.style.display = isModelVisible ? 'block' : 'none';
-                section.dataset.hiddenByVisibility = isModelVisible ? 'false' : 'true';
-            }
-        });
-    }
-    
-    /**
      * Toggle visibility of the radius controls panel
      */
     toggleVisible() {
@@ -729,9 +713,65 @@ export class RadiusControls {
     }
     
     /**
+     * Update the visibility of model sections based on model visibility
+     * Should be called after model visibility changes
+     */
+    updateSectionsVisibility() {
+        // Get all model sections
+        const modelSections = this.panel.querySelectorAll('.model-radius-section');
+        
+        // Loop through each section and check if its model is visible
+        modelSections.forEach(section => {
+            const modelIndex = section.dataset.modelIndex;
+            
+            // Find the corresponding model config
+            let modelConfig = null;
+            if (modelIndex !== undefined) {
+                // For top-level models
+                if (this.modelConfigs[modelIndex]) {
+                    modelConfig = this.modelConfigs[modelIndex];
+                } 
+                // For child models, search through all configs
+                else {
+                    this.modelConfigs.forEach(config => {
+                        if (config.children) {
+                            const childConfig = config.children.find(child => 
+                                child.model && child.model.options && 
+                                child.model.options.modelIndex === modelIndex);
+                            
+                            if (childConfig) {
+                                modelConfig = childConfig;
+                            }
+                        }
+                    });
+                }
+            }
+            
+            if (modelConfig && modelConfig.model) {
+                const model = modelConfig.model;
+                const isModelVisible = typeof model.isVisible === 'function' ? model.isVisible() : true;
+                
+                // Only update if visibility has changed
+                const wasHidden = section.dataset.hiddenByVisibility === 'true';
+                if (wasHidden === isModelVisible) {
+                    // Update section visibility based on model visibility
+                    section.style.display = isModelVisible ? 'block' : 'none';
+                    section.dataset.hiddenByVisibility = isModelVisible ? 'false' : 'true';
+                }
+            }
+        });
+    }
+    
+    /**
      * Destroy and clean up resources
      */
     dispose() {
+        // Clear the visibility interval if it exists
+        if (this.visibilityInterval) {
+            clearInterval(this.visibilityInterval);
+            this.visibilityInterval = null;
+        }
+        
         if (this.panel && this.panel.parentNode) {
             this.panel.parentNode.removeChild(this.panel);
         }
