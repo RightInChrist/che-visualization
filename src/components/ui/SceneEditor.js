@@ -951,7 +951,29 @@ export class SceneEditor {
         if (path === 'Ring Model' || path.startsWith('Ring Model/')) {
             console.log(`[SceneEditor] Applying Ring Model-specific handling for ${path}`);
             
-            // Nothing special needed here yet, just ensuring separation between models
+            // Find the Ring Model object from sceneObjects
+            const ringModelObject = this.sceneObjects['Ring Model'];
+            
+            // Special handling for toggling the Ring Model itself
+            if (path === 'Ring Model' && object && object.model) {
+                console.log('[SceneEditor] Direct use of model.setVisible for Ring Model');
+                try {
+                    // Directly use the model's setVisible method
+                    object.model.setVisible(isVisible);
+                    
+                    // Check if the visibility was actually set
+                    console.log(`[SceneEditor] After toggle, Ring Model rootNode.isEnabled(): ${object.model.rootNode?.isEnabled()}`);
+                    
+                    // Update the checkbox state
+                    if (this.checkboxElements[path]) {
+                        this.checkboxElements[path].element.checked = isVisible;
+                    }
+                    
+                    return; // Early return after special handling
+                } catch (error) {
+                    console.error('[SceneEditor] Error setting Ring Model visibility:', error);
+                }
+            }
         }
         
         // Set visibility on object using the normal path
