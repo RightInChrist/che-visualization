@@ -260,21 +260,12 @@ export class HexagonModel extends CompositeModel {
     }
     
     /**
-     * Updates the rotation of all children of this model
-     * Base implementation that does nothing, to be overridden by subclasses
-     * @param {number} rotationAngle - The rotation angle in degrees for all children
-     */
-    updateChildrenRotation(rotationAngle) {
-        this.debugLog(`Base updateChildrenRotation called with ${rotationAngle}° - No action taken`);
-        // Do nothing in base implementation
-    }
-    
-    /**
-     * Gets the rotation information for all children
+     * Gets or sets the rotation information for all children
      * Base implementation that returns null, to be overridden by subclasses
+     * @param {number|null} deltaRotation - When provided, applies this delta rotation to children
      * @returns {Object|null} - Rotation information for child elements, or null if not supported
      */
-    getChildrenRotations() {
+    getChildrenRotations(deltaRotation = null) {
         return null; // Base implementation returns null
     }
     

@@ -444,11 +444,43 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
-     * Gets the rotation information for all children (panels)
+     * Gets or sets the rotation information for all children (panels)
      * Implementation for SingleCutModel returns panel rotations
+     * @param {number|null} deltaRotation - When provided, applies this delta rotation to all panels
      * @returns {Object} - Rotation information for panels
      */
-    getChildrenRotations() {
+    getChildrenRotations(deltaRotation = null) {
+        // If deltaRotation is provided, apply it first
+        if (deltaRotation !== null) {
+            if (!this.panels || this.panels.length === 0) {
+                this.debugLog(`No panels to update rotations for in ${this.getName()}`);
+                return null;
+            }
+            
+            // Update the shared rotation state
+            this.panelRotations.currentDelta = deltaRotation;
+            
+            this.debugLog(`Updating all panels in ${this.getName()} with rotation: ${deltaRotation}°`);
+            
+            // Update each panel using its direct rotation methods
+            this.panels.forEach((panel, i) => {
+                if (panel) {
+                    // Use the panel's own rotation method to handle the delta
+                    if (typeof panel.applyRotationDelta === 'function') {
+                        panel.applyRotationDelta(deltaRotation);
+                    } else {
+                        // Fallback if panel doesn't have applyRotationDelta method
+                        const defaultAngle = this.getDefaultPanelRotation(i);
+                        const totalAngle = defaultAngle + (deltaRotation * Math.PI / 180);
+                        
+                        if (panel.rootNode) {
+                            panel.rootNode.rotation.y = totalAngle;
+                        }
+                    }
+                }
+            });
+        }
+        
         // For SingleCutModel, children are the panels
         const panelRotations = [];
         
@@ -527,38 +559,12 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
+     * @deprecated Use getChildrenRotations(deltaRotation) instead
      * Updates the rotation of all children of this model
      * @param {number} rotationAngle - The rotation angle in degrees for all children
      */
     updateChildrenRotation(rotationAngle) {
-        if (!this.panels || this.panels.length === 0) {
-            this.debugLog(`No panels to update rotations for in ${this.getName()}`);
-            return;
-        }
-        
-        // Update the shared rotation state
-        this.panelRotations.currentDelta = rotationAngle;
-        
-        this.debugLog(`Updating all panels in ${this.getName()} with rotation: ${rotationAngle}°`);
-        
-        // Update each panel using its direct rotation methods
-        this.panels.forEach((panel, i) => {
-            if (panel) {
-                // Use the panel's own rotation method to handle the delta
-                // When called from user interaction, it's safe to render
-                if (typeof panel.applyRotationDelta === 'function') {
-                    panel.applyRotationDelta(rotationAngle);
-                } else {
-                    // Fallback if panel doesn't have applyRotationDelta method
-                    const defaultAngle = this.getDefaultPanelRotation(i);
-                    const totalAngle = defaultAngle + (rotationAngle * Math.PI / 180);
-                    
-                    if (panel.rootNode) {
-                        panel.rootNode.rotation.y = totalAngle;
-                    }
-                }
-            }
-        });
+        return this.getChildrenRotations(rotationAngle);
     }
     
     /**

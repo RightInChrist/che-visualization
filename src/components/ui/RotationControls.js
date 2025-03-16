@@ -148,11 +148,8 @@ export class RotationControls {
             modelSection.appendChild(yRotationContainer);
         }
         
-        // Add child rotation control if model supports both updateChildrenRotation and getChildrenRotations
-        if (model && 
-            typeof model.updateChildrenRotation === 'function' && 
-            typeof model.getChildrenRotations === 'function') {
-            
+        // Add child rotation control if model supports getChildrenRotations
+        if (model && typeof model.getChildrenRotations === 'function') {
             // Get current child rotations
             const childRotations = model.getChildrenRotations();
             
@@ -188,7 +185,8 @@ export class RotationControls {
                     180,
                     childRotations.currentDelta || 0,
                     (value) => {
-                        model.updateChildrenRotation(value);
+                        // Call getChildrenRotations with the delta value to apply it
+                        model.getChildrenRotations(value);
                     }
                 );
                 childRotationContainer.appendChild(deltaSlider);
@@ -488,9 +486,9 @@ export class RotationControls {
         
         console.log(`Children rotation change: model=${model.getName?.() || model.constructor.name}, value=${value}`);
         
-        // Call the updateChildrenRotation method if available
-        if (typeof model.updateChildrenRotation === 'function') {
-            model.updateChildrenRotation(value);
+        // Call getChildrenRotations with the delta value to apply it
+        if (typeof model.getChildrenRotations === 'function') {
+            model.getChildrenRotations(value);
         }
     }
     
