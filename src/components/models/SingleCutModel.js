@@ -4,6 +4,9 @@ import { PanelModel } from './PanelModel';
 import * as BABYLON from '@babylonjs/core';
 import { BaseModel } from './BaseModel';
 
+// Static counter to track creation of SingleCutModel instances
+let _instanceCounter = 0;
+
 /**
  * Creates a Single CUT model (Convective Heat Engine) with pipes and panels arranged in a hexagonal pattern
  */
@@ -28,6 +31,11 @@ export class SingleCutModel extends BaseModel {
 
         // Call parent constructor with merged options
         super(scene, position, { ...defaultOptions, ...options });
+        
+        // Generate unique ID and store creation timestamp
+        this.uniqueId = `SingleCut-${++_instanceCounter}`;
+        this.creationTime = new Date().toISOString();
+        this.instanceNumber = _instanceCounter;
         
         // Create the models
         this.createModels();

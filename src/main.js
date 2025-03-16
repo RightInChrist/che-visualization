@@ -274,6 +274,9 @@ class CHEVisualization {
             this.rotationControls = rotationControls;
             this.debugInfoView = debugInfoView;
             
+            // Add click handler for model inspection
+            this.setupModelClickHandler();
+            
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
                 const cameraPosition = this.scene.activeCamera.position;
@@ -358,6 +361,183 @@ class CHEVisualization {
             }
         } catch (e) {
             webglInfo.innerHTML = `<p>Could not get WebGL information: ${e.message}</p>`;
+        }
+    }
+    
+    /**
+     * Set up click handler to inspect models
+     */
+    setupModelClickHandler() {
+        // Create the info panel
+        const infoPanel = document.createElement('div');
+        infoPanel.id = 'modelInfoPanel';
+        infoPanel.style.position = 'absolute';
+        infoPanel.style.bottom = '10px';
+        infoPanel.style.left = '10px';
+        infoPanel.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+        infoPanel.style.color = '#fff';
+        infoPanel.style.padding = '10px';
+        infoPanel.style.borderRadius = '5px';
+        infoPanel.style.fontFamily = 'monospace';
+        infoPanel.style.fontSize = '14px';
+        infoPanel.style.zIndex = '1000';
+        infoPanel.style.maxWidth = '400px';
+        infoPanel.style.display = 'none';
+        infoPanel.style.pointerEvents = 'none'; // Don't interfere with other UI elements
+        document.body.appendChild(infoPanel);
+        
+        // Store reference
+        this.modelInfoPanel = infoPanel;
+        
+        // Add click handler to the scene
+        this.scene.onPointerDown = (evt, pickResult) => {
+            // Only handle left clicks
+            if (evt.button !== 0) return;
+            
+            if (pickResult.hit) {
+                const mesh = pickResult.pickedMesh;
+                if (!mesh) return;
+                
+                // Try to find the parent model
+                let model = null;
+                let modelType = null;
+                
+                // Start by looking for pipe meshes
+                if (mesh.name.includes('pipe')) {
+                    // Find the parent PipeModel
+                    const pipe = this.findParentPipe(mesh);
+                    if (pipe) {
+                        // Try to find parent SingleCutModel of this pipe
+                        model = this.findParentModel(pipe.rootNode);
+                        if (model) {
+                            modelType = 'SingleCutModel';
+                        }
+                    }
+                }
+                
+                // Check if we found a model to display info for
+                if (model && model instanceof SingleCutModel) {
+                    this.showModelInfo(model, modelType, pickResult.pickedPoint);
+                } else {
+                    this.hideModelInfo();
+                }
+            } else {
+                this.hideModelInfo();
+            }
+        };
+    }
+    
+    /**
+     * Find the parent PipeModel of a mesh
+     * @param {BABYLON.Mesh} mesh - The mesh to find the parent for
+     * @returns {PipeModel|null} - The parent PipeModel or null if not found
+     */
+    findParentPipe(mesh) {
+        // Get all pipes from ring and star models
+        const allPipes = [...this.ringModel.getAllPipes(), ...this.starModel.getAllPipes()];
+        
+        // Find the pipe that owns this mesh
+        return allPipes.find(pipe => 
+            pipe.pipeMesh === mesh || pipe.pipeMesh.id === mesh.id
+        );
+    }
+    
+    /**
+     * Find the parent SingleCutModel of a node
+     * @param {BABYLON.TransformNode} node - The node to find the parent for
+     * @returns {SingleCutModel|null} - The parent SingleCutModel or null if not found
+     */
+    findParentModel(node) {
+        // Get all SingleCUTs from ring and star models
+        const ringCuts = this.ringModel.getAllSingleCuts();
+        const starCuts = this.starModel.getAllSingleCuts();
+        
+        // Combine all SingleCUT models
+        const allCuts = [
+            ...ringCuts.central,
+            ...ringCuts.layerOne,
+            ...ringCuts.layerTwo,
+            ...starCuts.central,
+            ...starCuts.layerOne,
+            ...starCuts.layerTwo
+        ];
+        
+        // Find the SingleCUT model that contains this node
+        return allCuts.find(model => {
+            return (model.rootNode === node || model.rootNode.id === node.id || 
+                   (node.parent && (model.rootNode === node.parent || model.rootNode.id === node.parent.id)));
+        });
+    }
+    
+    /**
+     * Show information about a picked model
+     * @param {Object} model - The model to show info for
+     * @param {string} modelType - The type of model
+     * @param {BABYLON.Vector3} pickedPoint - The point where the pick occurred
+     */
+    showModelInfo(model, modelType, pickedPoint) {
+        if (!this.modelInfoPanel) return;
+        
+        // Get absolute world position of the model
+        const worldPosition = model.rootNode.getAbsolutePosition();
+        
+        // Determine parent model info
+        let parentInfo = "None";
+        let parentType = "None";
+        let layerType = "Unknown";
+        
+        if (model.options && model.options.parent) {
+            const parent = model.options.parent;
+            parentType = parent.constructor.name;
+            
+            if (parent.constructor.name.includes("LayerOne")) {
+                layerType = "Layer One";
+            } else if (parent.constructor.name.includes("LayerTwo")) {
+                layerType = "Layer Two";
+            } else if (parent.constructor.name.includes("Central")) {
+                layerType = "Central";
+            }
+            
+            parentInfo = `${parentType} (${parent.rootNode ? parent.rootNode.id : 'No ID'})`;
+        }
+        
+        // Create info HTML
+        let infoHTML = `
+            <h4 style="margin: 0 0 8px 0; color: #00aaff;">SingleCUT Model Info</h4>
+            <div style="margin-bottom: 5px;"><strong>Instance ID:</strong> ${model.uniqueId || 'Unknown'}</div>
+            <div style="margin-bottom: 5px;"><strong>Instance #:</strong> ${model.instanceNumber || 'Unknown'}</div>
+            <div style="margin-bottom: 5px;"><strong>Created:</strong> ${model.creationTime ? model.creationTime.split('T')[1].substring(0, 12) : 'Unknown'}</div>
+            <div style="margin-bottom: 5px;"><strong>BabylonJS ID:</strong> ${model.rootNode ? model.rootNode.id : 'Unknown'}</div>
+            <div style="margin-bottom: 5px;"><strong>Layer:</strong> ${layerType}</div>
+            <div style="margin-bottom: 5px;"><strong>Parent:</strong> ${parentInfo}</div>
+            <div style="margin-bottom: 8px;"><strong>Position:</strong> 
+                <div style="padding-left: 10px;">
+                    X: ${worldPosition.x.toFixed(2)}<br>
+                    Y: ${worldPosition.y.toFixed(2)}<br>
+                    Z: ${worldPosition.z.toFixed(2)}
+                </div>
+            </div>
+            <div style="margin-bottom: 8px;"><strong>Radius Settings:</strong> 
+                <div style="padding-left: 10px;">
+                    Model Radius: ${model.options.radius.toFixed(2)}<br>
+                    Parent Outer Radius: ${model.options.parent ? model.options.parent.options.outerRadius.toFixed(2) : 'N/A'}<br>
+                    Parent Inner Radius: ${model.options.parent && model.options.parent.options.innerRadius ? model.options.parent.options.innerRadius.toFixed(2) : 'N/A'}
+                </div>
+            </div>
+            <div style="font-size: 12px; color: #aaa;">(Click anywhere else to dismiss)</div>
+        `;
+        
+        // Update and show panel
+        this.modelInfoPanel.innerHTML = infoHTML;
+        this.modelInfoPanel.style.display = 'block';
+    }
+    
+    /**
+     * Hide the model info panel
+     */
+    hideModelInfo() {
+        if (this.modelInfoPanel) {
+            this.modelInfoPanel.style.display = 'none';
         }
     }
 }
