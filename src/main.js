@@ -46,7 +46,7 @@ class CHEVisualization {
                     initialPosition: new Vector3(0, 1000, 200),
                     zoomScaling: 5,
                     minDistance: 20,
-                    maxDistance: 1500
+                    maxDistance: 3000
                 }
             );
             
