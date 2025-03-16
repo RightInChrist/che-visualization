@@ -175,6 +175,19 @@ export class SingleCutModel extends BaseModel {
             
             pipe.rootNode.parent = this.rootNode;
             this.pipes.push(pipe);
+            
+            // Check if this pipe should be permanently hidden (based on parent model)
+            if (this.options.parent && typeof this.options.parent.isElementPermanentlyHidden === 'function') {
+                // Get our index in the parent's childModels array
+                const ourIndex = this.options.parent.childModels ? 
+                    this.options.parent.childModels.indexOf(this) : -1;
+                    
+                if (ourIndex !== -1 && this.options.parent.isElementPermanentlyHidden(ourIndex, 'pipe', i)) {
+                    this.debugLog(`Permanently hiding Pipe #${i+1} as requested by parent model`);
+                    pipe.pipeMesh.isVisible = false;
+                    pipe.rootNode.setEnabled(false);
+                }
+            }
         }
         
         // Only create panels if not skipping them
@@ -196,6 +209,19 @@ export class SingleCutModel extends BaseModel {
                 const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
                 
                 this.panels.push(panel);
+                
+                // Check if this panel should be permanently hidden (based on parent model)
+                if (this.options.parent && typeof this.options.parent.isElementPermanentlyHidden === 'function') {
+                    // Get our index in the parent's childModels array
+                    const ourIndex = this.options.parent.childModels ? 
+                        this.options.parent.childModels.indexOf(this) : -1;
+                        
+                    if (ourIndex !== -1 && this.options.parent.isElementPermanentlyHidden(ourIndex, 'panel', i)) {
+                        this.debugLog(`Permanently hiding Panel #${i+1} as requested by parent model`);
+                        panel.panelMesh.isVisible = false;
+                        panel.rootNode.setEnabled(false);
+                    }
+                }
             }
         } else {
             this.debugLog('Skipping panel creation as requested by skipPanels option');

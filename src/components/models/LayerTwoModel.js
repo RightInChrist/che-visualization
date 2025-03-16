@@ -10,8 +10,8 @@ export class LayerTwoModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 72.7, // Updated to 72.7 as requested
-            innerRadius: 65, // Inner radius for alternating pattern
+            outerRadius: 72.52, // Updated to 72.7 as requested
+            innerRadius: 63.02, // Inner radius for alternating pattern
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
@@ -131,10 +131,57 @@ export class LayerTwoModel extends CompositeModel {
             this.addChild(singleCut);
         }
         
+        // Setup hidden elements for each SingleCUT model
+        this.setupHiddenElements();
+        
         // Verify that distances match the expected pattern
         this.verifyDistances(distances);
         
         this.debugLog('Layer Two Ring model creation complete with alternating distances');
+    }
+    
+    /**
+     * Setup which elements (pipes and panels) should be permanently hidden for each SingleCUT
+     * This defines the pattern of hidden elements to create a clean aesthetic
+     */
+    setupHiddenElements() {
+        this.debugLog('Setting up permanently hidden elements for SingleCUTs');
+        
+        // Define hidden elements mapping
+        // Format: modelIndex (0-based) => { pipes: [indices to hide], panels: [indices to hide] }
+        this.hiddenElementsMap = {};
+        
+        // Based on the provided examples, create a rotating pattern:
+        // Cut 12 (index 11): Hide pipes 4,5,6 and panels 4,5
+        // Cut 11 (index 10): Hide pipes 3,4,5 and panels 3,4
+        
+        for (let i = 0; i < 12; i++) {
+            // Calculate the "window" of pipes to hide (3 consecutive pipes)
+            // We shift this window as we move around the ring
+            const startPipe = ((i + 3) % 6) + 1; // Range: 1-6
+            
+            // Calculate pipe indices to hide (3 consecutive pipes)
+            const pipesToHide = [
+                startPipe % 6 || 6, // Handle wrap around from 6 to 1
+                (startPipe + 1) % 6 || 6,
+                (startPipe + 2) % 6 || 6
+            ];
+            
+            // Calculate panel indices to hide (2 consecutive panels)
+            // Panels share index with the pipe they follow
+            const panelsToHide = [
+                startPipe % 6 || 6,
+                (startPipe + 1) % 6 || 6
+            ];
+            
+            // Store in the map (convert to 0-based indices for internal use)
+            this.hiddenElementsMap[i] = {
+                pipes: pipesToHide.map(idx => idx - 1),
+                panels: panelsToHide.map(idx => idx - 1)
+            };
+            
+            this.debugLog(`SingleCUT #${i+1}: Hidden pipes: ${pipesToHide.join(', ')}, Hidden panels: ${panelsToHide.join(', ')}`);
+        }
     }
     
     /**
@@ -644,7 +691,25 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
      * @returns {boolean} - Whether the element is permanently hidden
      */
     isElementPermanentlyHidden(modelIndex, type, index) {
-        // In this implementation, we don't hide any elements permanently
+        // Quick validation
+        if (modelIndex < 0 || modelIndex >= (this.childModels?.length || 0)) {
+            return false;
+        }
+        
+        // Get the map entry for this model
+        const hiddenElements = this.hiddenElementsMap?.[modelIndex];
+        if (!hiddenElements) {
+            return false;
+        }
+        
+        // Check if the specific element is in the hidden list
+        if (type === 'pipe' && hiddenElements.pipes) {
+            return hiddenElements.pipes.includes(index);
+        }
+        else if (type === 'panel' && hiddenElements.panels) {
+            return hiddenElements.panels.includes(index);
+        }
+        
         return false;
     }
     
