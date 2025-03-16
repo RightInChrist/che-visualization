@@ -10,7 +10,7 @@ export class LayerTwoModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 72, // Larger radius for Layer Two
+            outerRadius: 72.7, // Updated to 72.7 as requested
             innerRadius: 65, // Inner radius for alternating pattern (NEW)
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging

@@ -58,7 +58,7 @@ class CHEVisualization {
                 visibility: {
                     centralCut: true,
                     layerOne: true,
-                    layerTwo: false  // Layer Two Ring hidden initially
+                    layerTwo: true  // Layer Two Ring visible at startup
                 }
             });
             
@@ -67,7 +67,7 @@ class CHEVisualization {
                 visibility: {
                     centralCut: true,
                     layerOne: true,
-                    layerTwo: false  // Layer Two Star hidden initially
+                    layerTwo: true  // Layer Two Star visible at startup
                 }
             });
             
