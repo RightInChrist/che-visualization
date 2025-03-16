@@ -90,8 +90,9 @@ export class PanelModel extends BaseModel {
     /**
      * Apply a rotation delta to the panel
      * @param {number} deltaRotation - Delta angle in degrees
+     * @param {boolean} [renderScene=true] - Whether to render the scene after applying rotation
      */
-    applyRotationDelta(deltaRotation) {
+    applyRotationDelta(deltaRotation, renderScene = true) {
         if (!this.rootNode) return;
         
         // Store initial rotation if not already stored
@@ -122,14 +123,15 @@ export class PanelModel extends BaseModel {
         // Log the current rotation after applying delta
         console.log(`Panel ${this.panelIndex+1} rotation after delta: (${this.radToDeg(this.rootNode.rotation.y)}°)`);
         
-        // Force update of world matrix and rendering
-        this.forceUpdate();
+        // Force update of world matrix and rendering (with optional scene rendering)
+        this.forceUpdate(renderScene);
     }
     
     /**
      * Force Babylon.js to update the panel mesh and matrices
+     * @param {boolean} [renderScene=true] - Whether to render the scene
      */
-    forceUpdate() {
+    forceUpdate(renderScene = true) {
         // Force updates to Babylon.js objects
         if (this.rootNode) {
             this.rootNode.computeWorldMatrix(true);
@@ -141,8 +143,8 @@ export class PanelModel extends BaseModel {
             this.panelMesh.computeWorldMatrix(true);
         }
         
-        // Force scene update
-        if (this.scene) {
+        // Force scene update only if requested and if there's a camera
+        if (renderScene && this.scene && this.scene.activeCamera) {
             this.scene.render();
         }
     }

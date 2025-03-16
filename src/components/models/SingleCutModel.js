@@ -169,10 +169,7 @@ export class SingleCutModel extends HexagonModel {
         this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
         this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
         
-        // Force a scene rendering to ensure panels are visible with correct rotations
-        if (this.scene) {
-            this.scene.render();
-        }
+        // DO NOT call scene.render() here - it's too early in initialization
     }
     
     /**
@@ -406,12 +403,12 @@ export class SingleCutModel extends HexagonModel {
                 
                 this.debugLog(`Panel #${i+1}: Ensuring default angle of ${defaultAngleDegrees.toFixed(1)}° is applied`);
                 
-                // If there's a current delta, apply it
+                // If there's a current delta, apply it without forcing render
                 if (currentDelta !== 0) {
-                    panel.applyRotationDelta(currentDelta);
+                    panel.applyRotationDelta(currentDelta, false); // Pass false to skip scene rendering
                 }
                 
-                // Force update
+                // Force update matrices but not scene rendering
                 panel.rootNode.computeWorldMatrix(true);
                 if (panel.panelMesh) {
                     panel.panelMesh.markAsDirty();
@@ -421,10 +418,7 @@ export class SingleCutModel extends HexagonModel {
             }
         });
         
-        // Force a scene render to update the visuals
-        if (this.scene) {
-            this.scene.render();
-        }
+        // DO NOT call scene.render() here - it's too early in initialization
     }
     
     /**
@@ -503,10 +497,14 @@ export class SingleCutModel extends HexagonModel {
         this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
         this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
         
-        // Force an immediate render of the scene
+        // At this point it's safe to render the scene since we're responding to user input
         if (this.scene) {
             this.scene.markAllMaterialsAsDirty();
-            this.scene.render();
+            
+            // Only render if there's a camera (check if we're in initialization phase)
+            if (this.scene.activeCamera) {
+                this.scene.render();
+            }
         }
     }
 } 
