@@ -233,6 +233,7 @@ export class RadiusControl {
             this.radiusInput.style.color = '#fff';
             this.radiusInput.style.border = '1px solid #555';
             this.radiusInput.style.borderRadius = '4px';
+            this.radiusInput.step = 0.01; // Allow hundredth place precision
             sliderContainer.appendChild(this.radiusInput);
             
             // Add event listeners for slider
