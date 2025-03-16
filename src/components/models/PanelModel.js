@@ -77,12 +77,12 @@ export class PanelModel extends BaseModel {
     storeInitialRotation() {
         if (!this.initialRotation && this.rootNode) {
             this.initialRotation = this.rootNode.rotation.clone();
-            console.log(`Stored initial rotation for panel ${this.panelIndex}: (${this.radToDeg(this.initialRotation.x)}°, ${this.radToDeg(this.initialRotation.y)}°, ${this.radToDeg(this.initialRotation.z)}°)`);
+            console.log(`Stored initial rotation for panel ${this.panelIndex+1}: (${this.radToDeg(this.initialRotation.x)}°, ${this.radToDeg(this.initialRotation.y)}°, ${this.radToDeg(this.initialRotation.z)}°)`);
             
             // For SingleCutModel panels, log the default rotation
             if (this.rotationState && this.panelIndex >= 0) {
                 const defaultAngle = this.rotationState.defaultAngles[this.panelIndex];
-                console.log(`Panel ${this.panelIndex} default angle from shared state: ${defaultAngle?.toFixed(1)}°`);
+                console.log(`Panel ${this.panelIndex+1} default angle from shared state: ${defaultAngle?.toFixed(1)}°`);
             }
         }
     }
@@ -105,6 +105,8 @@ export class PanelModel extends BaseModel {
             if (this.rotationState.defaultAngles && this.rotationState.defaultAngles[this.panelIndex] !== undefined) {
                 this.rotationState.currentAngles[this.panelIndex] = 
                     this.rotationState.defaultAngles[this.panelIndex] + deltaRotation;
+                    
+                console.log(`Panel ${this.panelIndex+1} current angle in shared state updated to: ${this.rotationState.currentAngles[this.panelIndex].toFixed(1)}°`);
             }
         }
         
@@ -116,7 +118,7 @@ export class PanelModel extends BaseModel {
         this.rootNode.rotate(Axis.Y, deltaRadians, Space.LOCAL);
         
         // Log the current rotation after applying delta
-        console.log(`Panel ${this.panelIndex} rotation after delta: (${this.radToDeg(this.rootNode.rotation.y)}°)`);
+        console.log(`Panel ${this.panelIndex+1} rotation after delta: (${this.radToDeg(this.rootNode.rotation.y)}°)`);
         
         // Force updates
         this.rootNode.computeWorldMatrix(true);
@@ -143,6 +145,25 @@ export class PanelModel extends BaseModel {
             return this.rotationState.currentDelta;
         }
         // Fallback to direct value
+        return 0;
+    }
+    
+    /**
+     * Get the current total rotation angle (default + delta)
+     * @returns {number} - Current total angle in degrees
+     */
+    getCurrentTotalAngle() {
+        if (this.rotationState && this.panelIndex >= 0) {
+            const defaultAngle = this.rotationState.defaultAngles[this.panelIndex] || 0;
+            const delta = this.rotationState.currentDelta || 0;
+            return defaultAngle + delta;
+        }
+        
+        // Fallback: convert current rotation to degrees
+        if (this.rootNode) {
+            return parseFloat(this.radToDeg(this.rootNode.rotation.y));
+        }
+        
         return 0;
     }
     

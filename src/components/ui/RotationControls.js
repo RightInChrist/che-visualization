@@ -736,12 +736,12 @@ export class RotationControls {
                 // Call the provided callback
                 onValueChange(value);
                 
-                // Update the dropdown values if open
+                // Update the dropdown values immediately
                 if (panelRotationDropdown && typeof panelRotationDropdown.updateValues === 'function') {
                     // Wait for the model to finish updating
                     setTimeout(() => {
                         panelRotationDropdown.updateValues();
-                    }, 100);
+                    }, 50);
                 }
             }
         );
@@ -764,6 +764,15 @@ export class RotationControls {
         // For Panel type, add a dropdown to view panel rotation values if available
         if (componentType === "Panel" && typeof model.getPanelRotations === 'function') {
             panelRotationDropdown = this.addPanelRotationValuesDropdown(deltaContainer, model);
+            
+            // Force open/update dropdown on initialization to ensure values are shown
+            if (panelRotationDropdown) {
+                setTimeout(() => {
+                    if (panelRotationDropdown.forceShowValues) {
+                        panelRotationDropdown.forceShowValues();
+                    }
+                }, 100);
+            }
         }
     }
     
@@ -892,9 +901,9 @@ export class RotationControls {
             // Get panel rotation state
             const panelRotations = model.getPanelRotations();
             
-            console.log("Panel rotation values:", panelRotations);
+            console.log("Updating panel rotation values display:", panelRotations);
             
-            if (panelRotations && panelRotations.defaultAngles) {
+            if (panelRotations && panelRotations.defaultAngles && panelRotations.defaultAngles.length > 0) {
                 // Create rows for each panel
                 panelRotations.defaultAngles.forEach((defaultAngle, index) => {
                     const valueRow = document.createElement('div');
@@ -909,7 +918,8 @@ export class RotationControls {
                     label.style.fontWeight = 'bold';
                     
                     const value = document.createElement('span');
-                    const currentAngle = panelRotations.currentAngles[index] || defaultAngle;
+                    const currentAngle = panelRotations.currentAngles[index] !== undefined ? 
+                        panelRotations.currentAngles[index] : defaultAngle;
                     value.textContent = `${currentAngle.toFixed(0)}° (Base: ${defaultAngle.toFixed(0)}°, Delta: ${panelRotations.currentDelta}°)`;
                     
                     valueRow.appendChild(label);
@@ -925,8 +935,12 @@ export class RotationControls {
             }
         };
         
-        // Store reference to update function for external updates
-        dropdownContainer.updateValues = updateRotationValues;
+        // Function to show values (automatically open dropdown)
+        const forceShowValues = () => {
+            rotationValuesList.style.display = 'block';
+            dropdownToggle.textContent = 'Hide Panel Rotation Values ▲';
+            updateRotationValues();
+        };
         
         // Toggle dropdown visibility
         dropdownToggle.addEventListener('click', () => {
@@ -945,7 +959,13 @@ export class RotationControls {
         dropdownContainer.appendChild(rotationValuesList);
         container.appendChild(dropdownContainer);
         
-        // Return the container with updateValues function for external updates
+        // Export functions for external access
+        dropdownContainer.updateValues = updateRotationValues;
+        dropdownContainer.forceShowValues = forceShowValues;
+        
+        // Show values initially to ensure they're visible at startup
+        setTimeout(forceShowValues, 0);
+        
         return dropdownContainer;
     }
 } 

@@ -107,6 +107,14 @@ export class SingleCutModel extends HexagonModel {
     createPanels() {
         const cornerCount = this.options.cornerCount;
         
+        // Initialize default and current angle arrays if they don't exist
+        if (!this.panelRotations.defaultAngles) {
+            this.panelRotations.defaultAngles = [];
+        }
+        if (!this.panelRotations.currentAngles) {
+            this.panelRotations.currentAngles = [];
+        }
+        
         for (let i = 0; i < cornerCount; i++) {
             const nextIndex = (i + 1) % cornerCount;
             
@@ -121,7 +129,7 @@ export class SingleCutModel extends HexagonModel {
             
             // Get default rotation angle for this panel
             const defaultAngle = this.getDefaultPanelRotation(i);
-            const defaultAngleDegrees = defaultAngle * 180 / Math.PI; // Store in degrees
+            const defaultAngleDegrees = defaultAngle * 180 / Math.PI; // Convert to degrees
             
             // Store default and current angles in the shared state
             this.panelRotations.defaultAngles[i] = defaultAngleDegrees;
@@ -157,6 +165,43 @@ export class SingleCutModel extends HexagonModel {
         this.debugLog('  Default angles:', this.panelRotations.defaultAngles.map(a => a.toFixed(1) + '°').join(', '));
         this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
         this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
+        
+        // Ensure the panels are correctly rotated with their default angles
+        // This explicitly applies the rotations in case they weren't applied during creation
+        this.applyPanelDefaultRotations();
+    }
+    
+    /**
+     * Apply default rotations to all panels
+     * This ensures panels have their correct default rotations applied
+     */
+    applyPanelDefaultRotations() {
+        if (!this.panels || this.panels.length === 0) {
+            this.debugLog('No panels to apply default rotations to');
+            return;
+        }
+        
+        this.debugLog('Applying default rotations to all panels');
+        
+        // Apply current delta rotation (if any)
+        const currentDelta = this.panelRotations.currentDelta || 0;
+        if (currentDelta !== 0) {
+            this.updateAllPanelRotations(currentDelta);
+        } else {
+            // Just ensure each panel is correctly rotated by default
+            this.panels.forEach((panel, i) => {
+                if (panel && panel.rootNode) {
+                    // Store initial rotation if not already stored
+                    panel.storeInitialRotation();
+                    
+                    // No need to apply additional rotation as the panels are already
+                    // initialized with their correct orientations during creation
+                    
+                    // Log the current state
+                    this.debugLog(`Panel #${i+1}: default angles properly applied`);
+                }
+            });
+        }
     }
     
     /**
