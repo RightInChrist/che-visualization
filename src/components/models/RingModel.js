@@ -1,122 +1,130 @@
 import { Vector3 } from '@babylonjs/core';
 import { CompositeModel } from './CompositeModel';
 import { SingleCutModel } from './SingleCutModel';
-import { LayerOneModel } from './LayerOneModel';
 
 /**
- * RingModel - A composite model containing ring-shaped layers
- * Organizes Layer One Ring into a single model
- * (Central CUT has been moved out of the RingModel)
+ * RingModel - A simplified composite model
+ * Contains a ring of SingleCUT models
  */
 export class RingModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
             debug: false,
+            outerRadius: 72.52,       // Radius for positioning SingleCUTs
+            singleCutRadius: 21,      // Radius for each SingleCUT
+            numModels: 12,            // Number of SingleCUTs in the ring
+            rotationAngle: 30,        // Overall rotation angle
             visibility: {
-                layerOne: true
+                ring: true
             }
         };
         
         // Call parent constructor with merged options
         super(scene, position, { ...defaultOptions, ...options });
         
-        // Store model references for direct access
-        this.models = {
-            layerOneRing: null
-        };
-        
-        // Friendly names for display in SceneEditor
-        this.friendlyNames = {
-            layerOneRing: "Layer One Ring"
-        };
-        
-        // Create models
+        // Create the SingleCUT models in a ring
         this.createModels();
     }
     
     /**
-     * Create all component models
+     * Create all SingleCUT models arranged in a ring
      */
     createModels() {
-        this.debugLog('Creating Ring Model with all layers');
+        this.debugLog('Creating Ring Model with SingleCUTs');
         
-        // Create Layer One Ring model
-        const layerOneRing = new LayerOneModel(this.scene, new Vector3(0, 0, 0), {
-            parent: this
-        });
-        layerOneRing.friendlyName = this.friendlyNames.layerOneRing;
-        this.models.layerOneRing = layerOneRing;
-        this.addChild(layerOneRing);
+        const { outerRadius, singleCutRadius, numModels, rotationAngle } = this.options;
         
-        // Set visibility based on options
-        this.setModelVisibility();
+        // Create SingleCUTs arranged in a ring
+        for (let i = 0; i < numModels; i++) {
+            // Calculate angle
+            const angle = (i * 2 * Math.PI) / numModels;
+            
+            // Calculate position
+            const x = outerRadius * Math.cos(angle);
+            const z = outerRadius * Math.sin(angle);
+            const position = new Vector3(x, 0, z);
+            
+            // Create a SingleCUT model
+            const singleCut = new SingleCutModel(this.scene, position, {
+                radius: singleCutRadius,
+                rotationAngle: rotationAngle,
+                parent: this
+            });
+            
+            // Add to the model children
+            this.addChild(singleCut);
+        }
         
         this.debugLog('Ring Model creation complete');
     }
     
     /**
-     * Set individual model visibility based on options
+     * Update the radius settings for all SingleCUTs
+     * @param {number} outerRadius - New outer radius for positioning
+     * @param {number} singleCutRadius - New radius for each SingleCUT
      */
-    setModelVisibility() {
-        const { visibility } = this.options;
+    updateRadiusSettings(outerRadius, singleCutRadius) {
+        this.options.outerRadius = outerRadius;
+        this.options.singleCutRadius = singleCutRadius;
         
-        // Set visibility for each component
-        if (this.models.layerOneRing) {
-            this.models.layerOneRing.setVisible(visibility.layerOne);
-        }
+        // Update positions of all SingleCUTs
+        this.childModels.forEach((singleCut, i) => {
+            // Calculate angle
+            const angle = (i * 2 * Math.PI) / this.options.numModels;
+            
+            // Calculate new position
+            const x = outerRadius * Math.cos(angle);
+            const z = outerRadius * Math.sin(angle);
+            const position = new Vector3(x, 0, z);
+            
+            // Update SingleCUT position
+            if (singleCut.rootNode) {
+                singleCut.rootNode.position = position;
+            }
+            
+            // Update SingleCUT radius
+            if (typeof singleCut.updateRadius === 'function') {
+                singleCut.updateRadius(singleCutRadius);
+            }
+        });
     }
     
     /**
-     * Update visibility of a model by its key
-     * @param {string} modelKey - Key of the model to update ('layerOne')
-     * @param {boolean} isVisible - Whether the model should be visible
-     */
-    updateModelVisibility(modelKey, isVisible) {
-        // Map option keys to model keys
-        const modelKeyMap = {
-            layerOne: 'layerOneRing'
-        };
-        
-        const modelRealKey = modelKeyMap[modelKey];
-        if (modelRealKey && this.models[modelRealKey]) {
-            this.models[modelRealKey].setVisible(isVisible);
-            this.options.visibility[modelKey] = isVisible;
-        }
-    }
-    
-    /**
-     * Get all pipes from all SingleCUTs across all layers
-     * @returns {Object} - Object containing all pipes from all layers
+     * Get all pipes from all SingleCUTs
+     * @returns {Array} - Array of all pipe objects
      */
     getAllPipes() {
         const allPipes = [];
         
-        // Get pipes from Layer One Ring
-        if (this.models.layerOneRing) {
-            const layerOnePipes = this.models.layerOneRing.getAllPipes() || [];
-            allPipes.push(...layerOnePipes);
-        }
+        // Collect pipes from all SingleCUTs
+        this.childModels.forEach(singleCut => {
+            if (singleCut.pipes) {
+                allPipes.push(...singleCut.pipes);
+            }
+        });
         
         return allPipes;
     }
     
     /**
-     * Get all SingleCUT models across all layers
+     * Get all SingleCUT models
      * @returns {Object} - Object containing all SingleCUT models by layer
      */
     getAllSingleCuts() {
         return {
             central: [], // Empty as central CUT has been moved out
-            layerOne: this.models.layerOneRing ? this.models.layerOneRing.getChildren() : []
+            layerOne: this.childModels || []
         };
     }
     
     /**
-     * Get all models in this composite structure
-     * @returns {Object} - Object containing all component models
+     * Calculate the distance between opposite panels
+     * @returns {number} - The distance between panels in meters
      */
-    getAllModels() {
-        return { ...this.models };
+    calculatePanelDistance() {
+        // For hexagons, distance between opposite sides is 2 * radius * sin(60°)
+        // or simply radius * √3
+        return this.options.outerRadius * Math.sqrt(3);
     }
 } 

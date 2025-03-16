@@ -6,8 +6,6 @@ import { initializeEngine } from './core/engine';
 import { createScene } from './core/scene';
 import { GroundModel } from './components/models/GroundModel';
 import { SingleCutModel } from './components/models/SingleCutModel';
-import { LayerOneModel } from './components/models/LayerOneModel';
-import { LayerOneStarModel } from './components/models/LayerOneStarModel';
 import { StarModel } from './components/models/StarModel';
 import { RingModel } from './components/models/RingModel';
 import { CameraController } from './components/controllers/CameraController';
@@ -55,19 +53,17 @@ class CHEVisualization {
             this.centralCutModel = new SingleCutModel(scene, new Vector3(0, 0, 0));
             this.centralCutModel.friendlyName = "Central CUT";
             
-            // Create Ring Model (contains Layer One Ring and Layer Two Ring)
+            // Create Ring Model (contains ring of SingleCUTs)
             this.ringModel = new RingModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
-                    layerOne: true,
-                    layerTwo: true  // Layer Two Ring visible at startup
+                    ring: true
                 }
             });
             
-            // Create Star Model (contains Central CUT and Layer One Star)
+            // Create Star Model (contains central SingleCUT and star arrangement)
             this.starModel = new StarModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
-                    centralCut: true,
-                    layerOne: true
+                    centralCut: true
                 }
             });
             
@@ -78,9 +74,9 @@ class CHEVisualization {
             
             // Apply a 30-degree global rotation to all SingleCUTs in the Star models for better appearance
             console.log('Applying 30-degree global rotation to all SingleCUTs in the Star models...');
-            if (this.starModel.models.layerOneStar) {
-                this.starModel.models.layerOneStar.updateAllSingleCutRotations(30);
-                console.log('Applied 30-degree rotation to all SingleCUTs in LayerOneStar');
+            if (this.starModel.updateAllSingleCutRotations) {
+                this.starModel.updateAllSingleCutRotations(30);
+                console.log('Applied 30-degree rotation to all SingleCUTs in Star model');
             }
             
             // Add shadows to all pipes in the scene
@@ -185,11 +181,11 @@ class CHEVisualization {
                     model: this.starModel,
                     children: {
                         'Star Central CUT': {
-                            model: this.starModel.models.centralCut,
+                            model: this.starModel.centralCut,
                             children: starCentralSingleCutObjects
                         },
-                        'Layer One Star': {
-                            model: this.starModel.models.layerOneStar,
+                        'Star Outer CUTs': {
+                            model: null, // There's no container model now
                             children: starLayerOneSingleCutObjects
                         }
                     }
@@ -309,9 +305,8 @@ class CHEVisualization {
             // Get all layers from both models for radius and rotation controls
             const layerModels = [
                 this.centralCutModel,
-                this.ringModel.models.layerOneRing,
-                this.starModel.models.centralCut,
-                this.starModel.models.layerOneStar
+                this.ringModel,
+                this.starModel
             ];
             
             // Create radius controls
@@ -320,7 +315,7 @@ class CHEVisualization {
                 layerModels,
                 {
                     isVisible: false,
-                    modelNames: ["Central CUT", "Layer One Ring", "Star Central CUT", "Layer One Star"]
+                    modelNames: ["Central CUT", "Ring Model", "Star Model"]
                 }
             );
             
@@ -330,7 +325,7 @@ class CHEVisualization {
                 layerModels, 
                 {
                     isVisible: false,
-                    modelNames: ["Central CUT", "Layer One Ring", "Star Central CUT", "Layer One Star"]
+                    modelNames: ["Central CUT", "Ring Model", "Star Model"]
                 }
             );
             
@@ -397,9 +392,7 @@ class CHEVisualization {
             models: {
                 centralCutModel: this.centralCutModel,
                 ringModel: this.ringModel,
-                starModel: this.starModel,
-                layerOneRing: this.ringModel?.models?.layerOneRing,
-                layerOneStar: this.starModel?.models?.layerOneStar,
+                starModel: this.starModel
             },
             // Helper functions
             getStats: () => {
@@ -545,23 +538,11 @@ cheDebug.app - Access the main application instance
         // Apply to Ring Model and all its children
         if (this.ringModel) {
             processModel(this.ringModel);
-            
-            // Also process each main component directly
-            if (this.ringModel.models) {
-                if (this.ringModel.models.layerOneRing) processModel(this.ringModel.models.layerOneRing);
-                if (this.ringModel.models.layerTwoRing) processModel(this.ringModel.models.layerTwoRing);
-            }
         }
         
         // Apply to Star Model and all its children
         if (this.starModel) {
             processModel(this.starModel);
-            
-            // Also process each main component directly
-            if (this.starModel.models) {
-                if (this.starModel.models.centralCut) processModel(this.starModel.models.centralCut);
-                if (this.starModel.models.layerOneStar) processModel(this.starModel.models.layerOneStar);
-            }
         }
         
         console.log('Default panel rotations successfully applied');
