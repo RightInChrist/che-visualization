@@ -230,20 +230,20 @@ export class SceneEditor {
      * Render the scene objects in a hierarchical structure
      */
     renderSceneObjects() {
-        // Clear existing content
         this.objectListContainer.innerHTML = '';
-        this.checkboxElements = {};
         
-        // Create object list
-        const objectTree = document.createElement('ul');
-        objectTree.style.listStyleType = 'none';
-        objectTree.style.paddingLeft = '0';
+        // Reset name counters for root level
+        this.nameCountMap = {};
         
-        // Process each top-level object
-        Object.entries(this.sceneObjects).forEach(([key, value]) => {
-            const objectItem = this.createObjectListItem(key, value);
+        // Create a tree of objects
+        const objectTree = document.createElement('div');
+        objectTree.className = 'scene-objects-tree';
+        
+        // Add each top-level object
+        for (const [name, object] of Object.entries(this.sceneObjects)) {
+            const objectItem = this.createObjectListItem(name, object);
             objectTree.appendChild(objectItem);
-        });
+        }
         
         this.objectListContainer.appendChild(objectTree);
     }
@@ -266,20 +266,43 @@ export class SceneEditor {
             displayName = object.model.getName();
         }
         
+        // Skip numbering for top-level items or if there's no parent path
+        if (!parentPath) {
+            return displayName;
+        }
+        
         // Create a key combining parent path and display name to track duplicates within same parent
         const nameKey = `${parentPath}/${displayName}`;
         
         // Initialize counter for this name if it doesn't exist
         if (!this.nameCountMap[nameKey]) {
-            this.nameCountMap[nameKey] = 0;
+            this.nameCountMap[nameKey] = {
+                count: 0,
+                instances: []
+            };
         }
         
-        // Increment counter for this name
-        this.nameCountMap[nameKey]++;
+        // Generate a unique instance key for this specific object
+        const instanceKey = object.id || 
+                          (object.model && object.model.id) || 
+                          (object.uniqueId || Math.random().toString(36).substr(2, 9));
         
-        // If this is a duplicate name (not the first occurrence), append a number
-        if (this.nameCountMap[nameKey] > 1) {
-            displayName = `${displayName} #${this.nameCountMap[nameKey]}`;
+        // Check if we've already processed this exact object
+        if (!this.nameCountMap[nameKey].instances.includes(instanceKey)) {
+            // Increment counter for this name
+            this.nameCountMap[nameKey].count++;
+            
+            // Add this instance to our tracking
+            this.nameCountMap[nameKey].instances.push(instanceKey);
+        }
+        
+        // Get the occurrence number for this specific instance
+        const instanceIndex = this.nameCountMap[nameKey].instances.indexOf(instanceKey);
+        const occurrenceNumber = instanceIndex + 1;
+        
+        // Only add a number if there are multiple items with this name at this level
+        if (this.nameCountMap[nameKey].count > 1) {
+            displayName = `${displayName} #${occurrenceNumber}`;
         }
         
         return displayName;
@@ -573,26 +596,42 @@ export class SceneEditor {
      * @param {string} parentPath - Path of the parent model
      */
     addModelChildren(parentElement, model, parentPath) {
-        // Reset name counters for pipes and panels under this parent
-        const pipeKey = `${parentPath}/Pipe`;
-        const panelKey = `${parentPath}/Panel`;
-        this.nameCountMap[pipeKey] = 0;
-        this.nameCountMap[panelKey] = 0;
-        
-        // Add all pipes
+        // Check for pipes
         if (model.pipes && model.pipes.length > 0) {
+            // Get all pipe names first to determine if we need numbering
+            const pipeDisplayNames = model.pipes.map(pipe => {
+                return pipe && typeof pipe.getName === 'function' ? pipe.getName() : "Pipe";
+            });
+            
+            // Count occurrences of each name
+            const pipeNameCounts = {};
+            pipeDisplayNames.forEach(name => {
+                pipeNameCounts[name] = (pipeNameCounts[name] || 0) + 1;
+            });
+            
+            // Add all pipes
             model.pipes.forEach((pipe, index) => {
-                // Use pipe name if it has getName, otherwise use index+1
                 const pipeName = `Pipe #${index + 1}`;
                 const pipeItem = this.createObjectListItem(pipeName, pipe, model, parentPath);
                 parentElement.appendChild(pipeItem);
             });
         }
         
-        // Add panels
+        // Check for panels
         if (model.panels && model.panels.length > 0) {
+            // Get all panel names first to determine if we need numbering
+            const panelDisplayNames = model.panels.map(panel => {
+                return panel && typeof panel.getName === 'function' ? panel.getName() : "Panel";
+            });
+            
+            // Count occurrences of each name
+            const panelNameCounts = {};
+            panelDisplayNames.forEach(name => {
+                panelNameCounts[name] = (panelNameCounts[name] || 0) + 1;
+            });
+            
+            // Add all panels
             model.panels.forEach((panel, index) => {
-                // Use panel name if it has getName, otherwise use index+1
                 const panelName = `Panel #${index + 1}`;
                 const panelItem = this.createObjectListItem(panelName, panel, model, parentPath);
                 parentElement.appendChild(panelItem);
@@ -607,19 +646,31 @@ export class SceneEditor {
      * @param {string} parentPath - Path of the parent model
      */
     addCompositeModelChildren(parentElement, compositeModel, parentPath) {
-        // Reset name counter for CUTs under this parent
-        const cutKey = `${parentPath}/CUT`;
-        this.nameCountMap[cutKey] = 0;
-        
-        // Add all SingleCUTs
-        if (compositeModel.model && compositeModel.model.singleCuts && compositeModel.model.singleCuts.length > 0) {
-            compositeModel.model.singleCuts.forEach((singleCut, index) => {
-                // Use qualified name with index
-                const singleCutName = `Single CUT #${index + 1}`;
-                const singleCutItem = this.createObjectListItem(singleCutName, singleCut, compositeModel, parentPath);
-                parentElement.appendChild(singleCutItem);
-            });
+        // Check if we have SingleCUTs to add
+        if (!compositeModel.model || !compositeModel.model.singleCuts || !compositeModel.model.singleCuts.length) {
+            return;
         }
+        
+        // Get all child names to determine if we need numbering
+        const childModels = compositeModel.model.singleCuts;
+        const displayNames = {};
+        
+        // First pass: collect names
+        childModels.forEach(model => {
+            const displayName = model && typeof model.getName === 'function' ? 
+                model.getName() : "CUT";
+            
+            // Count occurrences
+            displayNames[displayName] = (displayNames[displayName] || 0) + 1;
+        });
+        
+        // Second pass: create items with appropriate naming
+        childModels.forEach((singleCut, index) => {
+            // Use qualified name with index for path
+            const singleCutName = `Single CUT #${index + 1}`;
+            const singleCutItem = this.createObjectListItem(singleCutName, singleCut, compositeModel, parentPath);
+            parentElement.appendChild(singleCutItem);
+        });
     }
     
     /**
@@ -629,13 +680,24 @@ export class SceneEditor {
      * @param {string} parentPath - Path of the parent model
      */
     addChildrenObjects(parentElement, children, parentPath) {
-        // Reset name counters for children under this parent
-        Object.keys(children).forEach(key => {
-            const childKey = `${parentPath}/${key}`;
-            this.nameCountMap[childKey] = 0;
+        // Get display names for all children to detect duplicates
+        const displayNames = {};
+        
+        // First pass: collect names and count duplicates
+        Object.entries(children).forEach(([key, value]) => {
+            // Get the display name that would be used
+            const childDisplayName = value && typeof value.getName === 'function' ? 
+                value.getName() : 
+                (value && value.model && typeof value.model.getName === 'function' ? 
+                    value.model.getName() : key);
+            
+            // Count occurrences
+            displayNames[childDisplayName] = (displayNames[childDisplayName] || 0) + 1;
         });
         
+        // Second pass: create items with appropriate naming
         Object.entries(children).forEach(([key, value]) => {
+            // Create item with the raw key (the display logic will handle the numbering if needed)
             const childItem = this.createObjectListItem(key, value, null, parentPath);
             parentElement.appendChild(childItem);
         });
