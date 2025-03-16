@@ -5,9 +5,8 @@ import { CompositeModel } from './CompositeModel';
  * Base class for hexagonal structures that provides consistent hexagon geometry
  * calculations and positioning of elements at corners and sides.
  * 
- * This is designed to be a common base for both SingleCutModel (where pipes are corners
- * and panels are sides) and larger layer models (where SingleCutModels are positioned
- * at corners and/or sides of larger hexagonal structures).
+ * This class provides common geometric operations for hexagonal structures
+ * and can be extended by more specific model implementations.
  */
 export class HexagonModel extends CompositeModel {
     /**

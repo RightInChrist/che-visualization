@@ -154,91 +154,91 @@ export class RadiusControls {
                 radius.value,
                 (value) => {
                     radius.value = value;
-                    // Update panel distance display if available
-                    this.updatePanelDistanceDisplay(model);
+                    // Update distance indicators if needed
+                    this.updateDistanceDisplay(model);
                 },
                 0.01 // Allow hundredths precision
             );
             modelSection.appendChild(radiusContainer);
             
-            // Add panel radius controls if model supports getChildrenRadii
+            // Add child element controls if model supports getChildrenRadii
             if (model && typeof model.getChildrenRadii === 'function') {
-                // Get panel radii objects - this returns an array of objects by reference
-                const panelRadii = model.getChildrenRadii();
+                // Get child radii objects - this returns an array of objects by reference
+                const childRadii = model.getChildrenRadii();
                 
-                if (panelRadii && panelRadii.length > 0) {
-                    // Create a container for panel width controls
-                    const panelWidthsContainer = document.createElement('div');
-                    panelWidthsContainer.className = 'panel-widths-container';
-                    panelWidthsContainer.style.marginTop = '15px';
-                    panelWidthsContainer.style.padding = '10px';
-                    panelWidthsContainer.style.backgroundColor = 'rgba(0, 0, 100, 0.1)';
-                    panelWidthsContainer.style.borderLeft = '3px solid #5599ff';
+                if (childRadii && childRadii.length > 0) {
+                    // Create a container for element width controls
+                    const elemWidthsContainer = document.createElement('div');
+                    elemWidthsContainer.className = 'element-widths-container';
+                    elemWidthsContainer.style.marginTop = '15px';
+                    elemWidthsContainer.style.padding = '10px';
+                    elemWidthsContainer.style.backgroundColor = 'rgba(0, 0, 100, 0.1)';
+                    elemWidthsContainer.style.borderLeft = '3px solid #5599ff';
                     
-                    // Add header for panel widths section
-                    const panelWidthsHeader = document.createElement('h5');
-                    panelWidthsHeader.textContent = 'Panel Widths';
-                    panelWidthsHeader.style.margin = '0 0 10px 0';
-                    panelWidthsHeader.style.fontWeight = 'bold';
-                    panelWidthsContainer.appendChild(panelWidthsHeader);
+                    // Add header for element widths section
+                    const elemWidthsHeader = document.createElement('h5');
+                    elemWidthsHeader.textContent = 'Element Widths';
+                    elemWidthsHeader.style.margin = '0 0 10px 0';
+                    elemWidthsHeader.style.fontWeight = 'bold';
+                    elemWidthsContainer.appendChild(elemWidthsHeader);
                     
-                    // Add a global control to adjust all panel widths
-                    const allPanelsContainer = this.createSliderRow(
-                        "All Panels",
+                    // Add a global control to adjust all element widths
+                    const allElemsContainer = this.createSliderRow(
+                        "All Elements",
                         5, // Min width
                         30, // Max width
-                        panelRadii[0].value, // Use first panel's width as default
+                        childRadii[0].value, // Use first element's width as default
                         (value) => {
-                            // Apply this width to all panels
+                            // Apply this width to all elements
                             model.getChildrenRadii(value);
                         },
                         0.1 // Allow tenths precision
                     );
                     
                     // Style the global control
-                    allPanelsContainer.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
-                    allPanelsContainer.style.paddingBottom = '10px';
-                    allPanelsContainer.style.marginBottom = '10px';
+                    allElemsContainer.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
+                    allElemsContainer.style.paddingBottom = '10px';
+                    allElemsContainer.style.marginBottom = '10px';
                     
-                    panelWidthsContainer.appendChild(allPanelsContainer);
+                    elemWidthsContainer.appendChild(allElemsContainer);
                     
-                    // Add individual panel width controls
-                    panelRadii.forEach((panelRadius, index) => {
-                        const panelContainer = this.createSliderRow(
-                            `Panel ${index + 1}`,
-                            panelRadius.min,
-                            panelRadius.max,
-                            panelRadius.value,
+                    // Add individual element width controls
+                    childRadii.forEach((elemRadius, index) => {
+                        const elemContainer = this.createSliderRow(
+                            `Element ${index + 1}`,
+                            elemRadius.min,
+                            elemRadius.max,
+                            elemRadius.value,
                             (value) => {
-                                // Update just this panel's width
-                                panelRadius.value = value;
+                                // Update just this element's width
+                                elemRadius.value = value;
                             },
                             0.1 // Allow tenths precision
                         );
                         
-                        // Style individual panel controls
-                        panelContainer.style.paddingLeft = '15px';
-                        panelContainer.style.fontSize = '0.9em';
+                        // Style individual element controls
+                        elemContainer.style.paddingLeft = '15px';
+                        elemContainer.style.fontSize = '0.9em';
                         
-                        panelWidthsContainer.appendChild(panelContainer);
+                        elemWidthsContainer.appendChild(elemContainer);
                     });
                     
-                    modelSection.appendChild(panelWidthsContainer);
+                    modelSection.appendChild(elemWidthsContainer);
                 }
             }
             
-            // Create panel distance indicator
-            this.createPanelDistanceIndicator(modelSection, model);
+            // Create distance indicator
+            this.createDistanceIndicator(modelSection, model);
         }
         // Create outer radius control for models with updateRadiusSettings
         else if (model && typeof model.updateRadiusSettings === 'function') {
             // Get current values or defaults
             let outerRadius = 42; // Default
-            let singleCutRadius = 21; // Default
+            let innerRadius = 21; // Default
             
             if (model.options) {
                 outerRadius = model.options.outerRadius || outerRadius;
-                singleCutRadius = model.options.singleCutRadius || singleCutRadius;
+                innerRadius = model.options.innerRadius || innerRadius;
             }
             
             // Create outer radius slider
@@ -252,32 +252,28 @@ export class RadiusControls {
             );
             modelSection.appendChild(outerRadiusContainer);
             
-            // Create SingleCut radius control
-            const hasSingleCutControl = model && (
-                (model.constructor.name === 'SingleCutModel') ||
-                (model.children && model.children.some(child => 
-                    child.constructor.name === 'SingleCutModel'))
-            );
+            // Create inner radius control
+            const hasInnerRadiusControl = true; // Simplified check - all models can have inner radius
             
-            if (hasSingleCutControl) {
-                const singleCutRadiusContainer = this.createSliderRow(
-                    "SingleCUT Radius",
+            if (hasInnerRadiusControl) {
+                const innerRadiusContainer = this.createSliderRow(
+                    "Inner Radius",
                     10,
                     40,
-                    singleCutRadius,
-                    (value) => this.onSingleCutRadiusChange(model, value),
+                    innerRadius,
+                    (value) => this.onInnerRadiusChange(model, value),
                     0.01 // Allow hundredths precision
                 );
                 
-                // Style the SingleCut radius control differently
-                singleCutRadiusContainer.style.paddingLeft = '10px';
-                singleCutRadiusContainer.style.borderLeft = '3px solid #3399ff';
-                singleCutRadiusContainer.style.backgroundColor = 'rgba(51, 153, 255, 0.1)';
+                // Style the inner radius control differently
+                innerRadiusContainer.style.paddingLeft = '10px';
+                innerRadiusContainer.style.borderLeft = '3px solid #3399ff';
+                innerRadiusContainer.style.backgroundColor = 'rgba(51, 153, 255, 0.1)';
                 
-                modelSection.appendChild(singleCutRadiusContainer);
+                modelSection.appendChild(innerRadiusContainer);
                 
-                // Create panel distance indicator
-                this.createPanelDistanceIndicator(modelSection, model);
+                // Create distance indicator
+                this.createDistanceIndicator(modelSection, model);
             }
         }
         // Add direct radius control for models with updateRadius
@@ -296,9 +292,9 @@ export class RadiusControls {
                     if (model && typeof model.updateRadius === 'function') {
                         model.updateRadius(value);
                         
-                        // Update panel distance display if available
-                        if (typeof this.updatePanelDistanceDisplay === 'function') {
-                            this.updatePanelDistanceDisplay(model);
+                        // Update distance display if available
+                        if (typeof this.updateDistanceDisplay === 'function') {
+                            this.updateDistanceDisplay(model);
                         }
                     }
                 },
@@ -307,16 +303,14 @@ export class RadiusControls {
             
             modelSection.appendChild(radiusContainer);
             
-            // Create panel distance indicator
-            this.createPanelDistanceIndicator(modelSection, model);
+            // Create distance indicator
+            this.createDistanceIndicator(modelSection, model);
         }
         
         // Recursively create sections for children if enabled
         if (this.options.recursive && config.children && config.children.length > 0) {
             // Only create child sections for non-SingleCutModel children
-            const childrenToShow = config.children.filter(child => 
-                child.name !== 'SingleCutModel'
-            );
+            const childrenToShow = config.children;
             
             if (childrenToShow.length > 0) {
                 const childrenContainer = document.createElement('div');
@@ -452,11 +446,11 @@ export class RadiusControls {
     }
     
     /**
-     * Create an indicator showing the distance between opposite panels
+     * Create an indicator showing the distance across the model
      * @param {HTMLElement} container - The container to add the indicator to
      * @param {Object} model - The model
      */
-    createPanelDistanceIndicator(container, model) {
+    createDistanceIndicator(container, model) {
         // Create container
         const indicatorContainer = document.createElement('div');
         indicatorContainer.style.marginTop = '10px';
@@ -473,14 +467,14 @@ export class RadiusControls {
         
         // Create label
         const label = document.createElement('span');
-        label.textContent = 'Distance between panels:';
+        label.textContent = 'Distance across model:';
         label.style.marginRight = '8px';
         
         // Create value display
-        const panelDistanceDisplay = document.createElement('span');
-        panelDistanceDisplay.style.fontWeight = 'bold';
-        panelDistanceDisplay.style.minWidth = '65px';
-        panelDistanceDisplay.style.textAlign = 'right';
+        const distanceDisplay = document.createElement('span');
+        distanceDisplay.style.fontWeight = 'bold';
+        distanceDisplay.style.minWidth = '65px';
+        distanceDisplay.style.textAlign = 'right';
         
         // Get model type and index for more specific identification
         const modelType = model.constructor ? model.constructor.name : "unknown";
@@ -489,42 +483,42 @@ export class RadiusControls {
                           Math.random().toString(36).substring(2, 9);
         
         // Set specific identifiers
-        panelDistanceDisplay.dataset.modelType = modelType;
-        panelDistanceDisplay.dataset.modelIndex = modelIndex;
+        distanceDisplay.dataset.modelType = modelType;
+        distanceDisplay.dataset.modelIndex = modelIndex;
         
         // Create a unique ID that includes model type and index
-        panelDistanceDisplay.id = `panel-distance-${modelType}-${modelIndex}`;
+        distanceDisplay.id = `distance-${modelType}-${modelIndex}`;
         
         // Add a specific class for easier selection
-        panelDistanceDisplay.className = 'panel-distance-display';
+        distanceDisplay.className = 'distance-display';
         
         // Store original model reference as a data attribute for debugging
-        panelDistanceDisplay.dataset.originalModel = model.rootNode ? model.rootNode.id : "none";
+        distanceDisplay.dataset.originalModel = model.rootNode ? model.rootNode.id : "none";
         
         // Log what we're creating
-        console.log(`Creating panel distance display for ${modelType} (index: ${modelIndex})`);
+        console.log(`Creating distance display for ${modelType} (index: ${modelIndex})`);
         
         // Add label and value to the row
         row.appendChild(label);
-        row.appendChild(panelDistanceDisplay);
+        row.appendChild(distanceDisplay);
         
         // Add the row to the container
         indicatorContainer.appendChild(row);
         container.appendChild(indicatorContainer);
         
         // Calculate and display initial value
-        this.updatePanelDistanceDisplay(model);
+        this.updateDistanceDisplay(model);
     }
     
     /**
-     * Update the panel distance display for a specific model
+     * Update the distance display for a specific model
      * @param {Object} model - The model
      */
-    updatePanelDistanceDisplay(model) {
+    updateDistanceDisplay(model) {
         if (!model) return;
         
-        // Calculate the panel distance for this model
-        let panelDistance = 0;
+        // Calculate the distance for this model
+        let distance = 0;
         let calculationMethod = "unknown";
         
         // Get model type and index for precise targeting
@@ -533,45 +527,45 @@ export class RadiusControls {
                           model.options.modelIndex : 
                           "unknown";
         
-        console.log(`Calculating panel distance for ${modelType} (index: ${modelIndex})`);
+        console.log(`Calculating distance for ${modelType} (index: ${modelIndex})`);
         
-        // Method 1: Check if model has a calculatePanelDistance method
-        if (model && typeof model.calculatePanelDistance === 'function') {
-            panelDistance = model.calculatePanelDistance();
-            calculationMethod = "model.calculatePanelDistance()";
-            console.log(`Using model's calculatePanelDistance method: ${panelDistance}`);
+        // Method 1: Check if model has a calculateSideDistance method
+        if (model && typeof model.calculateSideDistance === 'function') {
+            distance = model.calculateSideDistance();
+            calculationMethod = "model.calculateSideDistance()";
+            console.log(`Using model's calculateSideDistance method: ${distance}`);
         }
-        // Method 2: Use child models' calculatePanelDistance if they exist
+        // Method 2: Use child models' calculateSideDistance if they exist
         else if (model && typeof model.getChildren === 'function' && model.getChildren().length > 0) {
             const childModel = model.getChildren()[0]; // Get first child
-            if (childModel && typeof childModel.calculatePanelDistance === 'function') {
-                panelDistance = childModel.calculatePanelDistance();
-                calculationMethod = "childModel.calculatePanelDistance()";
-                console.log(`Using child model's calculatePanelDistance method: ${panelDistance}`);
+            if (childModel && typeof childModel.calculateSideDistance === 'function') {
+                distance = childModel.calculateSideDistance();
+                calculationMethod = "childModel.calculateSideDistance()";
+                console.log(`Using child model's calculateSideDistance method: ${distance}`);
             }
         }
         // Method 3: Fallback calculation for any model with outerRadius
         else if (model && model.options && model.options.outerRadius !== undefined) {
             // Use the standard formula for hexagons: distance = radius * √3
-            panelDistance = model.options.outerRadius * Math.sqrt(3);
+            distance = model.options.outerRadius * Math.sqrt(3);
             calculationMethod = "outerRadius * Math.sqrt(3)";
-            console.log(`Using formula calculation: ${model.options.outerRadius} * √3 = ${panelDistance}`);
+            console.log(`Using formula calculation: ${model.options.outerRadius} * √3 = ${distance}`);
         }
         
         // Try to find the specific display element for this model
         // First try with ID that includes model type and index
-        let displayElement = document.getElementById(`panel-distance-${modelType}-${modelIndex}`);
+        let displayElement = document.getElementById(`distance-${modelType}-${modelIndex}`);
         
         if (displayElement) {
-            console.log(`Found panel distance display by ID for ${modelType} (index: ${modelIndex})`);
+            console.log(`Found distance display by ID for ${modelType} (index: ${modelIndex})`);
         } else {
             // If not found by ID, try by data attributes
-            console.log(`Trying to find panel distance display by data attributes for ${modelType} (index: ${modelIndex})`);
+            console.log(`Trying to find distance display by data attributes for ${modelType} (index: ${modelIndex})`);
             const elements = document.querySelectorAll(`[data-model-type="${modelType}"][data-model-index="${modelIndex}"]`);
             
             if (elements.length > 0) {
                 displayElement = elements[0];
-                console.log(`Found ${elements.length} panel distance display(s) by data attributes`);
+                console.log(`Found ${elements.length} distance display(s) by data attributes`);
             } else {
                 // Last attempt: find any element with matching model type in matching section
                 console.warn(`No display found by ID or data attributes for ${modelType} (index: ${modelIndex}), trying section lookup`);
@@ -580,8 +574,8 @@ export class RadiusControls {
                 const modelSection = document.querySelector(`.model-radius-section[data-model-index="${modelIndex}"]`);
                 
                 if (modelSection) {
-                    // Find any panel distance displays within this section
-                    const sectionDisplays = modelSection.querySelectorAll('.panel-distance-display');
+                    // Find any distance displays within this section
+                    const sectionDisplays = modelSection.querySelectorAll('.distance-display');
                     if (sectionDisplays.length > 0) {
                         displayElement = sectionDisplays[0];
                         console.log(`Found display in model section ${modelIndex}`);
@@ -592,14 +586,14 @@ export class RadiusControls {
         
         // Update the display element if found
         if (displayElement) {
-            displayElement.textContent = `${Math.round(panelDistance)} meters`;
-            console.log(`Updated panel distance for ${modelType} (index: ${modelIndex}) to ${Math.round(panelDistance)} meters`);
+            displayElement.textContent = `${Math.round(distance)} meters`;
+            console.log(`Updated distance for ${modelType} (index: ${modelIndex}) to ${Math.round(distance)} meters`);
         } else {
-            console.warn(`⚠️ Failed to find panel distance display for ${modelType} (index: ${modelIndex})`);
+            console.warn(`⚠️ Failed to find distance display for ${modelType} (index: ${modelIndex})`);
             
             // Debug: list all distance displays
-            const allDisplays = document.querySelectorAll('.panel-distance-display');
-            console.log(`All panel distance displays (${allDisplays.length}):`);
+            const allDisplays = document.querySelectorAll('.distance-display');
+            console.log(`All distance displays (${allDisplays.length}):`);
             allDisplays.forEach(display => {
                 console.log(`- Type: ${display.dataset.modelType}, Index: ${display.dataset.modelIndex}, ID: ${display.id}`);
             });
@@ -621,48 +615,18 @@ export class RadiusControls {
         
         console.log(`Outer radius change: model=${modelType} (index: ${modelIndex}), value=${value}`);
         
-        // Get current singleCutRadius if available
-        let singleCutRadius = 21; // Default
-        if (model.options && model.options.singleCutRadius !== undefined) {
-            singleCutRadius = model.options.singleCutRadius;
+        // Get current innerRadius if available
+        let innerRadius = 21; // Default
+        if (model.options && model.options.innerRadius !== undefined) {
+            innerRadius = model.options.innerRadius;
         }
         
         // Update the model's radius
         if (model && typeof model.updateRadiusSettings === 'function') {
-            model.updateRadiusSettings(value, singleCutRadius);
+            model.updateRadiusSettings(value, innerRadius);
             
-            // Update the panel distance display
-            this.updatePanelDistanceDisplay(model);
-        }
-    }
-    
-    /**
-     * Handle changes to SingleCUT radius for a specific model
-     * @param {Object} model - The model to update
-     * @param {number} value - New SingleCUT radius value
-     */
-    onSingleCutRadiusChange(model, value) {
-        if (!model) return;
-        
-        const modelType = model.constructor ? model.constructor.name : "unknown";
-        const modelIndex = model.options && model.options.modelIndex !== undefined ? 
-                          model.options.modelIndex : 
-                          "unknown";
-        
-        console.log(`SingleCut radius change: model=${modelType} (index: ${modelIndex}), value=${value}`);
-        
-        // Get current outerRadius if available
-        let outerRadius = 42; // Default
-        if (model.options && model.options.outerRadius !== undefined) {
-            outerRadius = model.options.outerRadius;
-        }
-        
-        // Update the model's radius
-        if (model && typeof model.updateRadiusSettings === 'function') {
-            model.updateRadiusSettings(outerRadius, value);
-            
-            // Update only this model's panel distance display
-            this.updatePanelDistanceDisplay(model);
+            // Update the distance display
+            this.updateDistanceDisplay(model);
         }
     }
     
@@ -684,8 +648,8 @@ export class RadiusControls {
         console.log(`Updating inner radius to ${formattedValue}`);
         model.updateInnerRadius(formattedValue);
         
-        // Update the panel distance display if needed
-        this.updatePanelDistanceDisplay(model);
+        // Update the distance display if needed
+        this.updateDistanceDisplay(model);
     }
     
     /**
