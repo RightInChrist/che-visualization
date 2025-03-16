@@ -295,7 +295,9 @@ export class SceneEditor {
             const childListId = `childList-${objectPath.replace(/[\s#]/g, '-').replace(/\//g, '_')}`;
             collapseBtn.setAttribute('data-target', childListId);
             
-            collapseBtn.addEventListener('click', () => {
+            collapseBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent propagation to the container
+                
                 const targetElement = document.getElementById(childListId);
                 if (targetElement) {
                     const isCollapsed = targetElement.classList.contains('collapsed');
@@ -368,51 +370,76 @@ export class SceneEditor {
             (object.constructor.name.includes('Model') || 
              object.constructor.name.includes('SingleCut')));
         
+        // IMPORTANT CHANGE: Add click handler for collapse/expand to the container
+        // This separates the label click (for logs) from the container click (for collapse)
+        if (hasChildElements && !isLoggableModel) {
+            objectContainer.addEventListener('click', (e) => {
+                // Only handle clicks on the container itself, not on its children
+                if (e.target === objectContainer) {
+                    const collapseBtn = objectContainer.querySelector('.collapse-btn');
+                    if (collapseBtn) {
+                        collapseBtn.click();
+                    }
+                }
+            });
+        }
+        
         // Model labels should have special styling and logging behavior
+        // These override any container click behaviors
         if (isLoggableModel) {
             objectLabel.style.cursor = 'pointer';
             objectLabel.style.textDecoration = 'underline dotted';
             objectLabel.style.color = '#4CAF50';
+            objectLabel.style.fontWeight = 'bold'; // Make it more obvious it's clickable
+            objectLabel.style.position = 'relative'; // For z-index
+            objectLabel.style.zIndex = '10'; // Ensure it's on top for click handling
             
-            // For models, prioritize logging over collapse/expand
-            objectLabel.addEventListener('click', (e) => {
+            // Create a separate 'info' icon specifically for logging
+            const infoIcon = document.createElement('span');
+            infoIcon.textContent = 'ℹ️';
+            infoIcon.style.marginLeft = '5px';
+            infoIcon.style.cursor = 'pointer';
+            infoIcon.style.zIndex = '20';
+            infoIcon.title = 'Click for model details';
+            
+            // Info icon click handler is dedicated solely to logging
+            infoIcon.addEventListener('click', (e) => {
                 e.stopPropagation();
                 e.preventDefault();
                 
-                // Debug click detection
-                console.log(`Clicked on model label: ${displayName}`);
-                
-                // Debug object type
+                console.log(`Clicked info icon for: ${displayName}`);
                 console.log(`Object type: ${object?.constructor?.name || 'unknown'}`);
-                console.log(`Object: `, object);
                 
                 // Log model info
                 if (typeof this.logModelInfo === 'function') {
                     console.log("Calling logModelInfo function");
                     this.logModelInfo(object);
                 } else {
-                    console.log("WARNING: logModelInfo function not found on SceneEditor instance");
+                    console.log("WARNING: logModelInfo function not found");
                     console.log("Model Debug Info:", object);
                     
-                    // Try direct call to logModelDetails if available on the object
+                    // Try direct call to logModelDetails if available
                     if (object && typeof object.logModelDetails === 'function') {
                         console.log("Calling logModelDetails directly on object");
                         object.logModelDetails();
                     }
                 }
             });
-        } 
-        // For non-model objects with children, make the label toggle collapse
-        else if (hasChildElements) {
-            objectLabel.addEventListener('click', () => {
-                const collapseBtn = objectContainer.querySelector('.collapse-btn');
-                if (collapseBtn) {
-                    collapseBtn.click();
-                }
+            
+            // The label itself now only focuses on logging (not collapsing)
+            objectLabel.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                
+                console.log(`Clicked label for: ${displayName}`);
+                infoIcon.click(); // Delegate to the info icon's click handler
             });
+            
+            objectContainer.appendChild(objectLabel);
+            objectContainer.appendChild(infoIcon);
+        } else {
+            objectContainer.appendChild(objectLabel);
         }
-        
-        objectContainer.appendChild(objectLabel);
         
         // Add the object container to the list item
         objectItem.appendChild(objectContainer);
