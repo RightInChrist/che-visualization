@@ -298,13 +298,28 @@ export class RotationControls {
         // Create Y rotation control if available
         if (config.rotation.y !== undefined) {
             console.log(`Creating Y rotation slider for ${config.name} with value ${config.rotation.y.default}`);
+            
+            const hasSingleCutControl = config.model.constructor && 
+                (config.model.constructor.name === 'SingleCutModel');
+                
+            const sliderLabel = hasSingleCutControl ? "Rotation" : "Y Rotation";
+            
             const yRotationContainer = this.createSliderRow(
-                "Y Rotation",
+                sliderLabel,
                 config.rotation.y.min,
                 config.rotation.y.max,
                 config.rotation.y.default,
                 (value) => this.onRotationChange(config.model, 'y', value)
             );
+            
+            if (hasSingleCutControl) {
+                // Style differently for SingleCutModel
+                yRotationContainer.style.backgroundColor = 'rgba(0, 100, 100, 0.1)';
+                yRotationContainer.style.padding = '5px';
+                yRotationContainer.style.borderRadius = '3px';
+                yRotationContainer.style.marginBottom = '10px';
+            }
+            
             modelSection.appendChild(yRotationContainer);
         } else if (config.rotation.default !== undefined) {
             // Fallback for models that only have default rotation defined

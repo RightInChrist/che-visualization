@@ -321,8 +321,10 @@ class CHEVisualization {
             
             // Get all layers from both models for radius and rotation controls
             const layerModels = [
+                this.ringModel.models.centralCut,
                 this.ringModel.models.layerOneRing,
                 this.ringModel.models.layerTwoRing,
+                this.starModel.models.centralCut,
                 this.starModel.models.layerOneStar,
                 this.starModel.models.layerTwoStar
             ];
@@ -333,7 +335,7 @@ class CHEVisualization {
                 layerModels,
                 {
                     isVisible: false,
-                    modelNames: ["Layer One Ring", "Layer Two Ring", "Layer One Star", "Layer Two Star"]
+                    modelNames: ["Ring Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
                 }
             );
             
@@ -343,7 +345,7 @@ class CHEVisualization {
                 layerModels, 
                 {
                     isVisible: false,
-                    modelNames: ["Layer One Ring", "Layer Two Ring", "Layer One Star", "Layer Two Star"]
+                    modelNames: ["Ring Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
                 }
             );
             

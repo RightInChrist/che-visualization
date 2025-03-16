@@ -192,6 +192,7 @@ export class RadiusControls {
                 (config.model.constructor.name === 'LayerOneModel') ||
                 (config.model.constructor.name === 'LayerTwoModel') ||
                 (config.model.constructor.name === 'LayerTwoStarModel') ||
+                (config.model.constructor.name === 'SingleCutModel') ||
                 (config.model.children && config.model.children.some(child => 
                     child.constructor.name === 'SingleCutModel'))
             );
@@ -216,6 +217,37 @@ export class RadiusControls {
                 // Create panel distance indicator
                 this.createPanelDistanceIndicator(modelSection, config.model);
             }
+        }
+        // Add direct radius control for SingleCutModel
+        else if (config.model && config.model.constructor && config.model.constructor.name === 'SingleCutModel' && 
+                typeof config.model.updateRadius === 'function') {
+            // Get current radius value
+            let radius = config.model.options && config.model.options.radius !== undefined ? 
+                config.model.options.radius : 21;
+            
+            // Create radius slider
+            const radiusContainer = this.createSliderRow(
+                "Radius",
+                10,
+                40,
+                radius,
+                (value) => {
+                    if (config.model && typeof config.model.updateRadius === 'function') {
+                        config.model.updateRadius(value);
+                        
+                        // Update panel distance display if available
+                        if (typeof this.updatePanelDistanceDisplay === 'function') {
+                            this.updatePanelDistanceDisplay(config.model);
+                        }
+                    }
+                },
+                0.01 // Allow hundredths precision
+            );
+            
+            modelSection.appendChild(radiusContainer);
+            
+            // Create panel distance indicator
+            this.createPanelDistanceIndicator(modelSection, config.model);
         }
         
         // Recursively create sections for children if enabled
