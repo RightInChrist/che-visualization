@@ -128,6 +128,15 @@ export class RadiusControls {
         modelSection.style.paddingLeft = level > 0 ? '5px' : '0'; // Reduced padding
         modelSection.style.borderLeft = level > 0 ? '1px solid #444' : 'none';
         
+        // Check if the model is visible - if not, hide this section
+        const model = config.model;
+        const isModelVisible = model && typeof model.isVisible === 'function' ? model.isVisible() : true;
+        
+        if (!isModelVisible) {
+            modelSection.style.display = 'none';
+            modelSection.dataset.hiddenByVisibility = 'true';
+        }
+        
         // Create model name header with reduced size
         const modelNameHeader = document.createElement('h4');
         modelNameHeader.textContent = config.name;
@@ -136,8 +145,6 @@ export class RadiusControls {
         modelNameHeader.style.color = '#eee';
         modelSection.appendChild(modelNameHeader);
 
-        const model = config.model;
-        
         // Add radius control using getRadius if available
         if (model && typeof model.getRadius === 'function') {
             const radius = model.getRadius();
@@ -584,7 +591,7 @@ export class RadiusControls {
                 buttonContainer.id = 'controlButtons';
                 buttonContainer.className = 'control-buttons-container';
                 buttonContainer.style.position = 'absolute';
-                buttonContainer.style.top = '10px';
+                buttonContainer.style.bottom = '10px'; // Change to position at bottom right
                 buttonContainer.style.right = '20px';
                 buttonContainer.style.display = 'flex';
                 buttonContainer.style.flexDirection = 'row';
@@ -594,30 +601,29 @@ export class RadiusControls {
                 console.log("Created new control buttons container");
             }
             
-            // Create button
+            // Create button with styles matching RotationControls
             const button = document.createElement('button');
             button.id = 'radiusToggle';
             button.textContent = 'Radius';
             button.className = 'control-button';
-            button.style.backgroundColor = this.options.isVisible ? '#4CAF50' : '#444444';
+            button.style.backgroundColor = this.options.isVisible ? '#FF9800' : '#444444'; // Match orange color of RotationControls
             button.style.color = '#fff';
             button.style.border = 'none';
-            button.style.padding = '6px 12px'; // Reduced from 8px 16px
-            button.style.borderRadius = '3px'; // Reduced from 4px
+            button.style.padding = '8px 16px'; // Match RotationControls padding
+            button.style.borderRadius = '4px'; // Match RotationControls border radius
             button.style.cursor = 'pointer';
             button.style.fontWeight = 'bold';
-            button.style.width = '100px'; // Reduced from 120px
-            button.style.fontSize = '12px'; // Add smaller font size
+            button.style.width = '120px'; // Match RotationControls width
             button.style.textAlign = 'center';
             button.style.transition = 'background-color 0.3s';
-            button.style.boxShadow = '0 1px 3px rgba(0,0,0,0.3)'; // Reduced shadow
+            button.style.boxShadow = '0 2px 4px rgba(0,0,0,0.3)'; // Match RotationControls shadow
             
             button.addEventListener('mouseover', () => {
-                button.style.backgroundColor = this.options.isVisible ? '#4CAF50' : '#666666';
+                button.style.backgroundColor = this.options.isVisible ? '#FF9800' : '#666666'; // Match RotationControls hover color
             });
             
             button.addEventListener('mouseout', () => {
-                button.style.backgroundColor = this.options.isVisible ? '#4CAF50' : '#444444';
+                button.style.backgroundColor = this.options.isVisible ? '#FF9800' : '#444444'; // Match RotationControls out color
             });
             
             button.addEventListener('click', () => {
@@ -637,22 +643,47 @@ export class RadiusControls {
     }
     
     /**
-     * Toggle panel visibility
-     * @param {boolean} isVisible - Whether panel should be visible
+     * Update the visibility of model sections based on model visibility
+     * Should be called after model visibility changes
      */
-    togglePanel(isVisible) {
-        this.panel.style.display = isVisible ? 'block' : 'none';
-        this.options.isVisible = isVisible;
+    updateSectionsVisibility() {
+        // Get all model sections
+        const modelSections = this.panel.querySelectorAll('.model-radius-section');
         
-        // Update button active state
-        if (this.toggleButton) {
-            this.toggleButton.style.backgroundColor = isVisible ? '#4CAF50' : '#444444';
-        }
-        
-        // Toggle radius lines visibility in the models
-        this.models.forEach(model => {
-            if (model && typeof model.setRadiusLinesVisible === 'function') {
-                model.setRadiusLinesVisible(isVisible);
+        // Loop through each section and check if its model is visible
+        modelSections.forEach(section => {
+            const modelIndex = section.dataset.modelIndex;
+            
+            // Find the corresponding model config
+            let modelConfig = null;
+            if (modelIndex !== undefined) {
+                // For top-level models
+                if (this.modelConfigs[modelIndex]) {
+                    modelConfig = this.modelConfigs[modelIndex];
+                } 
+                // For child models, search through all configs
+                else {
+                    this.modelConfigs.forEach(config => {
+                        if (config.children) {
+                            const childConfig = config.children.find(child => 
+                                child.model && child.model.options && 
+                                child.model.options.modelIndex === modelIndex);
+                            
+                            if (childConfig) {
+                                modelConfig = childConfig;
+                            }
+                        }
+                    });
+                }
+            }
+            
+            if (modelConfig && modelConfig.model) {
+                const model = modelConfig.model;
+                const isModelVisible = typeof model.isVisible === 'function' ? model.isVisible() : true;
+                
+                // Update section visibility based on model visibility
+                section.style.display = isModelVisible ? 'block' : 'none';
+                section.dataset.hiddenByVisibility = isModelVisible ? 'false' : 'true';
             }
         });
     }
@@ -670,7 +701,7 @@ export class RadiusControls {
         }
         
         if (this.toggleButton) {
-            this.toggleButton.style.backgroundColor = newVisibility ? '#4CAF50' : '#444444';
+            this.toggleButton.style.backgroundColor = newVisibility ? '#FF9800' : '#444444'; // Match RotationControls color
         }
         
         // Store the visibility state
@@ -682,6 +713,11 @@ export class RadiusControls {
                 model.setRadiusLinesVisible(newVisibility);
             }
         });
+        
+        // Update section visibility based on model visibility
+        if (newVisibility) {
+            this.updateSectionsVisibility();
+        }
     }
     
     /**
