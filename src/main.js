@@ -361,6 +361,7 @@ class CHEVisualization {
             
             // Store the controls in class properties for later access
             this.rotationControls = rotationControls;
+            this.radiusControls = radiusControls;
             this.debugInfoView = debugInfoView;
             
             // Register before render callback for LOD updates

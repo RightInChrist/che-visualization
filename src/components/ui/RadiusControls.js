@@ -665,8 +665,13 @@ export class RadiusControls {
         try {
             console.log("Creating radius controls toggle button");
             
-            // First look for the controlButtons container (newer UI layout)
-            let buttonContainer = document.getElementById('controlButtons');
+            // First look for the toggleButtons container (created in main.js)
+            let buttonContainer = document.getElementById('toggleButtons');
+            
+            // If not found, try controlButtons container (newer UI layout)
+            if (!buttonContainer) {
+                buttonContainer = document.getElementById('controlButtons');
+            }
             
             // If not found, look for the legacy container
             if (!buttonContainer) {

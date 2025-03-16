@@ -147,8 +147,13 @@ export class DebugInfoView {
         try {
             console.log("Creating debug info toggle button");
             
-            // Find the control buttons container that other toggles use
-            let buttonContainer = document.getElementById('controlButtons');
+            // First look for the toggleButtons container (created in main.js)
+            let buttonContainer = document.getElementById('toggleButtons');
+            
+            // If not found, try the control buttons container that other toggles use
+            if (!buttonContainer) {
+                buttonContainer = document.getElementById('controlButtons');
+            }
             
             // If not found, try the older class-based selector
             if (!buttonContainer) {
