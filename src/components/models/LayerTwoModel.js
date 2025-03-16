@@ -1,16 +1,17 @@
 import { Vector3, Color3, MeshBuilder, StandardMaterial, Axis, Space, Mesh } from '@babylonjs/core';
 import { SingleCutModel } from './SingleCutModel';
-import { CompositeModel } from './CompositeModel';
+import { HexagonModel } from './HexagonModel';
 
 /**
  * Creates a Layer Two Ring with 12 SingleCUT models arranged in a dodecagonal (12-sided) pattern
  * This model has shared panels between adjacent SingleCUTs, with an alternating distance pattern
  */
-export class LayerTwoModel extends CompositeModel {
+export class LayerTwoModel extends HexagonModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
-            outerRadius: 72.52, // Updated to 72.7 as requested
+            cornerCount: 12, // 12-sided polygon
+            radius: 72.52, // Using outerRadius as the hexagon radius (updated to 72.7 as requested)
             innerRadius: 63.02, // Inner radius for alternating pattern
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
@@ -23,7 +24,6 @@ export class LayerTwoModel extends CompositeModel {
         super(scene, position, { ...defaultOptions, ...options });
         
         // Ensure precision is handled consistently for radius values
-        this.options.outerRadius = parseFloat(this.options.outerRadius.toFixed(2));
         this.options.innerRadius = parseFloat(this.options.innerRadius.toFixed(2));
         this.options.singleCutRadius = parseFloat(this.options.singleCutRadius.toFixed(2));
         
@@ -53,9 +53,8 @@ export class LayerTwoModel extends CompositeModel {
             this.drawRadiusLines();
         }
         
-        // Rotate the entire model by the specified angle around the Y axis
-        this.updateRotation(this.options.rotationAngle);
-        this.debugLog(`Rotated Layer Two Ring by ${this.options.rotationAngle} degrees`);
+        // Rotation is now handled by the HexagonModel parent class
+        this.debugLog(`Layer Two Ring model created with radius: ${this.options.radius}, inner radius: ${this.options.innerRadius}`);
         
         // Mark initialization as complete
         this.initializationComplete = true;
@@ -79,74 +78,60 @@ export class LayerTwoModel extends CompositeModel {
         this.permanentlyHiddenElements = [];
         
         // Use consistent precision for radius values
-        const outerRadius = parseFloat(this.options.outerRadius.toFixed(2));
+        const outerRadius = parseFloat(this.options.radius.toFixed(2));
         const innerRadius = parseFloat(this.options.innerRadius.toFixed(2));
         const singleCutRadius = parseFloat(this.options.singleCutRadius.toFixed(2));
         
         this.debugLog(`Using outer radius: ${outerRadius.toFixed(2)}, inner radius: ${innerRadius.toFixed(2)}, SingleCUT radius: ${singleCutRadius.toFixed(2)}`);
 
-        // Store positions for verification
-        const positions = [];
+        // Store distances for verification
         const distances = [];
         
         // Create 12 SingleCUTs in an alternating pattern
-        const numModels = 12;
-        
-        // Store calculated positions for resetting
-        this.calculatedPositions = [];
+        const numModels = this.options.cornerCount;
         
         // IMPORTANT: Setup hidden elements BEFORE creating child models
         this.setupHiddenElements();
         
-        // Define initial rotation values for each model based on the provided pattern
-        // These are the base rotations for each model
-        this.initialRotations = [
-            210, // Cut 1
-            150, // Cut 2
-            150, // Cut 3
-            90,  // Cut 4
-            90,  // Cut 5
-            30,  // Cut 6
-            30,  // Cut 7
-            330, // Cut 8
-            330, // Cut 9
-            270, // Cut 10
-            270, // Cut 11
-            210  // Cut 12
-        ];
+        // Define initial rotation values for each model in a 12-unit circle
+        // These are angles relative to each position, specific to each SingleCUT
+        // Note: These are now calculated based on the position rather than hardcoded
+        this.initialRotations = Array(numModels).fill(0).map((_, i) => {
+            // Calculate rotation based on position around the circle
+            // For 12-sided polygon, each position is 30 degrees apart (360/12)
+            // To have models face outward, they should face 90 degrees offset from their angle
+            const positionAngle = i * (360 / numModels);
+            const rotationAngle = (positionAngle + 90) % 360;
+            return rotationAngle;
+        });
         
         // Store the current rotation delta (will be applied on top of initial rotations)
         this.rotationDelta = 0;
         
-        // Create a dodecagon with alternating distances from center
+        // Create models at positions alternating between outer and inner radius
         for (let i = 0; i < numModels; i++) {
-            // Calculate angle with consistent precision
-            const angle = parseFloat(((i * 2 * Math.PI) / numModels).toFixed(6));
+            // Use cornerNodes positions as reference points
+            const basePosition = this.cornerNodes[i].position.clone();
             
-            // Alternate between inner and outer radius
-            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            // Decide radius based on alternating pattern
+            const useInnerRadius = i % 2 === 1; // Odd indices use inner radius
+            const currentRadius = useInnerRadius ? innerRadius : outerRadius;
             
-            // Calculate the position with consistent precision
-            const x = exactMultiply(radius, Math.cos(angle));
-            const z = exactMultiply(radius, Math.sin(angle));
-            
-            const position = new Vector3(x, 0, z);
-            positions.push(position);
-            this.calculatedPositions.push(position.clone()); // Clone to avoid reference issues
+            // Scale the position to the desired radius
+            // We'll calculate a normalized direction vector from origin to the corner
+            // Then multiply by the desired radius
+            const direction = basePosition.normalize();
+            const position = direction.scale(currentRadius);
             
             // Verify distance from center with consistent precision
-            const distanceFromCenter = parseFloat(Math.sqrt(x * x + z * z).toFixed(2));
+            const distanceFromCenter = parseFloat(Vector3.Distance(position, Vector3.Zero()).toFixed(2));
             distances.push(distanceFromCenter);
             
-            this.debugLog(`SingleCUT #${i+1}: angle=${(angle * 180 / Math.PI).toFixed(2)}°, ` +
-                         `radius=${radius.toFixed(2)}, ` +
-                         `position=(${x.toFixed(2)}, 0, ${z.toFixed(2)}), ` +
+            this.debugLog(`SingleCUT #${i+1}: Using ${useInnerRadius ? 'inner' : 'outer'} radius position=(${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)}), ` +
                          `distance=${distanceFromCenter.toFixed(2)}`);
             
-            // Get the initial rotation for this SingleCUT
-            // Use modulo 12 to handle case where we might have less than 12 models
-            const rotationIndex = i % this.initialRotations.length;
-            const initialRotation = this.initialRotations[rotationIndex];
+            // Get the initial rotation for this SingleCUT from the calculated array
+            const initialRotation = this.initialRotations[i];
             
             this.debugLog(`SingleCUT #${i+1}: initial rotation=${initialRotation}°`);
             
@@ -170,7 +155,7 @@ export class LayerTwoModel extends CompositeModel {
         // Verify that distances match the expected pattern
         this.verifyDistances(distances);
         
-        this.debugLog('Layer Two Ring model creation complete with alternating distances');
+        this.debugLog('Layer Two Ring model creation complete');
     }
     
     /**
@@ -327,7 +312,7 @@ export class LayerTwoModel extends CompositeModel {
         
         // Create circle for the outer radius
         const outerCircle = MeshBuilder.CreateDisc("outerRadiusLine", {
-            radius: this.options.outerRadius,
+            radius: this.options.radius,
             tessellation: 96,
             sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
@@ -367,7 +352,7 @@ export class LayerTwoModel extends CompositeModel {
             const angle = (i * 2 * Math.PI) / numModels;
             
             // Alternate between inner and outer radius for line color
-            const radius = i % 2 === 0 ? this.options.outerRadius : this.options.innerRadius;
+            const radius = i % 2 === 0 ? this.options.radius : this.options.innerRadius;
             
             // Calculate exact position
             const x = exactMultiply(radius, Math.cos(angle));
@@ -411,53 +396,51 @@ export class LayerTwoModel extends CompositeModel {
      * Update the model with new radius settings
      * @param {number} outerRadius - New radius for outer SingleCUTs
      * @param {number} singleCutRadius - New radius for each SingleCUT's internal structure
-     * @param {number} [innerRadius] - Optional. New radius for inner SingleCUTs. If not provided, 
-     *                               it will be calculated as 0.866 * outerRadius.
+     * @param {number} innerRadius - Optional new inner radius for alternating pattern
      */
     updateRadiusSettings(outerRadius, singleCutRadius, innerRadius) {
         // Store the new settings with precision to two decimal places
-        this.options.outerRadius = parseFloat(outerRadius.toFixed(2));
         this.options.singleCutRadius = parseFloat(singleCutRadius.toFixed(2));
         
         // Use provided innerRadius or calculate it from outerRadius
         if (innerRadius !== undefined) {
             this.options.innerRadius = parseFloat(innerRadius.toFixed(2));
-            this.debugLog(`Updating radius settings - outer: ${this.options.outerRadius}, inner: ${this.options.innerRadius}, singleCut: ${this.options.singleCutRadius}`);
+            this.debugLog(`Updating radius settings - outer: ${outerRadius}, inner: ${this.options.innerRadius}, singleCut: ${this.options.singleCutRadius}`);
         } else {
             // Calculate new inner radius proportional to outer radius
             this.options.innerRadius = parseFloat((outerRadius * 0.866).toFixed(2)); // Approximately cos(30°)
-            this.debugLog(`Updating radius settings - outer: ${this.options.outerRadius}, calculated inner: ${this.options.innerRadius}, singleCut: ${this.options.singleCutRadius}`);
+            this.debugLog(`Updating radius settings - outer: ${outerRadius}, calculated inner: ${this.options.innerRadius}, singleCut: ${this.options.singleCutRadius}`);
         }
         
-        // Need to recalculate the positions for each SingleCUT
-        this.calculatedPositions = this.calculateChildPositions();
+        // Use the parent HexagonModel's updateRadius method to update the main radius
+        // This will reposition all cornerNodes
+        super.updateRadius(outerRadius);
         
-        // Check if we have existing children to update
-        if (this.childModels && this.childModels.length > 0) {
-            // Update positions of existing children instead of recreating them
+        // Only update positions if we're not in the initialization phase
+        if (this.initializationComplete) {
+            // First dispose of all existing children
+            this.disposeChildren();
+            this.clearRadiusLines();
+            
+            // Recreate all models with new settings
+            this.createModels();
+            
+            // Update child positions consistently
             this.updateChildPositions();
             
-            // Update SingleCUT radius for all children
-            this.childModels.forEach(singleCut => {
-                if (singleCut && typeof singleCut.updateRadius === 'function') {
-                    singleCut.updateRadius(this.options.singleCutRadius);
-                }
-            });
+            // Redraw radius lines
+            if (this.options.showRadiusLines) {
+                this.drawRadiusLines();
+            }
+            
+            // Log success
+            this.debugLog('Radius settings updated and models recreated');
+            
+            // Update the stats
+            this.logLayerTwoSummary();
         } else {
-            // No existing children, create them from scratch
-            this.createModels();
+            this.debugLog('Skipping repositioning during initialization phase');
         }
-        
-        // Clear and redraw radius lines
-        this.clearRadiusLines();
-        if (this.options.showRadiusLines) {
-            this.drawRadiusLines();
-        }
-        
-        // Log a summary after updates
-        this.logLayerTwoSummary();
-        
-        this.debugLog('Radius settings updated');
     }
     
     /**
@@ -469,7 +452,7 @@ export class LayerTwoModel extends CompositeModel {
         const numModels = 12; // Always 12 SingleCUTs in this model
         
         // Use consistent precision for all calculations
-        const outerRadius = parseFloat(this.options.outerRadius.toFixed(2));
+        const outerRadius = parseFloat(this.options.radius.toFixed(2));
         const innerRadius = parseFloat(this.options.innerRadius.toFixed(2));
         
         for (let i = 0; i < numModels; i++) {
@@ -651,15 +634,15 @@ export class LayerTwoModel extends CompositeModel {
         console.log(`
 ========== LayerTwo Model Summary ==========
 Configuration:
-  - Outer Radius: ${this.options.outerRadius.toFixed(2)}
-  - Inner Radius: ${this.options.innerRadius.toFixed(2)} (${(100 * this.options.innerRadius / this.options.outerRadius).toFixed(1)}% of outer)
+  - Outer Radius: ${this.options.radius.toFixed(2)}
+  - Inner Radius: ${this.options.innerRadius.toFixed(2)} (${(100 * this.options.innerRadius / this.options.radius).toFixed(1)}% of outer)
   - SingleCUT Radius: ${this.options.singleCutRadius.toFixed(2)}
   - Rotation Angle: ${this.options.rotationAngle.toFixed(2)}°
   - SingleCUT Rotation Angle: ${this.options.singleCutRotationAngle.toFixed(2)}°
 
 Child Models: ${this.childModels ? this.childModels.length : 0} SingleCUTs
-Position Pattern: Alternating at ${this.options.outerRadius.toFixed(2)} and ${this.options.innerRadius.toFixed(2)} units
-Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFixed(2)} units
+Position Pattern: Alternating at ${this.options.radius.toFixed(2)} and ${this.options.innerRadius.toFixed(2)} units
+Radius Difference: ${(this.options.radius - this.options.innerRadius).toFixed(2)} units
 ==============================================
 `);
     }
@@ -691,7 +674,7 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
         console.log("Performing guaranteed position refresh with radius trick...");
         
         // Store current radius values
-        const currentOuterRadius = this.options.outerRadius;
+        const currentOuterRadius = this.options.radius;
         const currentSingleCutRadius = this.options.singleCutRadius;
         
         // Make a tiny change to force update
@@ -714,11 +697,11 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
         // Set inner radius with precision to two decimal places
         const preciseInnerRadius = parseFloat(innerRadius.toFixed(2));
         
-        this.debugLog(`Updating inner radius to ${preciseInnerRadius} (outer: ${this.options.outerRadius})`);
+        this.debugLog(`Updating inner radius to ${preciseInnerRadius} (outer: ${this.options.radius})`);
         
         // Call the main update method with current outer radius and singleCutRadius
         this.updateRadiusSettings(
-            this.options.outerRadius,
+            this.options.radius,
             this.options.singleCutRadius,
             preciseInnerRadius
         );
@@ -835,38 +818,11 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
     }
     
     /**
-     * Update rotation of the entire model
-     * @param {number} rotationAngleDegrees - Rotation angle in degrees
-     */
-    updateRotation(rotationAngleDegrees) {
-        // Convert to radians
-        const rotationAngle = (rotationAngleDegrees * Math.PI) / 180;
-        
-        // Update root node rotation
-        this.rootNode.rotation = new Vector3(0, rotationAngle, 0);
-        
-        // Store the current angle
-        this.options.rotationAngle = rotationAngleDegrees;
-        
-        // Update all SingleCUT rotations to match their own internal rotation
-        // This is necessary for when SingleCUT controls are used separately
-        if (this.childModels && this.childModels.length > 0) {
-            this.childModels.forEach(singleCut => {
-                if (singleCut && typeof singleCut.updateRotation === 'function') {
-                    // Each SingleCut model maintains its own rotation, 
-                    // independent of the parent model rotation
-                    singleCut.updateRotation(singleCut.options.rotationAngle);
-                }
-            });
-        }
-    }
-    
-    /**
      * Get the default outer radius value for this model
      * @returns {number} - Default outer radius
      */
     getDefaultRadius() {
-        return this.options.outerRadius;
+        return this.options.radius;
     }
     
     /**
@@ -943,48 +899,70 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
     }
     
     /**
-     * Update the rotation of all child SingleCUT models to the same value
-     * @param {number} rotationAngleDegrees - New rotation angle in degrees for all SingleCUTs
+     * Update all SingleCUT rotations with a delta value applied to their initial rotations
+     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
      */
-    updateAllSingleCutRotations(rotationAngleDegrees) {
-        this.debugLog(`Setting all SingleCUT rotations to ${rotationAngleDegrees} degrees`);
-        
-        // Store this as the common SingleCUT rotation value
-        this.options.singleCutRotationAngle = rotationAngleDegrees;
-        
-        // Update all child SingleCUT models
-        if (this.childModels && this.childModels.length > 0) {
-            this.childModels.forEach(singleCut => {
-                if (singleCut && typeof singleCut.updateRotation === 'function') {
-                    singleCut.updateRotation(rotationAngleDegrees);
-                }
-            });
+    updateAllSingleCutDeltaRotations(deltaRotation) {
+        if (!this.childModels || this.childModels.length === 0) {
+            this.debugLog('No child models to update rotations for');
+            return;
         }
+        
+        // Store the current rotation delta
+        this.rotationDelta = deltaRotation;
+        
+        console.log(`Updating all SingleCUT rotations with delta: ${deltaRotation}°`);
+        
+        // Update each child model with its initial rotation + the delta
+        this.childModels.forEach((singleCut, i) => {
+            if (singleCut && typeof singleCut.updateRotation === 'function') {
+                // Get the original rotation value (or use the initialRotations array as fallback)
+                const originalRotation = singleCut.originalRotation || this.initialRotations[i % this.initialRotations.length];
+                
+                // Calculate new rotation by adding delta
+                let newRotation = originalRotation + deltaRotation;
+                
+                // Normalize to 0-360 range
+                newRotation = ((newRotation % 360) + 360) % 360;
+                
+                console.log(`SingleCUT #${i+1}: Updating rotation from ${originalRotation}° to ${newRotation}° (delta: ${deltaRotation}°)`);
+                
+                // Update the rotation
+                singleCut.updateRotation(newRotation);
+            }
+        });
     }
     
     /**
-     * Get the default SingleCut rotation value for all child models
-     * @returns {number} - Default SingleCut rotation in degrees
+     * Get the minimum delta rotation value for SingleCUTs
+     * @returns {number} - Minimum delta rotation in degrees
      */
-    getDefaultSingleCutRotation() {
-        // Use the stored value or fall back to a default
-        return this.options.singleCutRotationAngle || 30;
+    getMinSingleCutDeltaRotation() {
+        return -180;
     }
     
     /**
-     * Get the min SingleCut rotation value
-     * @returns {number} - Minimum SingleCut rotation in degrees
+     * Get the maximum delta rotation value for SingleCUTs
+     * @returns {number} - Maximum delta rotation in degrees
      */
-    getMinSingleCutRotation() {
+    getMaxSingleCutDeltaRotation() {
+        return 180;
+    }
+    
+    /**
+     * Get the default delta rotation value for SingleCUTs
+     * @returns {number} - Default delta rotation in degrees
+     */
+    getDefaultSingleCutDeltaRotation() {
         return 0;
     }
     
     /**
-     * Get the max SingleCut rotation value
-     * @returns {number} - Maximum SingleCut rotation in degrees
+     * Get the current delta rotation value for SingleCUTs
+     * @returns {number} - Current delta rotation in degrees
      */
-    getMaxSingleCutRotation() {
-        return 360;
+    getCurrentSingleCutDeltaRotation() {
+        return this.rotationDelta || 0;
     }
     
     /**
@@ -997,7 +975,7 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
         }
         // For a regular dodecagon, the distance between opposite panels (sides)
         // is outerRadius * 2 * cos(π/12)
-        const distanceBetweenPanels = this.options.outerRadius * 2 * Math.cos(Math.PI / 12);
+        const distanceBetweenPanels = this.options.radius * 2 * Math.cos(Math.PI / 12);
         return distanceBetweenPanels;
     }
     
@@ -1038,70 +1016,28 @@ Radius Difference: ${(this.options.outerRadius - this.options.innerRadius).toFix
     }
     
     /**
-     * Update all SingleCUT rotations with a delta value applied to their initial rotations
-     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
+     * Update all SingleCUT rotations to a specific angle (absolute angle, not delta)
+     * @param {number} rotationAngleDegrees - The absolute rotation angle in degrees
      */
-    updateAllSingleCutRotations(deltaRotation) {
+    updateAllSingleCutRotations(rotationAngleDegrees) {
         if (!this.childModels || this.childModels.length === 0) {
-            this.debugLog('No child models to update rotations for');
+            this.debugLog('No SingleCUT models to update rotations for');
             return;
         }
         
-        // Store the current rotation delta
-        this.rotationDelta = deltaRotation;
+        this.debugLog(`Updating all SingleCUT rotations to absolute angle: ${rotationAngleDegrees}°`);
         
-        console.log(`Updating all SingleCUT rotations with delta: ${deltaRotation}°`);
-        
-        // Update each child model with its initial rotation + the delta
-        this.childModels.forEach((singleCut, i) => {
+        // Update each child model to the same absolute rotation
+        this.childModels.forEach(singleCut => {
             if (singleCut && typeof singleCut.updateRotation === 'function') {
-                // Get the original rotation value (or use the initialRotations array as fallback)
-                const originalRotation = singleCut.originalRotation || this.initialRotations[i % this.initialRotations.length];
-                
-                // Calculate new rotation by adding delta
-                let newRotation = originalRotation + deltaRotation;
-                
-                // Normalize to 0-360 range
-                newRotation = ((newRotation % 360) + 360) % 360;
-                
-                console.log(`SingleCUT #${i+1}: Updating rotation from ${originalRotation}° to ${newRotation}° (delta: ${deltaRotation}°)`);
-                
-                // Update the rotation
-                singleCut.updateRotation(newRotation);
+                singleCut.updateRotation(rotationAngleDegrees);
             }
         });
-    }
-    
-    /**
-     * Get min delta rotation value for SingleCUTs
-     * @returns {number} - Minimum delta rotation in degrees
-     */
-    getMinSingleCutDeltaRotation() {
-        return -180;
-    }
-    
-    /**
-     * Get max delta rotation value for SingleCUTs
-     * @returns {number} - Maximum delta rotation in degrees
-     */
-    getMaxSingleCutDeltaRotation() {
-        return 180;
-    }
-    
-    /**
-     * Get default delta rotation value for SingleCUTs
-     * @returns {number} - Default delta rotation in degrees
-     */
-    getDefaultSingleCutDeltaRotation() {
-        return 0;
-    }
-    
-    /**
-     * Get current delta rotation value for SingleCUTs
-     * @returns {number} - Current delta rotation in degrees
-     */
-    getCurrentSingleCutDeltaRotation() {
-        return this.rotationDelta || 0;
+        
+        // Store the new rotation
+        this.options.singleCutRotationAngle = rotationAngleDegrees;
+        
+        this.debugLog(`All SingleCUT rotations updated to ${rotationAngleDegrees}°`);
     }
 }
 
