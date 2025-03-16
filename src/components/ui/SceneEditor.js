@@ -382,18 +382,8 @@ export class SceneEditor {
         const objectRow = document.createElement('div');
         objectRow.className = 'object-row';
         
-        // Flag to check if this is a Central CUT model
-        const isCentralCut = (
-            displayName === 'Central CUT' || 
-            displayName === 'Star Central CUT' || 
-            objectPath.includes('Ring Model/Central CUT') || 
-            objectPath.includes('Star Model/Star Central CUT')
-        );
-        
         // Check if the object has children to determine if we need a collapse button
-        // For Central CUTs, we'll manually handle panels below, so don't count them here
-        const hasChildren = this.hasChildren(object) || 
-                           (isCentralCut && object.constructor && object.constructor.name === 'SingleCutModel');
+        const hasChildren = this.hasChildren(object);
         
         // Create collapse button for items with children
         if (hasChildren) {
@@ -550,37 +540,19 @@ export class SceneEditor {
             childrenContainer.className = 'object-children';
             childrenContainer.style.marginLeft = '15px';
             
-            // Handle different types of objects and their children
+            // Add panels and pipes if they exist
+            if (object.pipes || object.panels) {
+                this.addModelChildren(childrenContainer, object, objectPath);
+            }
             
-            // Special handling for Central CUT models
-            if (isCentralCut && object.constructor && object.constructor.name === 'SingleCutModel') {
-                // Only add panels directly here, don't rely on addModelChildren for Central CUT
-                if (object.panels && object.panels.length > 0) {
-                    console.log(`[SceneEditor] Adding ${object.panels.length} panels for ${displayName}`);
-                    object.panels.forEach((panel, index) => {
-                        const panelName = `Panel #${index + 1}`;
-                        const panelItem = this.createObjectListItem(panelName, panel, object, objectPath);
-                        childrenContainer.appendChild(panelItem);
-                    });
-                }
-            } else {
-                // Standard handling for other model types
-                
-                // Add panels and pipes if they exist
-                if ((object.pipes || object.panels) && 
-                    !(isCentralCut && object.constructor && object.constructor.name === 'SingleCutModel')) {
-                    this.addModelChildren(childrenContainer, object, objectPath);
-                }
-                
-                // If the object is a composite model with SingleCUTs, add them
-                if (object.model && object.model.singleCuts) {
-                    this.addCompositeModelChildren(childrenContainer, object, objectPath);
-                }
-                
-                // Add regular children for objects with a children property
-                if (object.children && Object.keys(object.children).length > 0) {
-                    this.addChildrenObjects(childrenContainer, object.children, objectPath);
-                }
+            // If the object is a composite model with SingleCUTs, add them
+            if (object.model && object.model.singleCuts) {
+                this.addCompositeModelChildren(childrenContainer, object, objectPath);
+            }
+            
+            // Add regular children for objects with a children property
+            if (object.children && Object.keys(object.children).length > 0) {
+                this.addChildrenObjects(childrenContainer, object.children, objectPath);
             }
             
             listItem.appendChild(childrenContainer);
@@ -601,26 +573,14 @@ export class SceneEditor {
             return true;
         }
         
-        // Check if this is a pipe or panel in a composite model
-        if (path.includes('/Pipe #') || path.includes('/Panel #')) {
-            // Parse the path to extract model index, type and element index
-            const parts = path.split('/');
-            if (parts.length >= 2) {
-                const singleCutName = parts[0]; // e.g., "Single CUT #2"
-                const elementName = parts[1];   // e.g., "Pipe #3" or "Panel #4"
-                
-                // Extract indices
-                const modelIndex = parseInt(singleCutName.replace('Single CUT #', '')) - 1; // Convert to 0-based index
-                const elementIndex = parseInt(elementName.replace(/^(Pipe|Panel) #/, '')) - 1;
-                const elementType = elementName.startsWith('Pipe') ? 'pipe' : 'panel';
-                
-                // For any parent that contains singleCuts array, check if element is permanently hidden
-                const parent = path.includes('/') ? this.findParentObject(path) : null;
-                
-                if (parent && parent.model && typeof parent.model.isElementPermanentlyHidden === 'function') {
-                    return parent.model.isElementPermanentlyHidden(modelIndex, elementType, elementIndex);
-                }
-            }
+        // If the object has a method to determine if it's permanently hidden, use that
+        if (object && typeof object.isPermanentlyHidden === 'function') {
+            return object.isPermanentlyHidden();
+        }
+        
+        // If object has a model with the method, use that
+        if (object && object.model && typeof object.model.isPermanentlyHidden === 'function') {
+            return object.model.isPermanentlyHidden();
         }
         
         return false;
@@ -859,179 +819,12 @@ export class SceneEditor {
             console.log(`[SceneEditor] Using object from ID map for ${objectId}`);
         }
         
-        // Check if this is a panel of a Central CUT
-        const isCentralCutPanel = path.includes('/Central CUT/Panel #') || path.includes('/Star Central CUT/Panel #');
-        
-        // Handle individual panel visibility for Central CUT models
-        if (isCentralCutPanel && object) {
-            console.log(`[SceneEditor] Setting visibility of Central CUT Panel to ${isVisible}`);
-            
-            // Set panel visibility directly
-            if (object.panelMesh) {
-                object.panelMesh.isVisible = isVisible;
-                console.log(`[SceneEditor] Set panelMesh.isVisible to ${isVisible}`);
-            }
-            
-            // Also enable/disable the rootNode if it exists
-            if (object.rootNode) {
-                object.rootNode.setEnabled(isVisible);
-                console.log(`[SceneEditor] Set rootNode.enabled to ${isVisible}`);
-            }
-            
-            // Update the checkbox state
-            if (this.checkboxElements[path]) {
-                this.checkboxElements[path].element.checked = isVisible;
-            }
-            
-            return; // Early return after handling individual panel
-        }
-        
-        // Extract root model type from path (either "Ring Model" or "Star Model")
-        const rootModelType = path.startsWith('Ring Model') ? 'Ring Model' : 
-                            path.startsWith('Star Model') ? 'Star Model' : null;
-        
-        // Handle the Star Model and its children explicitly
-        if (path === 'Star Model' || path.startsWith('Star Model/')) {
-            console.log(`[SceneEditor] Special handling for Star Model path: ${path}`);
-            
-            // For debugging, log the object
-            console.log(`[SceneEditor] Object type: ${object?.constructor?.name}`);
-            
-            // Find the Star Model object from sceneObjects
-            const starModelObject = this.sceneObjects['Star Model'];
-            
-            // Special handling for toggling the Star Model itself
-            if (path === 'Star Model' && object && object.model) {
-                console.log('[SceneEditor] Direct use of model.setVisible for Star Model');
-                try {
-                    // Directly use the model's setVisible method
-                    object.model.setVisible(isVisible);
-                    
-                    // Check if the visibility was actually set
-                    console.log(`[SceneEditor] After toggle, Star Model rootNode.isEnabled(): ${object.model.rootNode?.isEnabled()}`);
-                    
-                    // Update the checkbox state
-                    if (this.checkboxElements[path]) {
-                        this.checkboxElements[path].element.checked = isVisible;
-                    }
-                    
-                    return; // Early return after special handling
-                } catch (error) {
-                    console.error('[SceneEditor] Error setting Star Model visibility:', error);
-                }
-            }
-            
-            // Special handling for toggling any child of Star Model
-            if (path.startsWith('Star Model/') && isVisible) {
-                if (starModelObject && starModelObject.model) {
-                    console.log('[SceneEditor] Making parent Star Model visible for child toggle');
-                    
-                    // Check if Star Model is currently invisible
-                    const starModelVisible = this.getObjectVisibility(starModelObject);
-                    
-                    if (!starModelVisible) {
-                        console.log('[SceneEditor] Star Model is invisible, making it visible first');
-                        
-                        // Make Star Model visible first
-                        starModelObject.model.setVisible(true);
-                        
-                        // Update the checkbox state for Star Model
-                        if (this.checkboxElements['Star Model']) {
-                            this.checkboxElements['Star Model'].element.checked = true;
-                        }
-                    }
-                    
-                    // Direct handling for Layer One Star and Layer Two Star
-                    if (path === 'Star Model/Layer One Star' || path === 'Star Model/Layer Two Star') {
-                        const modelKey = path === 'Star Model/Layer One Star' ? 'layerOne' : 'layerTwo';
-                        
-                        console.log(`[SceneEditor] Setting ${path} visibility to ${isVisible}`);
-                        
-                        // Update the visibility option in StarModel
-                        starModelObject.model.options.visibility[modelKey] = isVisible;
-                        
-                        // Apply the visibility settings
-                        starModelObject.model.setModelVisibility();
-                        
-                        // Update the checkbox state
-                        if (this.checkboxElements[path]) {
-                            this.checkboxElements[path].element.checked = isVisible;
-                        }
-                        
-                        // Special case: If we're showing Layer One Star, make sure Layer Two Star is also rendered
-                        if (path === 'Star Model/Layer One Star' && isVisible) {
-                            console.log('[SceneEditor] Also checking Layer Two Star visibility');
-                            
-                            // Check if LayerTwoStar is configured to be visible in options
-                            if (starModelObject.model.options.visibility.layerTwo) {
-                                console.log('[SceneEditor] Ensuring Layer Two Star visibility is applied');
-                                
-                                // Force Layer Two Star to be visible if it's set to be visible in options
-                                if (starModelObject.model.models.layerTwoStar) {
-                                    starModelObject.model.models.layerTwoStar.setVisible(true);
-                                    
-                                    // Make sure checkbox matches
-                                    if (this.checkboxElements['Star Model/Layer Two Star']) {
-                                        this.checkboxElements['Star Model/Layer Two Star'].element.checked = true;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        return; // Early return after handling
-                    }
-                }
-            }
-        }
-        
-        // Handle the Ring Model children explicitly for path clarity
-        if (path === 'Ring Model' || path.startsWith('Ring Model/')) {
-            console.log(`[SceneEditor] Applying Ring Model-specific handling for ${path}`);
-            
-            // Find the Ring Model object from sceneObjects
-            const ringModelObject = this.sceneObjects['Ring Model'];
-            
-            // Special handling for toggling the Ring Model itself
-            if (path === 'Ring Model' && object && object.model) {
-                console.log('[SceneEditor] Direct use of model.setVisible for Ring Model');
-                try {
-                    // Directly use the model's setVisible method
-                    object.model.setVisible(isVisible);
-                    
-                    // Check if the visibility was actually set
-                    console.log(`[SceneEditor] After toggle, Ring Model rootNode.isEnabled(): ${object.model.rootNode?.isEnabled()}`);
-                    
-                    // Update the checkbox state
-                    if (this.checkboxElements[path]) {
-                        this.checkboxElements[path].element.checked = isVisible;
-                    }
-                    
-                    return; // Early return after special handling
-                } catch (error) {
-                    console.error('[SceneEditor] Error setting Ring Model visibility:', error);
-                }
-            }
-        }
-        
-        // Set visibility on object using the normal path
+        // Set visibility on object using the standard approach
         this.setObjectVisibility(object, isVisible, path);
         
         // Update the checkbox state
         if (this.checkboxElements[path]) {
             this.checkboxElements[path].element.checked = isVisible;
-        }
-        
-        // Special check for Star Model to make sure it was toggled properly
-        if (path === 'Star Model') {
-            setTimeout(() => {
-                const actuallyVisible = this.getObjectVisibility(object);
-                console.log(`[SceneEditor] After toggle and timeout, Star Model visibility: ${actuallyVisible}`);
-                
-                // Force the checkbox to match the actual state after a delay
-                if (this.checkboxElements[path]) {
-                    this.checkboxElements[path].element.checked = actuallyVisible;
-                }
-            }, 200);
         }
     }
     
