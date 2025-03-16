@@ -60,11 +60,18 @@ export class DebugInfoView {
             this.panel.style.maxHeight = '300px';
             this.panel.style.overflowY = 'auto';
             
+            // Add order property to ensure it's displayed at the top
+            this.panel.style.order = '-1'; // Negative value puts it at the top in flexbox
+            
             // Create camera info content
             this.updateCameraInfo();
             
-            // Add the panel to the control panels container
-            this.controlPanels.appendChild(this.panel);
+            // Add the panel to the control panels container as the first child
+            if (this.controlPanels.firstChild) {
+                this.controlPanels.insertBefore(this.panel, this.controlPanels.firstChild);
+            } else {
+                this.controlPanels.appendChild(this.panel);
+            }
             
             console.log("DebugInfoView panel created successfully");
         } catch (error) {
