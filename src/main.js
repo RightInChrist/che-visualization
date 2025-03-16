@@ -88,21 +88,34 @@ class CHEVisualization {
             }
             
             // For Ring Model
-            const allRingPipes = this.ringModel.getAllPipes();
-            allRingPipes.forEach(pipe => {
-                shadowGenerator.addShadowCaster(pipe.pipeMesh);
-            });
+            if (this.ringModel && typeof this.ringModel.getAllPipes === 'function') {
+                const allRingPipes = this.ringModel.getAllPipes() || [];
+                allRingPipes.forEach(pipe => {
+                    shadowGenerator.addShadowCaster(pipe.pipeMesh);
+                });
+            }
             
             // For Star Model
-            const allStarPipes = this.starModel.getAllPipes();
-            allStarPipes.forEach(pipe => {
-                shadowGenerator.addShadowCaster(pipe.pipeMesh);
-            });
+            if (this.starModel && typeof this.starModel.getAllPipes === 'function') {
+                const allStarPipes = this.starModel.getAllPipes() || [];
+                allStarPipes.forEach(pipe => {
+                    shadowGenerator.addShadowCaster(pipe.pipeMesh);
+                });
+            }
             
             // Combine all pipe meshes for collision detection
-            const centralCutPipeMeshes = this.centralCutModel.pipes ? this.centralCutModel.pipes.map(pipe => pipe.pipeMesh) : [];
-            const ringPipeMeshes = allRingPipes.map(pipe => pipe.pipeMesh);
-            const starPipeMeshes = allStarPipes.map(pipe => pipe.pipeMesh);
+            const centralCutPipeMeshes = this.centralCutModel && this.centralCutModel.pipes 
+                ? this.centralCutModel.pipes.map(pipe => pipe.pipeMesh) 
+                : [];
+                
+            const ringPipeMeshes = this.ringModel && typeof this.ringModel.getAllPipes === 'function'
+                ? (this.ringModel.getAllPipes() || []).map(pipe => pipe.pipeMesh)
+                : [];
+                
+            const starPipeMeshes = this.starModel && typeof this.starModel.getAllPipes === 'function'
+                ? (this.starModel.getAllPipes() || []).map(pipe => pipe.pipeMesh)
+                : [];
+                
             const pipeMeshes = [...centralCutPipeMeshes, ...ringPipeMeshes, ...starPipeMeshes];
             
             // Create camera controller
@@ -126,7 +139,6 @@ class CHEVisualization {
             // Prepare SingleCUTs for the scene editor
             const ringCentralSingleCutObjects = {};
             const ringLayerOneSingleCutObjects = {};
-            const ringLayerTwoSingleCutObjects = {};
             
             // Add Central CUT directly
             ringCentralSingleCutObjects['Central CUT'] = this.centralCutModel;
@@ -134,11 +146,6 @@ class CHEVisualization {
             // Add each Layer One SingleCUT from Ring Model
             ringModelSingleCuts.layerOne.forEach((singleCut, index) => {
                 ringLayerOneSingleCutObjects[`Single CUT #${index + 1}`] = singleCut;
-            });
-            
-            // Add each Layer Two SingleCUT from Ring Model
-            ringModelSingleCuts.layerTwo.forEach((singleCut, index) => {
-                ringLayerTwoSingleCutObjects[`Single CUT #${index + 1}`] = singleCut;
             });
             
             // Prepare Star Model SingleCUTs for the scene editor
@@ -163,19 +170,14 @@ class CHEVisualization {
                 'Ring Model': {
                     model: this.ringModel,
                     children: {
-                        'Central CUT': {
-                            model: this.centralCutModel,
-                            children: ringCentralSingleCutObjects
-                        },
-                        'Layer One Ring': {
-                            model: this.ringModel.models.layerOneRing,
+                        'Ring CUTs': {
+                            model: null,
                             children: ringLayerOneSingleCutObjects
-                        },
-                        'Layer Two Ring': {
-                            model: this.ringModel.models.layerTwoRing,
-                            children: ringLayerTwoSingleCutObjects
                         }
                     }
+                },
+                'Central CUT': {
+                    model: this.centralCutModel
                 },
                 'Star Model': {
                     model: this.starModel,
@@ -185,7 +187,7 @@ class CHEVisualization {
                             children: starCentralSingleCutObjects
                         },
                         'Star Outer CUTs': {
-                            model: null, // There's no container model now
+                            model: null,
                             children: starLayerOneSingleCutObjects
                         }
                     }
@@ -396,66 +398,48 @@ class CHEVisualization {
             },
             // Helper functions
             getStats: () => {
-                if (window.cheDebug.models.layerTwoRing) {
-                    console.log("Getting LayerTwoRing stats:");
-                    return window.cheDebug.models.layerTwoRing.getRepositionStats();
-                } else {
-                    console.error("LayerTwoRing model not accessible");
-                    return null;
-                }
-            },
-            repositionLayerTwo: () => {
-                if (window.cheDebug.models.layerTwoRing) {
-                    console.log("Manually triggering LayerTwoRing repositioning...");
-                    window.cheDebug.models.layerTwoRing.updateChildPositions();
-                    return "Repositioning complete";
-                } else {
-                    console.error("LayerTwoRing model not accessible");
-                    return null;
-                }
+                console.log("Getting model stats:");
+                return {
+                    ringModel: {
+                        childCount: this.ringModel.childModels ? this.ringModel.childModels.length : 0,
+                        radius: this.ringModel.options ? this.ringModel.options.outerRadius : 'unknown'
+                    },
+                    starModel: {
+                        childCount: this.starModel.childModels ? this.starModel.childModels.length : 0,
+                        radius: this.starModel.options ? this.starModel.options.outerRadius : 'unknown'
+                    }
+                };
             },
             // Force a complete recalculation and update of child positions
             forceUpdatePositions: () => {
-                if (window.cheDebug.models.layerTwoRing) {
-                    console.log("Forcing complete recalculation of all positions...");
-                    const count = window.cheDebug.models.layerTwoRing.forceUpdatePositions();
-                    return `Force updated ${count} SingleCUT positions`;
-                } else {
-                    console.error("LayerTwoRing model not accessible");
-                    return null;
+                console.log("Forcing complete recalculation of all positions...");
+                
+                // Update Ring Model positions
+                if (this.ringModel && typeof this.ringModel.updateRadiusSettings === 'function') {
+                    const outerRadius = this.ringModel.options ? this.ringModel.options.outerRadius : 72.52;
+                    const singleCutRadius = this.ringModel.options ? this.ringModel.options.singleCutRadius : 21;
+                    this.ringModel.updateRadiusSettings(outerRadius, singleCutRadius);
+                    console.log(`Updated Ring Model positions with radius=${outerRadius}`);
                 }
-            },
-            // Guaranteed refresh using radius trick
-            guaranteedRefresh: () => {
-                if (window.cheDebug.models.layerTwoRing) {
-                    console.log("Executing guaranteed refresh method...");
-                    return window.cheDebug.models.layerTwoRing.guaranteedRefresh();
-                } else {
-                    console.error("LayerTwoRing model not accessible");
-                    return null;
+                
+                // Update Star Model positions
+                if (this.starModel && typeof this.starModel.updateRadiusSettings === 'function') {
+                    const outerRadius = this.starModel.options ? this.starModel.options.outerRadius : 72.52;
+                    const singleCutRadius = this.starModel.options ? this.starModel.options.singleCutRadius : 21;
+                    this.starModel.updateRadiusSettings(outerRadius, singleCutRadius);
+                    console.log(`Updated Star Model positions with radius=${outerRadius}`);
                 }
+                
+                return "Force updated all model positions";
             },
-            // Get a specific child model by index
-            getSingleCut: (index) => {
-                if (window.cheDebug.models.layerTwoRing && 
-                    window.cheDebug.models.layerTwoRing.childModels && 
-                    index < window.cheDebug.models.layerTwoRing.childModels.length) {
-                    return window.cheDebug.models.layerTwoRing.childModels[index];
-                } else {
-                    console.error(`SingleCUT model at index ${index} not found`);
-                    return null;
-                }
-            },
+            
             // Helper to explain how to use debug functions
             help: () => {
                 console.log(`
 CHE Visualization Debug Console Commands:
 ----------------------------------------
-cheDebug.getStats() - Get debugging statistics for LayerTwoRing
-cheDebug.repositionLayerTwo() - Manually trigger repositioning
+cheDebug.getStats() - Get basic statistics about models
 cheDebug.forceUpdatePositions() - Force complete recalculation and update of positions
-cheDebug.guaranteedRefresh() - Force a visual refresh using the radius update trick (RECOMMENDED)
-cheDebug.getSingleCut(index) - Get a specific SingleCUT model by index (0-11)
 cheDebug.models - Access all models directly
 cheDebug.app - Access the main application instance
 `);
