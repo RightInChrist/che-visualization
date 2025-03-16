@@ -2,6 +2,7 @@ import { Vector3 } from '@babylonjs/core';
 import { CompositeModel } from './CompositeModel';
 import { SingleCutModel } from './SingleCutModel';
 import { LayerOneStarModel } from './LayerOneStarModel';
+import { LayerTwoStarModel } from './LayerTwoStarModel';
 
 /**
  * StarModel - A model with a central CUT and outer star rings
@@ -13,7 +14,7 @@ export class StarModel extends CompositeModel {
             debug: false,
             singleCutRadius: 21,      // Radius for the SingleCUT
             rotationAngle: 0,         // Default rotation angle for star (different from ring)
-            outerRadius: 72.52,       // Outer radius
+            outerRadius: 80.0,        // Outer radius (now matches LayerTwoStarModel)
             visibility: {
                 centralCut: true,
                 outerRing: true
@@ -34,10 +35,10 @@ export class StarModel extends CompositeModel {
     }
     
     /**
-     * Create the central SingleCUT model and layer one star
+     * Create the central SingleCUT model and star layers
      */
     createModels() {
-        this.debugLog('Creating Star Model with central CUT and outer star');
+        this.debugLog('Creating Star Model with central CUT and outer star layers');
         
         const { singleCutRadius, rotationAngle, outerRadius } = this.options;
         
@@ -65,9 +66,23 @@ export class StarModel extends CompositeModel {
         this.layerOneStar = layerOneStar;
         this.addChild(layerOneStar);
         
+        // Create the Layer Two Star with 12 SingleCUTs (6 corners, 6 sides)
+        const layerTwoStar = new LayerTwoStarModel(this.scene, new Vector3(0, 0, 0), {
+            singleCutRadius: singleCutRadius,
+            cornerRotationAngle: rotationAngle,
+            sideRotationAngle: rotationAngle,
+            parent: this,
+            debug: this.options.debug
+        });
+        
+        // Store reference to the layer two star for direct access
+        this.layerTwoStar = layerTwoStar;
+        this.addChild(layerTwoStar);
+        
         // Ensure the star components are hidden by default
         centralCut.setVisible(false);
         layerOneStar.setVisible(false);
+        layerTwoStar.setVisible(false);
         
         this.debugLog('Star Model creation complete');
     }
@@ -99,6 +114,11 @@ export class StarModel extends CompositeModel {
             this.layerOneStar.onRender();
         }
         
+        // Propagate to layer two star
+        if (this.layerTwoStar && typeof this.layerTwoStar.onRender === 'function') {
+            this.layerTwoStar.onRender();
+        }
+        
         this.debugLog('Star Model initialization complete');
     }
     
@@ -111,14 +131,29 @@ export class StarModel extends CompositeModel {
         this.options.outerRadius = outerRadius;
         this.options.singleCutRadius = singleCutRadius;
         
+        // Calculate proportional radiuses based on the outerRadius (layer two radius)
+        const layerOneDefaultRadius = this.layerOneStar ? this.layerOneStar.getDefaultRadius() : 42.0;
+        const layerTwoDefaultRadius = this.layerTwoStar ? this.layerTwoStar.getDefaultRadius() : 80.0;
+        
+        // Use proportional scaling if outerRadius differs from default
+        const scaleFactor = outerRadius / layerTwoDefaultRadius;
+        
         // Update layer one star radius
         if (this.layerOneStar) {
             const radius = this.layerOneStar.getRadius();
             if (radius) {
-                radius.value = outerRadius * 0.55; // Scale the layerOne radius proportionally
+                radius.value = layerOneDefaultRadius * scaleFactor;
             }
         }
         
-        this.debugLog(`Updated radius settings: outerRadius=${outerRadius}, singleCutRadius=${singleCutRadius}`);
+        // Update layer two star radius
+        if (this.layerTwoStar) {
+            const radius = this.layerTwoStar.getRadius();
+            if (radius) {
+                radius.value = outerRadius;
+            }
+        }
+        
+        this.debugLog(`Updated radius settings: outerRadius=${outerRadius}, singleCutRadius=${singleCutRadius}, scaleFactor=${scaleFactor}`);
     }
 } 

@@ -100,18 +100,18 @@ export class RingModel extends CompositeModel {
         this.layerFourRing = layerFourRing;
         this.addChild(layerFourRing);
         
-        // Create the Layer Five Ring with 30 SingleCUTs (6 corners, 24 sides)
-        const layerFiveRing = new LayerFiveRingModel(this.scene, new Vector3(0, 0, 0), {
-            singleCutRadius: singleCutRadius,
-            cornerRotationAngle: rotationAngle,
-            sideRotationAngle: rotationAngle,
-            parent: this,
-            debug: this.options.debug
-        });
+        // // Create the Layer Five Ring with 30 SingleCUTs (6 corners, 24 sides)
+        // const layerFiveRing = new LayerFiveRingModel(this.scene, new Vector3(0, 0, 0), {
+        //     singleCutRadius: singleCutRadius,
+        //     cornerRotationAngle: rotationAngle,
+        //     sideRotationAngle: rotationAngle,
+        //     parent: this,
+        //     debug: this.options.debug
+        // });
         
-        // Store reference to the layer five ring for direct access
-        this.layerFiveRing = layerFiveRing;
-        this.addChild(layerFiveRing);
+        // // Store reference to the layer five ring for direct access
+        // this.layerFiveRing = layerFiveRing;
+        // this.addChild(layerFiveRing);
         
         this.debugLog('Ring Model creation complete');
     }

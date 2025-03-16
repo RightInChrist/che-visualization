@@ -168,7 +168,9 @@ class CHEVisualization {
                         childCount: this.starModel.childModels ? this.starModel.childModels.length : 0,
                         radius: this.starModel.options ? this.starModel.options.outerRadius : 'unknown',
                         layerOneRadius: this.starModel.layerOneStar && this.starModel.layerOneStar.options ? 
-                            this.starModel.layerOneStar.options.radius.toFixed(1) : 'unknown'
+                            this.starModel.layerOneStar.options.radius.toFixed(1) : 'unknown',
+                        layerTwoRadius: this.starModel.layerTwoStar && this.starModel.layerTwoStar.options ? 
+                            this.starModel.layerTwoStar.options.radius.toFixed(1) : 'unknown'
                     }
                 };
             },

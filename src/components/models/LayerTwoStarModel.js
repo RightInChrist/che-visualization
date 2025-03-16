@@ -3,10 +3,11 @@ import { HexagonModel } from './HexagonModel';
 import { SingleCutModel } from './SingleCutModel';
 
 /**
- * LayerOneStarModel - A model with 6 SingleCutModel instances at the corners of a hexagon
- * Similar to LayerOneRingModel but with different default settings
+ * LayerTwoStarModel - A model with 6 SingleCutModel instances at the corners of a hexagon
+ * and 6 SingleCutModel instances at the sides of the hexagon.
+ * Similar to LayerTwoRingModel but with different default settings.
  */
-export class LayerOneStarModel extends HexagonModel {
+export class LayerTwoStarModel extends HexagonModel {
     /**
      * @param {BABYLON.Scene} scene - The Babylon.js scene
      * @param {BABYLON.Vector3} position - The position of the model
@@ -18,7 +19,8 @@ export class LayerOneStarModel extends HexagonModel {
             debug: false,
             singleCutRadius: 21,    // Radius for the SingleCUT instances
             cornerRotationAngle: 0, // Default rotation angle for corner SingleCUTs (different from Ring)
-            radius: 42,           // Default outer star radius (slightly larger than Ring)
+            sideRotationAngle: 0,   // Default rotation angle for side SingleCUTs (different from Ring)
+            radius: 80.0,           // Default outer star radius (slightly larger than Ring)
             visibility: {
                 all: true
             }
@@ -27,23 +29,25 @@ export class LayerOneStarModel extends HexagonModel {
         // Call parent constructor with merged options
         super(scene, position, { ...defaultOptions, ...options });
         
-        // Create cornerRotations array that will be passed by reference to SingleCutModels
+        // Create rotation arrays that will be passed by reference to SingleCutModels
         this.cornerRotations = [];
+        this.sideRotations = [];
         
-        // Create the corner SingleCUT models
+        // Create the corner and side SingleCUT models
         this.createModels();
     }
     
     /**
-     * Create the corner SingleCUT models
+     * Create the corner and side SingleCUT models
      */
     createModels() {
-        this.debugLog('Creating LayerOneStarModel with 6 corner SingleCUTs');
+        this.debugLog('Creating LayerTwoStarModel with 6 corner SingleCUTs and 6 side SingleCUTs');
         
-        const { singleCutRadius, cornerRotationAngle } = this.options;
+        const { singleCutRadius, cornerRotationAngle, sideRotationAngle } = this.options;
         
-        // Store corner models for direct access
+        // Store models for direct access
         this.cornerCuts = [];
+        this.sideCuts = [];
         
         // Initialize corner rotations
         for (let i = 0; i < 6; i++) {
@@ -55,6 +59,19 @@ export class LayerOneStarModel extends HexagonModel {
                 min: 0,
                 max: 360,
                 default: cornerRotationAngle
+            });
+        }
+        
+        // Initialize side rotations
+        for (let i = 0; i < 6; i++) {
+            this.sideRotations.push({
+                id: `side-${i}`,
+                name: `Side ${i + 1}`,
+                index: i,
+                angle: sideRotationAngle,
+                min: 0,
+                max: 360,
+                default: sideRotationAngle
             });
         }
         
@@ -76,7 +93,32 @@ export class LayerOneStarModel extends HexagonModel {
             this.addChild(cornerCut);
         }
         
-        this.debugLog('LayerOneStarModel creation complete');
+        // Create a SingleCUT at each side (between corners)
+        for (let i = 0; i < 6; i++) {
+            // Calculate the next corner index (wrapping around to 0)
+            const nextCornerIndex = (i + 1) % 6;
+            
+            // Get positions of current and next corner
+            const currentCornerPosition = this.cornerNodes[i].position.clone();
+            const nextCornerPosition = this.cornerNodes[nextCornerIndex].position.clone();
+            
+            // Calculate midpoint between the corners
+            const sidePosition = currentCornerPosition.add(nextCornerPosition).scale(0.5);
+            
+            // Create a SingleCUT model at this side
+            const sideCut = new SingleCutModel(this.scene, sidePosition, {
+                radius: singleCutRadius,
+                rotationAngle: this.sideRotations[i].angle,
+                parent: this,
+                debug: this.options.debug
+            });
+            
+            // Store reference and add as child
+            this.sideCuts.push(sideCut);
+            this.addChild(sideCut);
+        }
+        
+        this.debugLog('LayerTwoStarModel creation complete');
     }
 
     /**
@@ -109,15 +151,15 @@ export class LayerOneStarModel extends HexagonModel {
     }
     
     /**
-     * Gets the rotation information for corner models
-     * @returns {Array} - Array of rotation objects for corner models
+     * Gets the rotation information for corner and side models
+     * @returns {Array} - Array of rotation objects for all models
      */
     getChildrenRotations() {
-        return this.cornerRotations;
+        return [...this.cornerRotations, ...this.sideRotations];
     }
     
     /**
-     * Update radius and reposition all corner SingleCUTs
+     * Update radius and reposition all corner and side SingleCUTs
      * @param {number} newRadius - The new radius value
      */
     updateRadius(newRadius) {
@@ -134,6 +176,25 @@ export class LayerOneStarModel extends HexagonModel {
             }
         }
         
+        // Update position of each side SingleCUT
+        for (let i = 0; i < this.sideCuts.length; i++) {
+            // Calculate the next corner index (wrapping around to 0)
+            const currentCornerIndex = i;
+            const nextCornerIndex = (i + 1) % 6;
+            
+            // Get positions of current and next corner
+            const currentCornerPosition = this.cornerNodes[currentCornerIndex].position.clone();
+            const nextCornerPosition = this.cornerNodes[nextCornerIndex].position.clone();
+            
+            // Calculate midpoint between the corners
+            const sidePosition = currentCornerPosition.add(nextCornerPosition).scale(0.5);
+            
+            const sideCut = this.sideCuts[i];
+            if (sideCut && sideCut.rootNode) {
+                sideCut.rootNode.position = sidePosition;
+            }
+        }
+        
         this.debugLog(`Updated radius to ${newRadius}`);
     }
 
@@ -142,7 +203,7 @@ export class LayerOneStarModel extends HexagonModel {
      * @returns {number} The minimum radius
      */
     getMinRadius() {
-        return 30; // Minimum radius for this layer
+        return 60; // Minimum radius for this layer
     }
 
     /**
@@ -150,7 +211,7 @@ export class LayerOneStarModel extends HexagonModel {
      * @returns {number} The maximum radius
      */
     getMaxRadius() {
-        return 80; // Maximum radius for this layer
+        return 120; // Maximum radius for this layer
     }
 
     /**
@@ -158,15 +219,15 @@ export class LayerOneStarModel extends HexagonModel {
      * @returns {number} The default radius
      */
     getDefaultRadius() {
-        return 39.6; // Default radius for this layer
+        return 80.0; // Default radius for this layer
     }
 
     /**
-     * Override getName to return "Layer One Star"
+     * Override getName to return "Layer Two Star"
      * @returns {string} The display name for this model
      */
     getName() {
-        return "Layer One Star";
+        return "Layer Two Star";
     }
 
     /**
@@ -174,25 +235,34 @@ export class LayerOneStarModel extends HexagonModel {
      * Ensures the model and its children are properly initialized
      */
     onRender() {
-        this.debugLog('Initializing LayerOneStarModel');
+        this.debugLog('Initializing LayerTwoStarModel');
         
-        // Propagate to children
+        // Propagate to corner children
         this.cornerCuts.forEach(cornerCut => {
             if (cornerCut && typeof cornerCut.onRender === 'function') {
                 cornerCut.onRender();
             }
         });
         
-        this.debugLog('LayerOneStarModel initialization complete');
+        // Propagate to side children
+        this.sideCuts.forEach(sideCut => {
+            if (sideCut && typeof sideCut.onRender === 'function') {
+                sideCut.onRender();
+            }
+        });
+        
+        this.debugLog('LayerTwoStarModel initialization complete');
     }
     
     /**
      * Dispose this model and its resources
      */
     dispose() {
-        // Clean up references to cornerCuts
+        // Clean up references to cuts
         this.cornerCuts = [];
         this.cornerRotations = [];
+        this.sideCuts = [];
+        this.sideRotations = [];
         
         // Call parent dispose method which will dispose children
         super.dispose();
