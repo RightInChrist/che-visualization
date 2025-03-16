@@ -57,23 +57,6 @@ class CHEVisualization {
             // Make sure Ring Model is visible
             this.ringModel.setVisible(true);
             
-            // Add shadows to all pipes in the scene
-            // For Ring Model
-            if (this.ringModel && typeof this.ringModel.getAllPipes === 'function') {
-                const allRingPipes = this.ringModel.getAllPipes() || [];
-                allRingPipes.forEach(pipe => {
-                    shadowGenerator.addShadowCaster(pipe.pipeMesh);
-                });
-            }
-            
-            // For Star Model
-            if (this.starModel && typeof this.starModel.getAllPipes === 'function') {
-                const allStarPipes = this.starModel.getAllPipes() || [];
-                allStarPipes.forEach(pipe => {
-                    shadowGenerator.addShadowCaster(pipe.pipeMesh);
-                });
-            }
-            
             // Combine all pipe meshes for collision detection
             const ringPipeMeshes = this.ringModel && typeof this.ringModel.getAllPipes === 'function'
                 ? (this.ringModel.getAllPipes() || []).map(pipe => pipe.pipeMesh)

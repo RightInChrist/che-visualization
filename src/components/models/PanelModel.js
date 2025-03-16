@@ -44,41 +44,19 @@ export class PanelModel extends BaseModel {
         const panelMesh = MeshBuilder.CreateBox('panel', {
             height: this.options.height,
             width: this.options.width,
-            depth: this.options.depth,
-            faceUV: this._createUVs() // Create proper UV mapping
+            depth: this.options.depth
         }, this.scene);
         
         // Position box so bottom is at y=0
         panelMesh.position.y = this.options.height / 2;
         
-        // Create enhanced material
+        // Create simple material
         const panelMaterial = new StandardMaterial('panelMaterial', this.scene);
         panelMaterial.diffuseColor = this.options.color;
-        panelMaterial.ambientColor = this.options.color.scale(0.6); // Add ambient color for better lighting
-        panelMaterial.specularColor = new Color3(0.2, 0.2, 0.2); // Reduced specular for less shininess
-        panelMaterial.specularPower = 32; // More focused specular highlights
-        
-        // Add metallic-like reflections
-        panelMaterial.useReflectionFresnelFromSpecular = true;
-        panelMaterial.reflectionFresnelParameters = {
-            leftColor: this.options.color.scale(0.9),
-            rightColor: new Color3(0.8, 0.8, 0.8),
-            bias: 0.2,
-            power: 1.5
-        };
-        
-        // Add micro-surface texture for subtle variation
-        panelMaterial.microSurface = 0.92; // Slight roughness
-        
-        // Make edges more visible with emissive color
-        panelMaterial.emissiveColor = this.options.color.scale(0.1);
+        panelMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
         
         // Apply material
         panelMesh.material = panelMaterial;
-        
-        // Enhance shadows with better settings
-        panelMesh.receiveShadows = true;
-        panelMesh.castShadow = true;
         
         // Enable collisions
         panelMesh.checkCollisions = true;
@@ -87,24 +65,6 @@ export class PanelModel extends BaseModel {
         panelMesh.parent = this.rootNode;
         
         this.panelMesh = panelMesh;
-    }
-    
-    /**
-     * Creates proper UV mapping for the panel faces
-     * @returns {Array} - Face UVs array for box creation
-     * @private
-     */
-    _createUVs() {
-        // Create a simple UV mapping that stretches the texture across each face
-        const faceUV = new Array(6);
-        
-        // Set UV for each face (0-5) - the mapping depends on how you want each face to look
-        // For panels, we want the front and back to be the primary faces
-        for (let i = 0; i < 6; i++) {
-            faceUV[i] = new Vector4(0, 0, 1, 1);
-        }
-        
-        return faceUV;
     }
     
     /**
