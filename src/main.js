@@ -418,9 +418,6 @@ cheDebug.app - Access the main application instance
             // Apply to this model if it has the method
             if (model && typeof model.onRender === 'function') {
                 model.onRender();
-            } else if (model && typeof model.applyPanelDefaultRotations === 'function') {
-                // For backward compatibility
-                model.applyPanelDefaultRotations();
             }
             
             // Apply to child models
