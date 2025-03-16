@@ -214,6 +214,12 @@ class CHEVisualization {
                     return;
                 }
                 
+                // Use the new logModelDetails method if available
+                if (typeof model.logModelDetails === 'function') {
+                    model.logModelDetails();
+                    return;
+                }
+                
                 console.group("Selected Model Info");
                 
                 // Basic model info
