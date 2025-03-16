@@ -2,10 +2,23 @@ import { Engine } from '@babylonjs/core/Engines/engine';
 
 /**
  * Initializes the Babylon.js engine
- * @param {HTMLCanvasElement} canvas - The canvas element to render to
- * @returns {Promise<Engine>} - The initialized Babylon.js engine
+ * @returns {Promise<Object>} - Object containing the initialized engine and canvas
  */
-export const initializeEngine = async (canvas) => {
+export const initializeEngine = async () => {
+    // Create canvas element if not already in the DOM
+    let canvas = document.getElementById('renderCanvas');
+    
+    if (!canvas) {
+        console.log("Creating new canvas element");
+        canvas = document.createElement('canvas');
+        canvas.id = 'renderCanvas';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.touchAction = 'none';
+        canvas.style.outline = 'none';
+        document.body.appendChild(canvas);
+    }
+    
     // Create WebGL engine
     const engine = new Engine(canvas, true, { 
         preserveDrawingBuffer: true,
@@ -37,5 +50,5 @@ export const initializeEngine = async (canvas) => {
         }, 1000);
     });
     
-    return engine;
+    return { engine, canvas };
 }; 
