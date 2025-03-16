@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convective Heat Engine Visualization</title>
+    <style>
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+        }
+        /* UI Panel Container for all controls */
+        #controlPanels {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 350px; /* Consistent width for all control panels */
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #cameraInfo {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        #controlsInfo {
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .show-controls #controlsInfo {
+            display: block;
+        }
+        /* Control button container - horizontal layout */
+        #controlButtons {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: row; /* Arrange buttons horizontally */
+            gap: 10px;
+            pointer-events: auto;
+        }
+        /* Common button styles */
+        .control-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 40px; /* Fixed width for each button */
+            height: 40px;
+            border-radius: 20px;
+            background-color: #00aaff;
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+            transition: all 0.2s ease;
+        }
+        .control-button:hover {
+            background-color: #0088cc;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .control-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 3px rgba(0, 0, 0, 0.3);
+        }
+        /* Active state for toggled buttons */
+        .control-button.active {
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            border: 2px solid white;
+        }
+        /* Remove old positioning */
+        #modeToggle {
+            position: static;
+        }
+        #debugToggle {
+            position: static;
+        }
+        /* Button specific colors */
+        #modeToggle {
+            background-color: #4CAF50; /* Green */
+        }
+        #modeToggle:hover {
+            background-color: #3e8e41;
+        }
+        #debugToggle {
+            background-color: #F44336; /* Red */
+        }
+        #debugToggle:hover {
+            background-color: #d32f2f;
+        }
+        /* Button tooltips */
+        .tooltip {
+            position: relative;
+        }
+        .tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 45px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            white-space: nowrap;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none; /* Make sure tooltip doesn't interfere with clicking */
+        }
+        .tooltip:hover::after {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+  <script type="module" crossorigin src="/che-visualization/assets/index-DIrg038R.js"></script>
+  <link rel="modulepreload" crossorigin href="/che-visualization/assets/babylon-CE90AqKx.js">
+  <link rel="modulepreload" crossorigin href="/che-visualization/assets/loaders-Dq7FhDUI.js">
+  <link rel="modulepreload" crossorigin href="/che-visualization/assets/gui-DJfFYA57.js">
+</head>
+<body>
+    <!-- Render canvas -->
+    <canvas id="renderCanvas"></canvas>
+    
+    <!-- Control panels container (will be populated by the UI scripts) -->
+    <div id="controlPanels"></div>
+    
+</body>
+</html> 

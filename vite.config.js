@@ -4,7 +4,7 @@ import { resolve } from 'path';
 export default defineConfig({
   base: '/che-visualization/',
   build: {
-    outDir: 'dist',
+    outDir: 'docs',
     assetsDir: 'assets',
     rollupOptions: {
       output: {
