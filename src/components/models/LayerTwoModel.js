@@ -56,10 +56,12 @@ export class LayerTwoModel extends CompositeModel {
         // Track permanently hidden elements for scene editor
         this.permanentlyHiddenElements = [];
         
-        const outerRadius = this.options.outerRadius;
-        const innerRadius = this.options.innerRadius;
+        // Use consistent precision for radius values
+        const outerRadius = parseFloat(this.options.outerRadius.toFixed(2));
+        const innerRadius = parseFloat(this.options.innerRadius.toFixed(2));
+        const singleCutRadius = parseFloat(this.options.singleCutRadius.toFixed(2));
         
-        this.debugLog(`Using outer radius: ${outerRadius.toFixed(4)}, inner radius: ${innerRadius.toFixed(4)}, SingleCUT radius: ${this.options.singleCutRadius.toFixed(4)}`);
+        this.debugLog(`Using outer radius: ${outerRadius.toFixed(2)}, inner radius: ${innerRadius.toFixed(2)}, SingleCUT radius: ${singleCutRadius.toFixed(2)}`);
 
         // Store positions for verification
         const positions = [];
@@ -70,31 +72,31 @@ export class LayerTwoModel extends CompositeModel {
         
         // Create a dodecagon with alternating distances from center
         for (let i = 0; i < numModels; i++) {
-            // Using consistent angle calculation
-            const angle = (i * 2 * Math.PI) / numModels;
+            // Calculate angle with consistent precision
+            const angle = parseFloat(((i * 2 * Math.PI) / numModels).toFixed(6));
             
             // Alternate between inner and outer radius
             const radius = i % 2 === 0 ? outerRadius : innerRadius;
             
-            // Calculate the position with high precision
+            // Calculate the position with consistent precision
             const x = exactMultiply(radius, Math.cos(angle));
             const z = exactMultiply(radius, Math.sin(angle));
             
             const position = new Vector3(x, 0, z);
             positions.push(position);
             
-            // Verify distance from center with high precision
-            const distanceFromCenter = Math.sqrt(x * x + z * z);
+            // Verify distance from center with consistent precision
+            const distanceFromCenter = parseFloat(Math.sqrt(x * x + z * z).toFixed(2));
             distances.push(distanceFromCenter);
             
-            this.debugLog(`SingleCUT #${i+1}: angle=${(angle * 180 / Math.PI).toFixed(4)}°, ` +
-                         `radius=${radius.toFixed(4)}, ` +
-                         `position=(${x.toFixed(6)}, 0, ${z.toFixed(6)}), ` +
-                         `distance=${distanceFromCenter.toFixed(6)}`);
+            this.debugLog(`SingleCUT #${i+1}: angle=${(angle * 180 / Math.PI).toFixed(2)}°, ` +
+                         `radius=${radius.toFixed(2)}, ` +
+                         `position=(${x.toFixed(2)}, 0, ${z.toFixed(2)}), ` +
+                         `distance=${distanceFromCenter.toFixed(2)}`);
             
             // Create a SingleCUT with its own panels and rotation angle
             const singleCut = new SingleCutModel(this.scene, position, {
-                radius: this.options.singleCutRadius,
+                radius: singleCutRadius,
                 rotationAngle: this.options.singleCutRotationAngle,
                 parent: this
             });
@@ -126,35 +128,35 @@ export class LayerTwoModel extends CompositeModel {
             }
         });
         
-        // Calculate average for each group
-        const avgInner = innerDistances.reduce((sum, d) => sum + d, 0) / innerDistances.length;
-        const avgOuter = outerDistances.reduce((sum, d) => sum + d, 0) / outerDistances.length;
+        // Calculate average for each group with consistent precision
+        const avgInner = parseFloat((innerDistances.reduce((sum, d) => sum + d, 0) / innerDistances.length).toFixed(2));
+        const avgOuter = parseFloat((outerDistances.reduce((sum, d) => sum + d, 0) / outerDistances.length).toFixed(2));
         
         let maxInnerDeviation = 0;
         let maxOuterDeviation = 0;
         
         // Check deviations within each group
         innerDistances.forEach((distance, i) => {
-            const deviation = Math.abs(distance - avgInner);
+            const deviation = parseFloat(Math.abs(distance - avgInner).toFixed(2));
             maxInnerDeviation = Math.max(maxInnerDeviation, deviation);
             
-            if (deviation > 0.001) {
-                this.debugLog(`WARNING: Inner SingleCUT #${i*2+2} has distance deviation of ${deviation.toFixed(6)} units from average ${avgInner.toFixed(6)}`);
+            if (deviation > 0.01) { // Use a threshold that matches our precision (0.01)
+                this.debugLog(`WARNING: Inner SingleCUT #${i*2+2} has distance deviation of ${deviation.toFixed(2)} units from average ${avgInner.toFixed(2)}`);
             }
         });
         
         outerDistances.forEach((distance, i) => {
-            const deviation = Math.abs(distance - avgOuter);
+            const deviation = parseFloat(Math.abs(distance - avgOuter).toFixed(2));
             maxOuterDeviation = Math.max(maxOuterDeviation, deviation);
             
-            if (deviation > 0.001) {
-                this.debugLog(`WARNING: Outer SingleCUT #${i*2+1} has distance deviation of ${deviation.toFixed(6)} units from average ${avgOuter.toFixed(6)}`);
+            if (deviation > 0.01) { // Use a threshold that matches our precision (0.01)
+                this.debugLog(`WARNING: Outer SingleCUT #${i*2+1} has distance deviation of ${deviation.toFixed(2)} units from average ${avgOuter.toFixed(2)}`);
             }
         });
         
-        this.debugLog(`Outer SingleCUTs: average distance ${avgOuter.toFixed(6)}, max deviation ${maxOuterDeviation.toFixed(6)}`);
-        this.debugLog(`Inner SingleCUTs: average distance ${avgInner.toFixed(6)}, max deviation ${maxInnerDeviation.toFixed(6)}`);
-        this.debugLog(`Difference between inner and outer: ${(avgOuter - avgInner).toFixed(6)} units`);
+        this.debugLog(`Outer SingleCUTs: average distance ${avgOuter.toFixed(2)}, max deviation ${maxOuterDeviation.toFixed(2)}`);
+        this.debugLog(`Inner SingleCUTs: average distance ${avgInner.toFixed(2)}, max deviation ${maxInnerDeviation.toFixed(2)}`);
+        this.debugLog(`Difference between inner and outer: ${(avgOuter - avgInner).toFixed(2)} units`);
     }
     
     /**
@@ -331,11 +333,12 @@ export class LayerTwoModel extends CompositeModel {
             return;
         }
         
+        // Use consistent precision for all calculations
         const numModels = this.childModels.length;
-        const outerRadius = this.options.outerRadius;
-        const innerRadius = this.options.innerRadius;
+        const outerRadius = parseFloat(this.options.outerRadius.toFixed(2));
+        const innerRadius = parseFloat(this.options.innerRadius.toFixed(2));
         
-        this.debugLog(`Updating positions using outer radius: ${outerRadius.toFixed(4)}, inner radius: ${innerRadius.toFixed(4)}`);
+        this.debugLog(`Updating positions using outer radius: ${outerRadius.toFixed(2)}, inner radius: ${innerRadius.toFixed(2)}`);
         
         // Store positions for verification
         const positions = [];
@@ -343,21 +346,21 @@ export class LayerTwoModel extends CompositeModel {
         
         // Update the position of each child model
         for (let i = 0; i < numModels; i++) {
-            // Using consistent angle calculation
-            const angle = (i * 2 * Math.PI) / numModels;
+            // Calculate angle with consistent precision
+            const angle = parseFloat(((i * 2 * Math.PI) / numModels).toFixed(6));
             
             // Alternate between inner and outer radius
             const radius = i % 2 === 0 ? outerRadius : innerRadius;
             
-            // Calculate the position with high precision
+            // Calculate the position with consistent precision
             const x = exactMultiply(radius, Math.cos(angle));
             const z = exactMultiply(radius, Math.sin(angle));
             
             const position = new Vector3(x, 0, z);
             positions.push(position);
             
-            // Verify distance from center with high precision
-            const distanceFromCenter = Math.sqrt(x * x + z * z);
+            // Verify distance from center with consistent precision
+            const distanceFromCenter = parseFloat(Math.sqrt(x * x + z * z).toFixed(2));
             distances.push(distanceFromCenter);
             
             // Update the position of the existing SingleCUT model
@@ -699,6 +702,13 @@ export class LayerTwoModel extends CompositeModel {
  * to minimize floating point errors
  */
 function exactMultiply(a, b) {
-    // Perform the multiplication with as much precision as possible
-    return parseFloat((a * b).toPrecision(15));
+    // Ensure input values have consistent precision first
+    const preciseA = parseFloat(a.toFixed(2));
+    const preciseB = parseFloat(b.toFixed(2));
+    
+    // Perform the multiplication with high precision 
+    const result = preciseA * preciseB;
+    
+    // Return with consistent precision (15 significant digits, then rounded to 2 decimal places)
+    return parseFloat(result.toFixed(2));
 } 
