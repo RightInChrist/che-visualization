@@ -4,13 +4,14 @@ import { CompositeModel } from './CompositeModel';
 
 /**
  * Creates a Layer Two Ring with 12 SingleCUT models arranged in a dodecagonal (12-sided) pattern
- * This model has shared panels between adjacent SingleCUTs
+ * This model has shared panels between adjacent SingleCUTs, with an alternating distance pattern
  */
 export class LayerTwoModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
             outerRadius: 75, // Larger radius for Layer Two
+            innerRadius: 65, // Inner radius for alternating pattern (NEW)
             singleCutRadius: 21, // Radius for each individual SingleCUT
             debug: false, // Enable/disable debug logging
             showRadiusLines: false, // Whether to show radius lines on the ground
@@ -41,42 +42,34 @@ export class LayerTwoModel extends CompositeModel {
      * Create all the SingleCUT models
      */
     createModels() {
-        this.debugLog('Creating Layer Two Ring model');
+        this.debugLog('Creating Layer Two Ring model with alternating distances');
         
         // Track permanently hidden elements for scene editor
         this.permanentlyHiddenElements = [];
         
-        const dodecagonRadius = this.options.outerRadius;
+        const outerRadius = this.options.outerRadius;
+        const innerRadius = this.options.innerRadius;
         
-        // Calculate the appropriate singleCutRadius based on the outer radius
-        // to maintain proper panel alignment
-        const idealSingleCutRadius = dodecagonRadius * Math.sin(Math.PI / 12) / 2;
-        
-        // Only log a warning if the difference is significant (more than 5%)
-        if (Math.abs(idealSingleCutRadius - this.options.singleCutRadius) > 0.05 * this.options.singleCutRadius) {
-            this.debugLog(`WARNING: Provided singleCutRadius (${this.options.singleCutRadius.toFixed(2)}) ` +
-                    `may not be optimal for the outerRadius (${dodecagonRadius.toFixed(2)}). ` +
-                    `Ideal value would be ${idealSingleCutRadius.toFixed(2)}.`);
-        }
-
-        this.debugLog(`Using dodecagon radius: ${dodecagonRadius.toFixed(4)}, SingleCUT radius: ${this.options.singleCutRadius.toFixed(4)}`);
+        this.debugLog(`Using outer radius: ${outerRadius.toFixed(4)}, inner radius: ${innerRadius.toFixed(4)}, SingleCUT radius: ${this.options.singleCutRadius.toFixed(4)}`);
         
         // Store positions for verification
         const positions = [];
         const distances = [];
         
-        // Create 12 SingleCUTs in a dodecagonal pattern
+        // Create 12 SingleCUTs in an alternating pattern
         const numModels = 12;
         
-        // Create a perfect dodecagon by placing all vertices at exactly the same distance from center
+        // Create a dodecagon with alternating distances from center
         for (let i = 0; i < numModels; i++) {
-            // Using consistent angle calculation to ensure equidistant placement
+            // Using consistent angle calculation
             const angle = (i * 2 * Math.PI) / numModels;
-
+            
+            // Alternate between inner and outer radius
+            const radius = i % 2 === 0 ? outerRadius : innerRadius;
+            
             // Calculate the position with high precision
-            // Use exact radius value, not a rounded approximation
-            const x = exactMultiply(dodecagonRadius, Math.cos(angle));
-            const z = exactMultiply(dodecagonRadius, Math.sin(angle));
+            const x = exactMultiply(radius, Math.cos(angle));
+            const z = exactMultiply(radius, Math.sin(angle));
             
             const position = new Vector3(x, 0, z);
             positions.push(position);
@@ -86,6 +79,7 @@ export class LayerTwoModel extends CompositeModel {
             distances.push(distanceFromCenter);
             
             this.debugLog(`SingleCUT #${i+1}: angle=${(angle * 180 / Math.PI).toFixed(4)}°, ` +
+                         `radius=${radius.toFixed(4)}, ` +
                          `position=(${x.toFixed(6)}, 0, ${z.toFixed(6)}), ` +
                          `distance=${distanceFromCenter.toFixed(6)}`);
             
@@ -100,22 +94,58 @@ export class LayerTwoModel extends CompositeModel {
             this.addChild(singleCut);
         }
         
-        // Verify that all distances are the same
-        const avgDistance = distances.reduce((sum, distance) => sum + distance, 0) / distances.length;
-        let maxDeviation = 0;
+        // Verify that distances match the expected pattern
+        this.verifyDistances(distances);
+        
+        this.debugLog('Layer Two Ring model creation complete with alternating distances');
+    }
+    
+    /**
+     * Verify that the distances follow the expected alternating pattern
+     * @param {Array} distances - Array of distances from center
+     */
+    verifyDistances(distances) {
+        // Group distances by inner and outer
+        const innerDistances = [];
+        const outerDistances = [];
         
         distances.forEach((distance, i) => {
-            const deviation = Math.abs(distance - avgDistance);
-            maxDeviation = Math.max(maxDeviation, deviation);
-            
-            if (deviation > 0.001) {
-                this.debugLog(`WARNING: SingleCUT #${i+1} has distance deviation of ${deviation.toFixed(6)} units from average ${avgDistance.toFixed(6)}`);
+            if (i % 2 === 0) {
+                outerDistances.push(distance);
+            } else {
+                innerDistances.push(distance);
             }
         });
         
-        this.debugLog(`All SingleCUTs placed with average distance ${avgDistance.toFixed(6)} and max deviation ${maxDeviation.toFixed(6)}`);
+        // Calculate average for each group
+        const avgInner = innerDistances.reduce((sum, d) => sum + d, 0) / innerDistances.length;
+        const avgOuter = outerDistances.reduce((sum, d) => sum + d, 0) / outerDistances.length;
         
-        this.debugLog('Layer Two Ring model creation complete with shared panels');
+        let maxInnerDeviation = 0;
+        let maxOuterDeviation = 0;
+        
+        // Check deviations within each group
+        innerDistances.forEach((distance, i) => {
+            const deviation = Math.abs(distance - avgInner);
+            maxInnerDeviation = Math.max(maxInnerDeviation, deviation);
+            
+            if (deviation > 0.001) {
+                this.debugLog(`WARNING: Inner SingleCUT #${i*2+2} has distance deviation of ${deviation.toFixed(6)} units from average ${avgInner.toFixed(6)}`);
+            }
+        });
+        
+        outerDistances.forEach((distance, i) => {
+            const deviation = Math.abs(distance - avgOuter);
+            maxOuterDeviation = Math.max(maxOuterDeviation, deviation);
+            
+            if (deviation > 0.001) {
+                this.debugLog(`WARNING: Outer SingleCUT #${i*2+1} has distance deviation of ${deviation.toFixed(6)} units from average ${avgOuter.toFixed(6)}`);
+            }
+        });
+        
+        this.debugLog(`Outer SingleCUTs: average distance ${avgOuter.toFixed(6)}, max deviation ${maxOuterDeviation.toFixed(6)}`);
+        this.debugLog(`Inner SingleCUTs: average distance ${avgInner.toFixed(6)}, max deviation ${maxInnerDeviation.toFixed(6)}`);
+        this.debugLog(`Difference between inner and outer: ${(avgOuter - avgInner).toFixed(6)} units`);
     }
     
     /**
@@ -130,52 +160,74 @@ export class LayerTwoModel extends CompositeModel {
         // Height offset to place slightly above ground
         const heightOffset = 0.05;
         
-        // Create material for standard radius
-        const standardRadiusMaterial = new StandardMaterial("standardRadiusMaterial", this.scene);
-        standardRadiusMaterial.diffuseColor = new Color3(0.7, 0.7, 0);
-        standardRadiusMaterial.alpha = 0.8;
-        standardRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
-        standardRadiusMaterial.emissiveColor = new Color3(0.4, 0.4, 0);
+        // Create material for outer radius
+        const outerRadiusMaterial = new StandardMaterial("outerRadiusMaterial", this.scene);
+        outerRadiusMaterial.diffuseColor = new Color3(0.7, 0.7, 0);
+        outerRadiusMaterial.alpha = 0.8;
+        outerRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
+        outerRadiusMaterial.emissiveColor = new Color3(0.4, 0.4, 0);
+        
+        // Create material for inner radius
+        const innerRadiusMaterial = new StandardMaterial("innerRadiusMaterial", this.scene);
+        innerRadiusMaterial.diffuseColor = new Color3(0.0, 0.7, 0.7);
+        innerRadiusMaterial.alpha = 0.8;
+        innerRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
+        innerRadiusMaterial.emissiveColor = new Color3(0.0, 0.4, 0.4);
         
         // Create material for SingleCUT internal radius
-        const internalRadiusMaterial = new StandardMaterial("internalRadiusMaterial", this.scene);
-        internalRadiusMaterial.diffuseColor = new Color3(0.7, 0, 0.7);
-        internalRadiusMaterial.alpha = 0.8;
-        internalRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
-        internalRadiusMaterial.emissiveColor = new Color3(0.4, 0, 0.4);
+        const singleCutRadiusMaterial = new StandardMaterial("singleCutRadiusMaterial", this.scene);
+        singleCutRadiusMaterial.diffuseColor = new Color3(0.7, 0, 0.7);
+        singleCutRadiusMaterial.alpha = 0.8;
+        singleCutRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
+        singleCutRadiusMaterial.emissiveColor = new Color3(0.4, 0, 0.4);
         
-        // Create perfect circle for the standard radius using more segments for accuracy
-        const standardCircle = MeshBuilder.CreateDisc("standardRadiusLine", {
+        // Create circle for the outer radius
+        const outerCircle = MeshBuilder.CreateDisc("outerRadiusLine", {
             radius: this.options.outerRadius,
-            tessellation: 96, // Increased from 64 for smoother circle
+            tessellation: 96,
             sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
-        standardCircle.material = standardRadiusMaterial;
-        standardCircle.position.y = heightOffset;
-        standardCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
-        standardCircle.parent = this.rootNode;
-        this.radiusLines.push(standardCircle);
+        outerCircle.material = outerRadiusMaterial;
+        outerCircle.position.y = heightOffset;
+        outerCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
+        outerCircle.parent = this.rootNode;
+        this.radiusLines.push(outerCircle);
+        
+        // Create circle for the inner radius
+        const innerCircle = MeshBuilder.CreateDisc("innerRadiusLine", {
+            radius: this.options.innerRadius,
+            tessellation: 96,
+            sideOrientation: Mesh.DOUBLESIDE
+        }, this.scene);
+        innerCircle.material = innerRadiusMaterial;
+        innerCircle.position.y = heightOffset * 2;
+        innerCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
+        innerCircle.parent = this.rootNode;
+        this.radiusLines.push(innerCircle);
         
         // Create circle for SingleCUT internal radius
-        const internalCircle = MeshBuilder.CreateDisc("internalRadiusLine", {
+        const singleCutCircle = MeshBuilder.CreateDisc("singleCutRadiusLine", {
             radius: this.options.singleCutRadius,
-            tessellation: 96, // Increased from 64 for smoother circle
+            tessellation: 96,
             sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
-        internalCircle.material = internalRadiusMaterial;
-        internalCircle.position.y = heightOffset * 3; // Slightly above the other circles
-        internalCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
-        internalCircle.parent = this.rootNode;
-        this.radiusLines.push(internalCircle);
+        singleCutCircle.material = singleCutRadiusMaterial;
+        singleCutCircle.position.y = heightOffset * 3; // Slightly above the other circles
+        singleCutCircle.rotation.x = Math.PI / 2; // Rotate to lie flat
+        singleCutCircle.parent = this.rootNode;
+        this.radiusLines.push(singleCutCircle);
         
         // Create radius lines from center to each SingleCUT using exact model positions
         const numModels = 12;
         for (let i = 0; i < numModels; i++) {
             const angle = (i * 2 * Math.PI) / numModels;
             
-            // Calculate exact position with high precision
-            const x = exactMultiply(this.options.outerRadius, Math.cos(angle));
-            const z = exactMultiply(this.options.outerRadius, Math.sin(angle));
+            // Alternate between inner and outer radius for line color
+            const radius = i % 2 === 0 ? this.options.outerRadius : this.options.innerRadius;
+            
+            // Calculate exact position
+            const x = exactMultiply(radius, Math.cos(angle));
+            const z = exactMultiply(radius, Math.sin(angle));
             
             // Create a line from center to the SingleCUT position
             const line = MeshBuilder.CreateLines("radiusLine_" + i, {
@@ -185,7 +237,10 @@ export class LayerTwoModel extends CompositeModel {
                 ]
             }, this.scene);
             
-            line.color = new Color3(0.7, 0.7, 0); // Yellow for standard cases
+            // Color based on whether it's inner or outer
+            line.color = i % 2 === 0 ? 
+                new Color3(0.7, 0.7, 0) :  // Yellow for outer
+                new Color3(0.0, 0.7, 0.7); // Cyan for inner
             
             line.parent = this.rootNode;
             this.radiusLines.push(line);
@@ -219,6 +274,11 @@ export class LayerTwoModel extends CompositeModel {
         // Store the new settings
         this.options.outerRadius = outerRadius;
         this.options.singleCutRadius = singleCutRadius;
+        
+        // Calculate new inner radius proportional to outer radius
+        this.options.innerRadius = Math.round(outerRadius * 0.866); // Approximately cos(30°)
+        
+        this.debugLog(`Calculated new inner radius: ${this.options.innerRadius}`);
         
         // First dispose of all existing children
         this.disposeChildren();
