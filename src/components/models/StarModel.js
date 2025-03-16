@@ -170,4 +170,32 @@ export class StarModel extends CompositeModel {
         
         return models;
     }
+
+    /**
+     * Override the setVisible method to add debugging
+     * @param {boolean} isVisible - Whether the model should be visible
+     */
+    setVisible(isVisible) {
+        console.log(`StarModel.setVisible(${isVisible}) called`);
+        
+        // Check rootNode state before setting visibility
+        if (this.rootNode) {
+            console.log(`StarModel rootNode before: isEnabled=${this.rootNode.isEnabled()}`);
+        }
+        
+        // Call parent class setVisible method
+        super.setVisible(isVisible);
+        
+        // Check rootNode state after setting visibility
+        if (this.rootNode) {
+            console.log(`StarModel rootNode after: isEnabled=${this.rootNode.isEnabled()}`);
+        }
+        
+        // Make sure all child models get visibility set correctly
+        this.models.centralCut?.setVisible(isVisible && this.options.visibility.centralCut);
+        this.models.layerOneStar?.setVisible(isVisible && this.options.visibility.layerOne);
+        this.models.layerTwoStar?.setVisible(isVisible && this.options.visibility.layerTwo);
+        
+        console.log(`StarModel.setVisible complete`);
+    }
 } 

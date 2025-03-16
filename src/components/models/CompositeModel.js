@@ -51,13 +51,29 @@ export class CompositeModel extends BaseModel {
      * @param {boolean} isVisible - Whether models should be visible
      */
     setVisible(isVisible) {
+        console.log(`CompositeModel.setVisible(${isVisible}) called for ${this.constructor.name}`);
+        
         // Set visibility for this model's root node
         super.setVisible(isVisible);
         
+        // Log current state after setting super
+        if (this.rootNode) {
+            console.log(`${this.constructor.name} rootNode.isEnabled(): ${this.rootNode.isEnabled()}`);
+        }
+        
         // Set visibility for all child models
         this.childModels.forEach(child => {
-            child.setVisible(isVisible);
+            if (child && typeof child.setVisible === 'function') {
+                child.setVisible(isVisible);
+            } else {
+                console.warn(`Child model doesn't have setVisible method:`, child);
+            }
         });
+        
+        // Log final state after setting children
+        if (this.rootNode) {
+            console.log(`${this.constructor.name} final rootNode.isEnabled(): ${this.rootNode.isEnabled()}`);
+        }
     }
     
     /**

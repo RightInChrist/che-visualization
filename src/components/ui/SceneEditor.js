@@ -813,18 +813,36 @@ export class SceneEditor {
     toggleObjectVisibility(path, object, isVisible) {
         console.log(`[SceneEditor] Toggling visibility of "${path}" to ${isVisible ? 'visible' : 'hidden'}`);
         
-        // Handle the special case for 'Layer One Star' explicitly
-        if (path === 'Layer One Star' || path.startsWith('Layer One Star/')) {
-            console.log(`[SceneEditor] Special handling for Layer One Star object: `, object);
+        // Handle the Star Model case explicitly
+        if (path === 'Star Model' || path.startsWith('Star Model/')) {
+            console.log(`[SceneEditor] Special handling for Star Model path: ${path}`);
             
-            // Log more details about the object
-            if (object.model) {
-                console.log(`[SceneEditor] Layer One Star model type: ${object.model.constructor.name}`);
-                console.log(`[SceneEditor] Initial visibility state: ${object.model.isVisible()}`);
+            // For debugging, log the object
+            console.log(`[SceneEditor] Object type: ${object?.constructor?.name}`);
+            
+            // For objects with a model property
+            if (object && object.model) {
+                console.log(`[SceneEditor] Star Model's model property type: ${object.model.constructor.name}`);
+                console.log(`[SceneEditor] Initial visibility: ${object.model.rootNode?.isEnabled()}`);
+                
+                // Special handling for toggling the Star Model
+                if (path === 'Star Model' && object.model) {
+                    console.log('[SceneEditor] Direct use of model.setVisible for Star Model');
+                    try {
+                        // Directly use the model's setVisible method
+                        object.model.setVisible(isVisible);
+                        
+                        // Check if the visibility was actually set
+                        console.log(`[SceneEditor] After toggle, Star Model rootNode.isEnabled(): ${object.model.rootNode?.isEnabled()}`);
+                        return; // Early return after special handling
+                    } catch (error) {
+                        console.error('[SceneEditor] Error setting Star Model visibility:', error);
+                    }
+                }
             }
         }
         
-        // Set visibility on object
+        // Set visibility on object using the normal path
         this.setObjectVisibility(object, isVisible, path);
         
         // Update the checkbox state
@@ -832,19 +850,17 @@ export class SceneEditor {
             this.checkboxElements[path].element.checked = isVisible;
         }
         
-        // Now check the visibility state to verify it was set correctly
-        if (path === 'Layer One Star' || path.startsWith('Layer One Star/')) {
-            let currentVisibility = this.getObjectVisibility(object);
-            console.log(`[SceneEditor] After toggle, Layer One Star visibility: ${currentVisibility}`);
-            
-            // Also check the visibility of the model property if it exists
-            if (object.model) {
-                console.log(`[SceneEditor] After toggle, model.isVisible(): ${object.model.isVisible()}`);
-                // Check if the rootNode is enabled
-                if (object.model.rootNode) {
-                    console.log(`[SceneEditor] After toggle, model.rootNode.isEnabled(): ${object.model.rootNode.isEnabled()}`);
+        // Special check for Star Model to make sure it was toggled properly
+        if (path === 'Star Model') {
+            setTimeout(() => {
+                const actuallyVisible = this.getObjectVisibility(object);
+                console.log(`[SceneEditor] After toggle and timeout, Star Model visibility: ${actuallyVisible}`);
+                
+                // Force the checkbox to match the actual state after a delay
+                if (this.checkboxElements[path]) {
+                    this.checkboxElements[path].element.checked = actuallyVisible;
                 }
-            }
+            }, 200);
         }
     }
     
