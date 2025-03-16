@@ -135,152 +135,46 @@ export class RotationControls {
         const hasSingleCutChildren = model && model.childModels && 
             model.childModels.some(child => child && child.constructor.name === 'SingleCutModel');
         
-        // Check if model supports global delta rotation control
-        const supportsDeltaRotation = model && 
+        // Check if model supports global delta rotation control for SingleCUTs
+        const supportsSingleCutDeltaRotation = model && 
             typeof model.updateAllSingleCutRotations === 'function';
-        
-        // Special handling for models with SingleCUT children that support delta rotation
-        if (hasSingleCutChildren && supportsDeltaRotation) {
-            // Create container for the master delta control
-            const masterDeltaContainer = document.createElement('div');
-            masterDeltaContainer.className = 'master-delta-container';
-            masterDeltaContainer.style.border = '1px solid #555';
-            masterDeltaContainer.style.borderRadius = '5px';
-            masterDeltaContainer.style.padding = '10px';
-            masterDeltaContainer.style.marginBottom = '15px';
-            masterDeltaContainer.style.backgroundColor = 'rgba(0, 50, 100, 0.2)';
             
-            // Create header for master control
-            const masterHeader = document.createElement('div');
-            masterHeader.style.marginBottom = '8px';
-            masterHeader.style.display = 'flex';
-            masterHeader.style.justifyContent = 'space-between';
-            masterHeader.style.alignItems = 'center';
-            
-            const modelTypeName = model.constructor.name.replace('Model', '');
-            const masterTitle = document.createElement('h5');
-            masterTitle.textContent = `${modelTypeName} Master Rotation Control`;
-            masterTitle.style.margin = '0';
-            masterTitle.style.color = '#4CAF50';
-            masterTitle.style.fontWeight = 'bold';
-            
-            masterHeader.appendChild(masterTitle);
-            masterDeltaContainer.appendChild(masterHeader);
-            
-            // Get min/max/default values using methods if available, otherwise use sensible defaults
-            const min = typeof model.getMinSingleCutDeltaRotation === 'function' ? 
-                model.getMinSingleCutDeltaRotation() : -180;
-            const max = typeof model.getMaxSingleCutDeltaRotation === 'function' ? 
-                model.getMaxSingleCutDeltaRotation() : 180;
-            const defaultValue = typeof model.getDefaultSingleCutDeltaRotation === 'function' ? 
-                model.getDefaultSingleCutDeltaRotation() : 0;
-            const currentValue = typeof model.getCurrentSingleCutDeltaRotation === 'function' ? 
-                model.getCurrentSingleCutDeltaRotation() : 0;
-            
-            // Create the global delta rotation slider
-            const deltaSlider = this.createSliderRow(
-                "Global SingleCUT Delta",
-                min,
-                max,
-                currentValue || defaultValue,
+        // Check if model supports global panel rotation control
+        const supportsPanelDeltaRotation = model && 
+            typeof model.updateAllPanelRotations === 'function';
+
+        // Add control for SingleCUT rotation if supported
+        if (hasSingleCutChildren && supportsSingleCutDeltaRotation) {
+            this.addDeltaRotationControl(
+                modelSection, 
+                model, 
+                "SingleCUT",
+                model.getMinSingleCutDeltaRotation?.() ?? -180,
+                model.getMaxSingleCutDeltaRotation?.() ?? 180,
+                model.getDefaultSingleCutDeltaRotation?.() ?? 0,
+                model.getCurrentSingleCutDeltaRotation?.() ?? 0,
                 (value) => {
-                    console.log(`Setting global delta rotation for ${model.constructor.name} to ${value}°`);
+                    console.log(`Setting global SingleCUT delta rotation for ${model.constructor.name} to ${value}°`);
                     model.updateAllSingleCutRotations(value);
                 }
             );
-            
-            // Add some styling to make it stand out
-            deltaSlider.style.backgroundColor = 'rgba(0, 100, 0, 0.1)';
-            deltaSlider.style.padding = '5px';
-            deltaSlider.style.borderRadius = '3px';
-            
-            masterDeltaContainer.appendChild(deltaSlider);
-            
-            // Add dropdown to view all SingleCUT rotation values
-            const dropdownContainer = document.createElement('div');
-            dropdownContainer.style.marginTop = '10px';
-            
-            const dropdownToggle = document.createElement('button');
-            dropdownToggle.textContent = 'Show SingleCUT Rotation Values ▼';
-            dropdownToggle.style.backgroundColor = '#444';
-            dropdownToggle.style.color = '#fff';
-            dropdownToggle.style.border = '1px solid #555';
-            dropdownToggle.style.borderRadius = '3px';
-            dropdownToggle.style.padding = '5px 10px';
-            dropdownToggle.style.cursor = 'pointer';
-            dropdownToggle.style.width = '100%';
-            dropdownToggle.style.textAlign = 'left';
-            
-            const rotationValuesList = document.createElement('div');
-            rotationValuesList.style.display = 'none';
-            rotationValuesList.style.marginTop = '5px';
-            rotationValuesList.style.border = '1px solid #555';
-            rotationValuesList.style.borderRadius = '3px';
-            rotationValuesList.style.padding = '5px';
-            rotationValuesList.style.backgroundColor = '#333';
-            rotationValuesList.style.maxHeight = '200px';
-            rotationValuesList.style.overflowY = 'auto';
-            
-            // Function to update rotation values in the dropdown
-            const updateRotationValues = () => {
-                rotationValuesList.innerHTML = '';
-                
-                if (model && model.childModels) {
-                    // Only include SingleCutModel children
-                    const singleCutChildren = model.childModels.filter(
-                        child => child && child.constructor.name === 'SingleCutModel'
-                    );
-                    
-                    singleCutChildren.forEach((singleCut, index) => {
-                        if (singleCut) {
-                            const valueRow = document.createElement('div');
-                            valueRow.style.display = 'flex';
-                            valueRow.style.justifyContent = 'space-between';
-                            valueRow.style.padding = '3px 0';
-                            valueRow.style.borderBottom = index < singleCutChildren.length - 1 ? 
-                                '1px solid #444' : 'none';
-                            
-                            const label = document.createElement('span');
-                            label.textContent = `CUT #${index + 1}:`;
-                            label.style.fontWeight = 'bold';
-                            
-                            const value = document.createElement('span');
-                            const rotation = singleCut.options?.rotationAngle || 0;
-                            
-                            // Show original rotation if available
-                            if (typeof singleCut.originalRotation !== 'undefined') {
-                                value.textContent = `${rotation.toFixed(0)}° (Base: ${singleCut.originalRotation.toFixed(0)}°)`;
-                            } else {
-                                value.textContent = `${rotation.toFixed(0)}°`;
-                            }
-                            
-                            valueRow.appendChild(label);
-                            valueRow.appendChild(value);
-                            rotationValuesList.appendChild(valueRow);
-                        }
-                    });
+        }
+        
+        // Add control for Panel rotation if supported (SingleCutModel and potentially others)
+        if (model && supportsPanelDeltaRotation) {
+            this.addDeltaRotationControl(
+                modelSection,
+                model,
+                "Panel",
+                model.getMinPanelDeltaRotation?.() ?? -180,
+                model.getMaxPanelDeltaRotation?.() ?? 180,
+                model.getDefaultPanelDeltaRotation?.() ?? 0,
+                model.getCurrentPanelDeltaRotation?.() ?? 0,
+                (value) => {
+                    console.log(`Setting global Panel delta rotation for ${model.constructor.name} to ${value}°`);
+                    model.updateAllPanelRotations(value);
                 }
-            };
-            
-            // Toggle dropdown visibility
-            dropdownToggle.addEventListener('click', () => {
-                const isVisible = rotationValuesList.style.display !== 'none';
-                rotationValuesList.style.display = isVisible ? 'none' : 'block';
-                dropdownToggle.textContent = isVisible ? 
-                    'Show SingleCUT Rotation Values ▼' : 'Hide SingleCUT Rotation Values ▲';
-                
-                if (!isVisible) {
-                    // Update values when showing
-                    updateRotationValues();
-                }
-            });
-            
-            dropdownContainer.appendChild(dropdownToggle);
-            dropdownContainer.appendChild(rotationValuesList);
-            masterDeltaContainer.appendChild(dropdownContainer);
-            
-            // Add the master container to the model section
-            modelSection.appendChild(masterDeltaContainer);
+            );
         }
         
         // Create X rotation control if available
@@ -494,7 +388,7 @@ export class RotationControls {
             childrenContainer.style.marginLeft = `${this.options.defaultIndentation}px`;
             
             // Skip showing child SingleCUTs if we already have the master rotation control
-            const shouldHideChildren = hasSingleCutChildren && supportsDeltaRotation;
+            const shouldHideChildren = hasSingleCutChildren && supportsSingleCutDeltaRotation;
             
             if (!shouldHideChildren) {
                 // Create sections for each child model
@@ -790,5 +684,158 @@ export class RotationControls {
         if (this.toggleButton && this.toggleButton.parentNode) {
             this.toggleButton.parentNode.removeChild(this.toggleButton);
         }
+    }
+    
+    /**
+     * Add a delta rotation control for a specific component type (e.g., SingleCUT, Panel)
+     * @param {HTMLElement} container - The container to add the control to
+     * @param {Object} model - The model to control
+     * @param {string} componentType - The type of component ("SingleCUT", "Panel", etc.)
+     * @param {number} min - Minimum rotation value
+     * @param {number} max - Maximum rotation value
+     * @param {number} defaultValue - Default rotation value
+     * @param {number} currentValue - Current rotation value
+     * @param {Function} onValueChange - Callback function for value changes
+     */
+    addDeltaRotationControl(container, model, componentType, min, max, defaultValue, currentValue, onValueChange) {
+        // Create container for the delta control
+        const deltaContainer = document.createElement('div');
+        deltaContainer.className = 'delta-rotation-container';
+        deltaContainer.style.border = '1px solid #555';
+        deltaContainer.style.borderRadius = '5px';
+        deltaContainer.style.padding = '10px';
+        deltaContainer.style.marginBottom = '15px';
+        deltaContainer.style.backgroundColor = 'rgba(0, 50, 100, 0.2)';
+        
+        // Create header for control
+        const headerContainer = document.createElement('div');
+        headerContainer.style.marginBottom = '8px';
+        headerContainer.style.display = 'flex';
+        headerContainer.style.justifyContent = 'space-between';
+        headerContainer.style.alignItems = 'center';
+        
+        const modelTypeName = model.constructor.name.replace('Model', '');
+        const title = document.createElement('h5');
+        title.textContent = `${modelTypeName} ${componentType} Rotation Control`;
+        title.style.margin = '0';
+        title.style.color = '#4CAF50';
+        title.style.fontWeight = 'bold';
+        
+        headerContainer.appendChild(title);
+        deltaContainer.appendChild(headerContainer);
+        
+        // Create the global delta rotation slider
+        const deltaSlider = this.createSliderRow(
+            `Global ${componentType} Delta`,
+            min,
+            max,
+            currentValue || defaultValue,
+            onValueChange
+        );
+        
+        // Add some styling to make it stand out
+        deltaSlider.style.backgroundColor = 'rgba(0, 100, 0, 0.1)';
+        deltaSlider.style.padding = '5px';
+        deltaSlider.style.borderRadius = '3px';
+        
+        deltaContainer.appendChild(deltaSlider);
+        
+        // Add the container to the parent container
+        container.appendChild(deltaContainer);
+        
+        // Add dropdown if this is a SingleCUT control and the model has childModels
+        if (componentType === "SingleCUT" && model.childModels && model.childModels.length > 0) {
+            this.addRotationValuesDropdown(deltaContainer, model);
+        }
+    }
+    
+    /**
+     * Add a dropdown to show rotation values for child components
+     * @param {HTMLElement} container - The container to add the dropdown to
+     * @param {Object} model - The model containing children
+     */
+    addRotationValuesDropdown(container, model) {
+        // Add dropdown to view all rotation values
+        const dropdownContainer = document.createElement('div');
+        dropdownContainer.style.marginTop = '10px';
+        
+        const dropdownToggle = document.createElement('button');
+        dropdownToggle.textContent = 'Show SingleCUT Rotation Values ▼';
+        dropdownToggle.style.backgroundColor = '#444';
+        dropdownToggle.style.color = '#fff';
+        dropdownToggle.style.border = '1px solid #555';
+        dropdownToggle.style.borderRadius = '3px';
+        dropdownToggle.style.padding = '5px 10px';
+        dropdownToggle.style.cursor = 'pointer';
+        dropdownToggle.style.width = '100%';
+        dropdownToggle.style.textAlign = 'left';
+        
+        const rotationValuesList = document.createElement('div');
+        rotationValuesList.style.display = 'none';
+        rotationValuesList.style.marginTop = '5px';
+        rotationValuesList.style.border = '1px solid #555';
+        rotationValuesList.style.borderRadius = '3px';
+        rotationValuesList.style.padding = '5px';
+        rotationValuesList.style.backgroundColor = '#333';
+        rotationValuesList.style.maxHeight = '200px';
+        rotationValuesList.style.overflowY = 'auto';
+        
+        // Function to update rotation values in the dropdown
+        const updateRotationValues = () => {
+            rotationValuesList.innerHTML = '';
+            
+            if (model && model.childModels) {
+                // Only include SingleCutModel children
+                const singleCutChildren = model.childModels.filter(
+                    child => child && child.constructor.name === 'SingleCutModel'
+                );
+                
+                singleCutChildren.forEach((singleCut, index) => {
+                    if (singleCut) {
+                        const valueRow = document.createElement('div');
+                        valueRow.style.display = 'flex';
+                        valueRow.style.justifyContent = 'space-between';
+                        valueRow.style.padding = '3px 0';
+                        valueRow.style.borderBottom = index < singleCutChildren.length - 1 ? 
+                            '1px solid #444' : 'none';
+                        
+                        const label = document.createElement('span');
+                        label.textContent = `CUT #${index + 1}:`;
+                        label.style.fontWeight = 'bold';
+                        
+                        const value = document.createElement('span');
+                        const rotation = singleCut.options?.rotationAngle || 0;
+                        
+                        // Show original rotation if available
+                        if (typeof singleCut.originalRotation !== 'undefined') {
+                            value.textContent = `${rotation.toFixed(0)}° (Base: ${singleCut.originalRotation.toFixed(0)}°)`;
+                        } else {
+                            value.textContent = `${rotation.toFixed(0)}°`;
+                        }
+                        
+                        valueRow.appendChild(label);
+                        valueRow.appendChild(value);
+                        rotationValuesList.appendChild(valueRow);
+                    }
+                });
+            }
+        };
+        
+        // Toggle dropdown visibility
+        dropdownToggle.addEventListener('click', () => {
+            const isVisible = rotationValuesList.style.display !== 'none';
+            rotationValuesList.style.display = isVisible ? 'none' : 'block';
+            dropdownToggle.textContent = isVisible ? 
+                'Show SingleCUT Rotation Values ▼' : 'Hide SingleCUT Rotation Values ▲';
+            
+            if (!isVisible) {
+                // Update values when showing
+                updateRotationValues();
+            }
+        });
+        
+        dropdownContainer.appendChild(dropdownToggle);
+        dropdownContainer.appendChild(rotationValuesList);
+        container.appendChild(dropdownContainer);
     }
 } 
