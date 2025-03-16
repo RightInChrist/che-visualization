@@ -547,7 +547,6 @@ export class LayerOneStarModel extends CompositeModel {
         this.hiddenElementsMap = {};
         
         // In LayerOneStarModel, we don't hide any elements by default
-        // This is just an empty implementation to match the API of LayerTwoModel
     }
     
     /**
@@ -561,7 +560,6 @@ export class LayerOneStarModel extends CompositeModel {
         
         this.debugLog('Applying hidden elements to SingleCUTs in LayerOneStarModel (none by default)');
         
-        // This is just an empty implementation to match the API of LayerTwoModel
         // For LayerOneStarModel, we don't need to hide any elements by default
     }
 }

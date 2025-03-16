@@ -145,12 +145,10 @@ export class RadiusControls {
             // Get current values or defaults
             let outerRadius = 42; // Default
             let singleCutRadius = 21; // Default
-            let innerRadius; // For LayerTwoModel
             
             if (config.model.options) {
                 outerRadius = config.model.options.outerRadius || outerRadius;
                 singleCutRadius = config.model.options.singleCutRadius || singleCutRadius;
-                innerRadius = config.model.options.innerRadius;
             }
             
             // Create outer radius slider
@@ -164,33 +162,10 @@ export class RadiusControls {
             );
             modelSection.appendChild(outerRadiusContainer);
             
-            // Add inner radius control for LayerTwoModel
-            if (config.model.constructor && config.model.constructor.name === 'LayerTwoModel' && 
-                typeof config.model.updateInnerRadius === 'function' && innerRadius !== undefined) {
-                
-                // Create inner radius slider with precision to hundredths
-                const innerRadiusContainer = this.createSliderRow(
-                    "Inner Radius",
-                    30,
-                    100,
-                    innerRadius,
-                    (value) => this.onInnerRadiusChange(config.model, value),
-                    0.01 // Allow hundredths precision
-                );
-                
-                // Style the inner radius control differently
-                innerRadiusContainer.style.paddingLeft = '10px';
-                innerRadiusContainer.style.borderLeft = '3px solid #5599ff';
-                innerRadiusContainer.style.backgroundColor = 'rgba(85, 153, 255, 0.1)';
-                
-                modelSection.appendChild(innerRadiusContainer);
-            }
-            
             // Create SingleCut radius control
             const hasSingleCutControl = config.model && (
                 (config.model.constructor.name === 'LayerOneStarModel') ||
                 (config.model.constructor.name === 'LayerOneModel') ||
-                (config.model.constructor.name === 'LayerTwoModel') ||
                 (config.model.constructor.name === 'LayerTwoStarModel') ||
                 (config.model.constructor.name === 'SingleCutModel') ||
                 (config.model.children && config.model.children.some(child => 
@@ -635,27 +610,25 @@ export class RadiusControls {
     }
     
     /**
-     * Handle changes to inner radius for LayerTwoModel
+     * Handle changes to inner radius for inner-outer radius models
      * @param {Object} model - The model to update
-     * @param {number} value - New inner radius value
+     * @param {Number} value - The new inner radius value
      */
     onInnerRadiusChange(model, value) {
-        if (!model) return;
-        
-        const modelType = model.constructor ? model.constructor.name : "unknown";
-        const modelIndex = model.options && model.options.modelIndex !== undefined ? 
-                          model.options.modelIndex : 
-                          "unknown";
-        
-        console.log(`Inner radius change: model=${modelType} (index: ${modelIndex}), value=${value}`);
-        
-        // Update the model's inner radius
-        if (model && typeof model.updateInnerRadius === 'function') {
-            model.updateInnerRadius(value);
-            
-            // Update the panel distance display
-            this.updatePanelDistanceDisplay(model);
+        if (!model || typeof model.updateInnerRadius !== 'function') {
+            console.warn('Model does not support inner radius updates');
+            return;
         }
+        
+        // Format the value to have 2 decimal places for display consistency
+        const formattedValue = parseFloat(value.toFixed(2));
+        
+        // Update the model with the new inner radius value
+        console.log(`Updating inner radius to ${formattedValue}`);
+        model.updateInnerRadius(formattedValue);
+        
+        // Update the panel distance display if needed
+        this.updatePanelDistanceDisplay(model);
     }
     
     /**

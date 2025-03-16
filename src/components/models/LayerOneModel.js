@@ -546,7 +546,6 @@ export class LayerOneModel extends HexagonModel {
 
     /**
      * Setup which elements (pipes and panels) should be permanently hidden for each SingleCUT
-     * For LayerOneModel, nothing is permanently hidden by default
      */
     setupHiddenElements() {
         this.debugLog('Setting up permanently hidden elements for SingleCUTs in LayerOneModel');
@@ -555,7 +554,6 @@ export class LayerOneModel extends HexagonModel {
         this.hiddenElementsMap = {};
         
         // In LayerOneModel, we don't hide any elements by default
-        // This is just an empty implementation to match the API of LayerTwoModel
     }
 
     /**
@@ -569,7 +567,6 @@ export class LayerOneModel extends HexagonModel {
         
         this.debugLog('Applying hidden elements to SingleCUTs in LayerOneModel (none by default)');
         
-        // This is just an empty implementation to match the API of LayerTwoModel
         // For LayerOneModel, we don't need to hide any elements by default
     }
 

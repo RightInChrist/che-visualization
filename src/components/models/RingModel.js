@@ -2,11 +2,10 @@ import { Vector3 } from '@babylonjs/core';
 import { CompositeModel } from './CompositeModel';
 import { SingleCutModel } from './SingleCutModel';
 import { LayerOneModel } from './LayerOneModel';
-import { LayerTwoModel } from './LayerTwoModel';
 
 /**
  * RingModel - A composite model containing ring-shaped layers
- * Organizes Layer One Ring and Layer Two Ring into a single model
+ * Organizes Layer One Ring into a single model
  * (Central CUT has been moved out of the RingModel)
  */
 export class RingModel extends CompositeModel {
@@ -15,8 +14,7 @@ export class RingModel extends CompositeModel {
         const defaultOptions = {
             debug: false,
             visibility: {
-                layerOne: true,
-                layerTwo: true
+                layerOne: true
             }
         };
         
@@ -25,14 +23,12 @@ export class RingModel extends CompositeModel {
         
         // Store model references for direct access
         this.models = {
-            layerOneRing: null,
-            layerTwoRing: null
+            layerOneRing: null
         };
         
         // Friendly names for display in SceneEditor
         this.friendlyNames = {
-            layerOneRing: "Layer One Ring",
-            layerTwoRing: "Layer Two Ring"
+            layerOneRing: "Layer One Ring"
         };
         
         // Create models
@@ -53,15 +49,7 @@ export class RingModel extends CompositeModel {
         this.models.layerOneRing = layerOneRing;
         this.addChild(layerOneRing);
         
-        // Create Layer Two Ring model
-        const layerTwoRing = new LayerTwoModel(this.scene, new Vector3(0, 0, 0), {
-            parent: this
-        });
-        layerTwoRing.friendlyName = this.friendlyNames.layerTwoRing;
-        this.models.layerTwoRing = layerTwoRing;
-        this.addChild(layerTwoRing);
-        
-        // Apply initial visibility settings
+        // Set visibility based on options
         this.setModelVisibility();
         
         this.debugLog('Ring Model creation complete');
@@ -77,22 +65,17 @@ export class RingModel extends CompositeModel {
         if (this.models.layerOneRing) {
             this.models.layerOneRing.setVisible(visibility.layerOne);
         }
-        
-        if (this.models.layerTwoRing) {
-            this.models.layerTwoRing.setVisible(visibility.layerTwo);
-        }
     }
     
     /**
      * Update visibility of a model by its key
-     * @param {string} modelKey - Key of the model to update ('layerOne' or 'layerTwo')
+     * @param {string} modelKey - Key of the model to update ('layerOne')
      * @param {boolean} isVisible - Whether the model should be visible
      */
     updateModelVisibility(modelKey, isVisible) {
         // Map option keys to model keys
         const modelKeyMap = {
-            layerOne: 'layerOneRing',
-            layerTwo: 'layerTwoRing'
+            layerOne: 'layerOneRing'
         };
         
         const modelRealKey = modelKeyMap[modelKey];
@@ -115,12 +98,6 @@ export class RingModel extends CompositeModel {
             allPipes.push(...layerOnePipes);
         }
         
-        // Get pipes from Layer Two Ring
-        if (this.models.layerTwoRing) {
-            const layerTwoPipes = this.models.layerTwoRing.getAllPipes() || [];
-            allPipes.push(...layerTwoPipes);
-        }
-        
         return allPipes;
     }
     
@@ -131,8 +108,7 @@ export class RingModel extends CompositeModel {
     getAllSingleCuts() {
         return {
             central: [], // Empty as central CUT has been moved out
-            layerOne: this.models.layerOneRing ? this.models.layerOneRing.getChildren() : [],
-            layerTwo: this.models.layerTwoRing ? this.models.layerTwoRing.getChildren() : []
+            layerOne: this.models.layerOneRing ? this.models.layerOneRing.getChildren() : []
         };
     }
     
