@@ -2,14 +2,29 @@
  * Controls the user interface interactions
  */
 export class UIController {
-    constructor(cameraController) {
+    constructor(cameraController, options = {}) {
         this.cameraController = cameraController;
+        this.options = options;
+        this.models = options.models || [];
+        
+        // Create containers for UI elements
+        this.createContainers();
         
         // Create camera info panel for controls
         this.createControlsInfoPanel();
         
         // Initialize UI elements and buttons
         this.initUI();
+        
+        // Add model-specific controls if models are provided
+        if (this.models && this.models.length > 0) {
+            this.createModelControls();
+        }
+        
+        // Create debug info view if needed
+        if (options.showDebugInfo) {
+            this.createDebugInfoView();
+        }
     }
     
     /**
@@ -18,6 +33,12 @@ export class UIController {
     initUI() {
         // Create the camera toggle button
         this.createCameraToggleButton();
+        
+        // Create scene editor button (if not already created)
+        if (this.options.sceneEditor) {
+            // SceneEditor already has its own toggle button
+            this.sceneEditor = this.options.sceneEditor;
+        }
         
         // Initialize help overlay toggle
         document.addEventListener('keydown', (event) => {
@@ -28,11 +49,96 @@ export class UIController {
     }
     
     /**
+     * Creates containers for UI elements
+     */
+    createContainers() {
+        // Create control panels container if it doesn't exist
+        if (!document.getElementById('controlPanels')) {
+            const controlPanels = document.createElement('div');
+            controlPanels.id = 'controlPanels';
+            controlPanels.style.position = 'absolute';
+            controlPanels.style.top = '50px';
+            controlPanels.style.left = '10px';
+            controlPanels.style.display = 'flex';
+            controlPanels.style.flexDirection = 'column';
+            controlPanels.style.gap = '10px';
+            controlPanels.style.zIndex = '100';
+            document.body.appendChild(controlPanels);
+            this.controlPanelsContainer = controlPanels;
+        } else {
+            this.controlPanelsContainer = document.getElementById('controlPanels');
+        }
+        
+        // Create toggle buttons container if it doesn't exist
+        if (!document.getElementById('toggleButtons')) {
+            const toggleButtons = document.createElement('div');
+            toggleButtons.id = 'toggleButtons';
+            toggleButtons.style.position = 'absolute';
+            toggleButtons.style.bottom = '20px';
+            toggleButtons.style.right = '20px';
+            toggleButtons.style.display = 'flex';
+            toggleButtons.style.flexDirection = 'row';
+            toggleButtons.style.gap = '10px';
+            toggleButtons.style.zIndex = '100';
+            document.body.appendChild(toggleButtons);
+            this.toggleButtonsContainer = toggleButtons;
+        } else {
+            this.toggleButtonsContainer = document.getElementById('toggleButtons');
+        }
+    }
+    
+    /**
+     * Creates model-specific controls (radius and rotation)
+     */
+    createModelControls() {
+        const { RadiusControls, RotationControls } = this.options.controlClasses || {};
+        
+        // Create radius controls if the class is available
+        if (RadiusControls) {
+            this.radiusControls = new RadiusControls(
+                this.options.scene,
+                this.models,
+                {
+                    isVisible: false,
+                    modelNames: this.models.map(model => model.getName ? model.getName() : model.constructor.name)
+                }
+            );
+        }
+        
+        // Create rotation controls if the class is available
+        if (RotationControls) {
+            this.rotationControls = new RotationControls(
+                this.options.scene,
+                this.models,
+                {
+                    isVisible: false,
+                    modelNames: this.models.map(model => model.getName ? model.getName() : model.constructor.name)
+                }
+            );
+        }
+    }
+    
+    /**
+     * Creates debug info view
+     */
+    createDebugInfoView() {
+        const { DebugInfoView } = this.options.controlClasses || {};
+        
+        if (DebugInfoView) {
+            this.debugInfoView = new DebugInfoView({
+                isVisible: true,
+                cameraController: this.cameraController,
+                app: this.options.app
+            });
+        }
+    }
+    
+    /**
      * Creates the controls info panel
      */
     createControlsInfoPanel() {
         // Find the control panels container
-        const controlPanels = document.getElementById('controlPanels');
+        const controlPanels = this.controlPanelsContainer || document.getElementById('controlPanels');
         if (!controlPanels) {
             console.error("Control panels container not found");
             return;
@@ -61,6 +167,7 @@ export class UIController {
             <p><strong>Up/Down (Flight):</strong> Space/Shift</p>
             <p><strong>Look Around:</strong> Click and Drag</p>
             <p><strong>Zoom (Orbit):</strong> Mouse Wheel</p>
+            <p><strong>Scene Editor:</strong> Press E</p>
         `;
         
         // Add to control panels
@@ -72,19 +179,11 @@ export class UIController {
      */
     createCameraToggleButton() {
         try {
-            // Create button container if it doesn't exist
-            let buttonContainer = document.querySelector('.control-buttons-container');
+            // Use the toggle buttons container
+            const buttonContainer = this.toggleButtonsContainer || document.getElementById('toggleButtons');
             if (!buttonContainer) {
-                buttonContainer = document.createElement('div');
-                buttonContainer.className = 'control-buttons-container';
-                buttonContainer.style.position = 'absolute';
-                buttonContainer.style.bottom = '20px';
-                buttonContainer.style.right = '20px';
-                buttonContainer.style.display = 'flex';
-                buttonContainer.style.flexDirection = 'column';
-                buttonContainer.style.gap = '10px';
-                buttonContainer.style.zIndex = '100';
-                document.body.appendChild(buttonContainer);
+                console.error("Toggle buttons container not found");
+                return;
             }
             
             // Create button
@@ -98,35 +197,53 @@ export class UIController {
             button.style.borderRadius = '4px';
             button.style.cursor = 'pointer';
             button.style.fontWeight = 'bold';
-            button.style.width = '120px';
-            button.style.textAlign = 'center';
-            button.style.transition = 'background-color 0.3s';
+            button.style.fontSize = '14px';
+            button.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
             
-            button.addEventListener('mouseover', () => {
+            // Add hover effect
+            button.addEventListener('mouseenter', () => {
                 button.style.backgroundColor = '#444';
             });
             
-            button.addEventListener('mouseout', () => {
+            button.addEventListener('mouseleave', () => {
                 button.style.backgroundColor = '#333';
             });
             
+            // Add click handler
             button.addEventListener('click', () => {
                 if (this.cameraController) {
                     this.cameraController.toggleCameraMode();
+                    button.textContent = `Camera: ${this.cameraController.getCurrentCameraName()}`;
                 }
             });
             
-            // Add the button to the container
+            // Update button text based on current camera
+            if (this.cameraController) {
+                button.textContent = `Camera: ${this.cameraController.getCurrentCameraName()}`;
+            }
+            
+            // Add to container
             buttonContainer.appendChild(button);
+            
+            // Save reference
+            this.cameraButton = button;
         } catch (error) {
             console.error("Error creating camera toggle button:", error);
         }
     }
     
     /**
-     * Updates UI elements with current application state
+     * Updates UI elements
      */
     update() {
-        // Any UI updates can be added here if needed in the future
+        // Update camera button text if camera mode changes
+        if (this.cameraButton && this.cameraController) {
+            this.cameraButton.textContent = `Camera: ${this.cameraController.getCurrentCameraName()}`;
+        }
+        
+        // Update debug info if available
+        if (this.debugInfoView) {
+            this.debugInfoView.update();
+        }
     }
 } 

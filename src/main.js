@@ -97,145 +97,33 @@ class CHEVisualization {
             // Now that cameras are set up, apply default panel rotations to ensure they're properly displayed
             this.onRender();
             
-            // Create UI controller
-            this.uiController = new UIController(this.cameraController);
-
             // Create an array of models for the scene editor
             const models = [this.ringModel, this.starModel];
             
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, models);
             
-            // Add debug function to SceneEditor
-            this.sceneEditor.logModelInfo = (model) => {
-                // Debug model info before processing
-                console.log("logModelInfo called with model:", model);
-                console.log("Model constructor:", model?.constructor?.name);
-                
-                if (!model) {
-                    console.log("No model selected");
-                    return;
-                }
-                
-                // Use the new logModelDetails method if available
-                if (typeof model.logModelDetails === 'function') {
-                    console.log("Using model.logModelDetails() method");
-                    model.logModelDetails();
-                    return;
-                }
-                
-                console.group("Selected Model Info");
-                
-                // Basic model info
-                console.log("Model Type:", model.constructor ? model.constructor.name : "Unknown");
-                console.log("BabylonJS ID:", model.rootNode ? model.rootNode.id : "No rootNode");
-                console.log("Instance ID:", model.uniqueId || "N/A");
-                console.log("Instance #:", model.instanceNumber || "N/A");
-                console.log("Creation Time:", model.creationTime || "N/A");
-                
-                // Position info
-                if (model.rootNode) {
-                    const position = model.rootNode.getAbsolutePosition();
-                    console.log("Position:", {
-                        x: position.x.toFixed(2),
-                        y: position.y.toFixed(2),
-                        z: position.z.toFixed(2)
-                    });
-                }
-                
-                // Radius settings
-                if (model.options) {
-                    console.log("Radius Options:", {
-                        radius: model.options.radius,
-                        outerRadius: model.options.outerRadius,
-                        innerRadius: model.options.innerRadius,
-                        singleCutRadius: model.options.singleCutRadius
-                    });
-                }
-                
-                // Parent info
-                if (model.options && model.options.parent) {
-                    const parent = model.options.parent;
-                    console.log("Parent Type:", parent.constructor ? parent.constructor.name : "Unknown");
-                    console.log("Parent ID:", parent.rootNode ? parent.rootNode.id : "No rootNode");
-                    
-                    if (parent.options) {
-                        console.log("Parent Radius Settings:", {
-                            outerRadius: parent.options.outerRadius,
-                            innerRadius: parent.options.innerRadius,
-                            singleCutRadius: parent.options.singleCutRadius
-                        });
+            // Create UI controller with enhanced capabilities
+            this.uiController = new UIController(
+                this.cameraController,
+                {
+                    scene: this.scene,
+                    models: [this.ringModel, this.starModel],
+                    sceneEditor: this.sceneEditor,
+                    showDebugInfo: true,
+                    app: this,
+                    controlClasses: {
+                        RadiusControls: RadiusControls,
+                        RotationControls: RotationControls,
+                        DebugInfoView: DebugInfoView
                     }
                 }
-                
-                console.groupEnd();
-            };
-            
-            // Create control panels container if it doesn't exist
-            if (!document.getElementById('controlPanels')) {
-                const controlPanels = document.createElement('div');
-                controlPanels.id = 'controlPanels';
-                controlPanels.style.position = 'absolute';
-                controlPanels.style.top = '50px';
-                controlPanels.style.left = '10px';
-                controlPanels.style.display = 'flex';
-                controlPanels.style.flexDirection = 'column';
-                controlPanels.style.gap = '10px';
-                controlPanels.style.zIndex = '100';
-                document.body.appendChild(controlPanels);
-            }
-            
-            // Create toggle buttons container if it doesn't exist
-            if (!document.getElementById('toggleButtons')) {
-                const toggleButtons = document.createElement('div');
-                toggleButtons.id = 'toggleButtons';
-                toggleButtons.style.position = 'absolute';
-                toggleButtons.style.bottom = '20px';
-                toggleButtons.style.right = '20px';
-                toggleButtons.style.display = 'flex';
-                toggleButtons.style.flexDirection = 'row';
-                toggleButtons.style.gap = '10px';
-                toggleButtons.style.zIndex = '100';
-                document.body.appendChild(toggleButtons);
-            }
-            
-            // Get all layers from both models for radius and rotation controls
-            const layerModels = [
-                this.ringModel,
-                this.starModel
-            ];
-            
-            // Create radius controls
-            const radiusControls = new RadiusControls(
-                scene, 
-                layerModels,
-                {
-                    isVisible: false,
-                    modelNames: ["Ring Model", "Star Model"]
-                }
             );
             
-            // Create rotation controls
-            const rotationControls = new RotationControls(
-                scene, 
-                layerModels, 
-                {
-                    isVisible: false,
-                    modelNames: ["Ring Model", "Star Model"]
-                }
-            );
-            
-            // Create debug info view (positioned at the top of control panels)
-            const debugInfoView = new DebugInfoView({
-                isVisible: true,
-                cameraController: this.cameraController,
-                app: this
-            });
-            
-            // Store the controls in class properties for later access
-            this.rotationControls = rotationControls;
-            this.radiusControls = radiusControls;
-            this.debugInfoView = debugInfoView;
+            // Store references to UI components for easier access
+            this.rotationControls = this.uiController.rotationControls;
+            this.radiusControls = this.uiController.radiusControls;
+            this.debugInfoView = this.uiController.debugInfoView;
             
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
