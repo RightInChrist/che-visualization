@@ -60,6 +60,13 @@ export class LayerTwoModel extends CompositeModel {
         // Mark initialization as complete
         this.initializationComplete = true;
         this.debugLog('LayerTwoModel initialization complete');
+        
+        // Use guaranteedRefresh to ensure all visual elements are properly positioned at startup
+        // This forces Babylon.js to properly update the scene
+        setTimeout(() => {
+            console.log("Applying guaranteed refresh during initialization...");
+            this.guaranteedRefresh();
+        }, 100);
     }
     
     /**
