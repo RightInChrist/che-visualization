@@ -82,6 +82,10 @@ export class CameraController {
         this.orbitCamera.panningSensibility = 50;
         this.orbitCamera.checkCollisions = false; // Turn off automatic collision
         
+        // Set limits to prevent going below the ground
+        this.orbitCamera.lowerBetaLimit = 0.1; // Restrict minimum angle to just above horizon
+        this.orbitCamera.upperBetaLimit = Math.PI / 2 - 0.1; // Restrict maximum angle to just below zenith
+        
         // Create first person camera
         this.firstPersonCamera = new UniversalCamera(
             'firstPersonCamera', 
@@ -452,7 +456,7 @@ export class CameraController {
                 if (this.currentMode === CAMERA_MODES.ORBIT) {
                     const direction = this.orbitCamera.target.subtract(this.orbitCamera.position).normalize();
                     const position = this.orbitCamera.position.add(direction.scale(50));
-                    position.y = Math.max(position.y, this.ground.position.y + this.minHeightAboveGround);
+                    position.y = Math.max(position.y, this.minHeightAboveGround);
                     
                     this.firstPersonCamera.position = position;
                     this.firstPersonCamera.setTarget(position.add(direction));

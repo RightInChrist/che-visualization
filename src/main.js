@@ -45,12 +45,12 @@ class CHEVisualization {
                     initialPosition: new Vector3(0, 100, 200),
                     zoomScaling: 5,
                     minDistance: 20,
-                    maxDistance: 500
+                    maxDistance: 1500
                 }
             );
             
             // Create ground model
-            this.groundModel = new GroundModel(scene);
+            this.groundModel = new GroundModel(scene, 2000);
             
             // Create Ring model (visible by default)
             this.ringModel = new RingModel(scene, new Vector3(0, 0, 0), {
