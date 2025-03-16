@@ -250,20 +250,23 @@ export class HexagonModel extends CompositeModel {
     }
     
     /**
-     * Update rotation of the entire hexagon model
-     * @param {number} rotationAngleDegrees - Rotation angle in degrees
+     * Updates the rotation of this model
+     * Base implementation that does nothing, to be overridden by subclasses
+     * @param {number} rotationAngle - The rotation angle in degrees
      */
-    updateRotation(rotationAngleDegrees) {
-        // Convert to radians
-        const rotationAngle = (rotationAngleDegrees * Math.PI) / 180;
-        
-        // Update root node rotation around Y axis
-        this.rootNode.rotation.y = rotationAngle;
-        
-        // Store the current angle
-        this.options.rotationAngle = rotationAngleDegrees;
-        
-        this.debugLog(`Updated rotation to ${rotationAngleDegrees} degrees`);
+    updateRotation(rotationAngle) {
+        this.debugLog(`Base updateRotation called with ${rotationAngle}° - No action taken`);
+        // Do nothing in base implementation
+    }
+    
+    /**
+     * Updates the rotation of all children of this model
+     * Base implementation that does nothing, to be overridden by subclasses
+     * @param {number} rotationAngle - The rotation angle in degrees for all children
+     */
+    updateChildrenRotation(rotationAngle) {
+        this.debugLog(`Base updateChildrenRotation called with ${rotationAngle}° - No action taken`);
+        // Do nothing in base implementation
     }
     
     /**
@@ -344,7 +347,7 @@ export class HexagonModel extends CompositeModel {
     }
     
     /**
-     * Dispose of resources
+     * Disposes of the resources used by this model
      */
     dispose() {
         // Dispose corner and side nodes

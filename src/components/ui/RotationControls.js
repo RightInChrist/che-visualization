@@ -136,42 +136,42 @@ export class RotationControls {
         
         // Check if model supports child rotation controls
         const supportsChildRotation = model && 
-            typeof model.updateAllSingleCutRotations === 'function';
+            typeof model.updateChildrenRotation === 'function';
             
-        // Check if model supports panel rotation control
-        const supportsPanelRotation = model && 
-            typeof model.updateAllPanelRotations === 'function';
+        // Check if model supports self rotation
+        const supportsRotation = model && 
+            typeof model.updateRotation === 'function';
 
         // Add control for child component rotation if supported
         if (hasChildModels && supportsChildRotation) {
             this.addDeltaRotationControl(
                 modelSection, 
                 model, 
-                model.constructor.name.includes("Star") ? "Star" : "SingleCUT",
-                model.getMinSingleCutDeltaRotation?.() ?? -180,
-                model.getMaxSingleCutDeltaRotation?.() ?? 180,
-                model.getDefaultSingleCutDeltaRotation?.() ?? 0,
-                model.getCurrentSingleCutDeltaRotation?.() ?? 0,
+                model.getName ? model.getName() : "Child",
+                model.getMinChildRotation?.() ?? -180,
+                model.getMaxChildRotation?.() ?? 180,
+                model.getDefaultChildRotation?.() ?? 0,
+                model.getCurrentChildRotation?.() ?? 0,
                 (value) => {
-                    console.log(`Setting global child rotation for ${model.constructor.name} to ${value}°`);
-                    model.updateAllSingleCutRotations(value);
+                    console.log(`Setting global child rotation for ${model.getName?.() || model.constructor.name} to ${value}°`);
+                    model.updateChildrenRotation(value);
                 }
             );
         }
         
-        // Add control for Panel rotation if supported
-        if (model && supportsPanelRotation) {
+        // Add control for self rotation if supported
+        if (model && supportsRotation) {
             this.addDeltaRotationControl(
                 modelSection,
                 model,
-                "Panel",
-                model.getMinPanelDeltaRotation?.() ?? -180,
-                model.getMaxPanelDeltaRotation?.() ?? 180,
-                model.getDefaultPanelDeltaRotation?.() ?? 0,
-                model.getCurrentPanelDeltaRotation?.() ?? 0,
+                "Self",
+                model.getMinSelfRotation?.() ?? -180,
+                model.getMaxSelfRotation?.() ?? 180,
+                model.getDefaultSelfRotation?.() ?? 0,
+                model.getCurrentSelfRotation?.() ?? 0,
                 (value) => {
-                    console.log(`Setting global Panel delta rotation for ${model.constructor.name} to ${value}°`);
-                    model.updateAllPanelRotations(value);
+                    console.log(`Setting rotation for ${model.getName?.() || model.constructor.name} to ${value}°`);
+                    model.updateRotation(value);
                 }
             );
         }
@@ -662,18 +662,18 @@ export class RotationControls {
     }
     
     /**
-     * Handle changes to all SingleCut rotations for a parent model
+     * Handle changes to all child rotations for a parent model
      * @param {Object} model - The parent model
-     * @param {number} value - New rotation value in degrees for all SingleCUTs
+     * @param {number} value - New rotation value in degrees for all children
      */
-    onSingleCutRotationChange(model, value) {
+    onChildrenRotationChange(model, value) {
         if (!model) return;
         
-        console.log(`All SingleCUTs rotation change: model=${model.constructor.name}, value=${value}`);
+        console.log(`Children rotation change: model=${model.getName?.() || model.constructor.name}, value=${value}`);
         
-        // Call the updateAllSingleCutRotations method if available
-        if (typeof model.updateAllSingleCutRotations === 'function') {
-            model.updateAllSingleCutRotations(value);
+        // Call the updateChildrenRotation method if available
+        if (typeof model.updateChildrenRotation === 'function') {
+            model.updateChildrenRotation(value);
         }
     }
     
@@ -691,10 +691,10 @@ export class RotationControls {
     }
     
     /**
-     * Add a delta rotation control for a specific component type (e.g., SingleCUT, Panel)
+     * Add a delta rotation control for a specific component type
      * @param {HTMLElement} container - The container to add the control to
      * @param {Object} model - The model to control
-     * @param {string} componentType - The type of component ("SingleCUT", "Star", "Panel", etc.)
+     * @param {string} componentType - The type of component
      * @param {number} min - Minimum rotation value
      * @param {number} max - Maximum rotation value
      * @param {number} defaultValue - Default rotation value
@@ -718,9 +718,9 @@ export class RotationControls {
         headerContainer.style.justifyContent = 'space-between';
         headerContainer.style.alignItems = 'center';
         
-        const modelTypeName = model.constructor.name.replace('Model', '');
+        const modelName = model.getName ? model.getName() : model.constructor.name.replace('Model', '');
         const title = document.createElement('h5');
-        title.textContent = `${modelTypeName} ${componentType} Rotation Control`;
+        title.textContent = `${modelName} ${componentType} Rotation Control`;
         title.style.margin = '0';
         title.style.color = '#4CAF50';
         title.style.fontWeight = 'bold';
@@ -728,26 +728,15 @@ export class RotationControls {
         headerContainer.appendChild(title);
         deltaContainer.appendChild(headerContainer);
         
-        // Reference to dropdown container for updating values
-        let panelRotationDropdown = null;
-        
         // Create the global delta rotation slider
         const deltaSlider = this.createSliderRow(
-            `Global ${componentType} Delta`,
+            `${componentType} Rotation`,
             min,
             max,
             currentValue || defaultValue,
             (value) => {
                 // Call the provided callback
                 onValueChange(value);
-                
-                // Update the dropdown values immediately
-                if (panelRotationDropdown && typeof panelRotationDropdown.updateValues === 'function') {
-                    // Wait for the model to finish updating
-                    setTimeout(() => {
-                        panelRotationDropdown.updateValues();
-                    }, 50);
-                }
             }
         );
         
@@ -761,23 +750,9 @@ export class RotationControls {
         // Add the container to the parent container
         container.appendChild(deltaContainer);
         
-        // Add dropdown if model has childModels (for SingleCUT, Star, or other component types)
-        if (componentType !== "Panel" && model.childModels && model.childModels.length > 0) {
+        // Add dropdown if model has childModels
+        if (model.childModels && model.childModels.length > 0) {
             this.addRotationValuesDropdown(deltaContainer, model, componentType);
-        }
-        
-        // For Panel type, add a dropdown to view panel rotation values if available
-        if (componentType === "Panel" && typeof model.getPanelRotations === 'function') {
-            panelRotationDropdown = this.addPanelRotationValuesDropdown(deltaContainer, model);
-            
-            // Force open/update dropdown on initialization to ensure values are shown
-            if (panelRotationDropdown) {
-                setTimeout(() => {
-                    if (panelRotationDropdown.forceShowValues) {
-                        panelRotationDropdown.forceShowValues();
-                    }
-                }, 100);
-            }
         }
     }
     
@@ -785,7 +760,7 @@ export class RotationControls {
      * Add a dropdown to show rotation values for child components
      * @param {HTMLElement} container - The container to add the dropdown to
      * @param {Object} model - The model containing children
-     * @param {string} componentType - The type of component ("SingleCUT", "Star", etc.)
+     * @param {string} componentType - The type of component
      */
     addRotationValuesDropdown(container, model, componentType) {
         // Add dropdown to view all rotation values
@@ -793,7 +768,7 @@ export class RotationControls {
         dropdownContainer.style.marginTop = '10px';
         
         const dropdownToggle = document.createElement('button');
-        dropdownToggle.textContent = `Show ${componentType} Rotation Values ▼`;
+        dropdownToggle.textContent = `Show Rotation Values ▼`;
         dropdownToggle.style.backgroundColor = '#444';
         dropdownToggle.style.color = '#fff';
         dropdownToggle.style.border = '1px solid #555';
@@ -828,19 +803,18 @@ export class RotationControls {
                         valueRow.style.borderBottom = index < model.childModels.length - 1 ? 
                             '1px solid #444' : 'none';
                         
+                        const childName = childModel.getName ? childModel.getName() : `Child ${index + 1}`;
+                        const childId = childModel.getId ? childModel.getId() : `idx-${index}`;
+                        
                         const label = document.createElement('span');
-                        label.textContent = `${componentType} #${index + 1}:`;
+                        label.textContent = childName;
                         label.style.fontWeight = 'bold';
+                        label.title = `ID: ${childId}`;
                         
                         const value = document.createElement('span');
                         const rotation = childModel.options?.rotationAngle || 0;
                         
-                        // Show original rotation if available
-                        if (typeof childModel.originalRotation !== 'undefined') {
-                            value.textContent = `${rotation.toFixed(0)}° (Base: ${childModel.originalRotation.toFixed(0)}°)`;
-                        } else {
-                            value.textContent = `${rotation.toFixed(0)}°`;
-                        }
+                        value.textContent = `${rotation.toFixed(0)}°`;
                         
                         valueRow.appendChild(label);
                         valueRow.appendChild(value);
@@ -855,7 +829,7 @@ export class RotationControls {
             const isVisible = rotationValuesList.style.display !== 'none';
             rotationValuesList.style.display = isVisible ? 'none' : 'block';
             dropdownToggle.textContent = isVisible ? 
-                `Show ${componentType} Rotation Values ▼` : `Hide ${componentType} Rotation Values ▲`;
+                `Show Rotation Values ▼` : `Hide Rotation Values ▲`;
             
             if (!isVisible) {
                 // Update values when showing
@@ -866,111 +840,5 @@ export class RotationControls {
         dropdownContainer.appendChild(dropdownToggle);
         dropdownContainer.appendChild(rotationValuesList);
         container.appendChild(dropdownContainer);
-    }
-    
-    /**
-     * Add a dropdown to show rotation values for panels
-     * @param {HTMLElement} container - The container to add the dropdown to
-     * @param {Object} model - The model containing panel rotations
-     */
-    addPanelRotationValuesDropdown(container, model) {
-        // Add dropdown to view all panel rotation values
-        const dropdownContainer = document.createElement('div');
-        dropdownContainer.style.marginTop = '10px';
-        
-        const dropdownToggle = document.createElement('button');
-        dropdownToggle.textContent = 'Show Panel Rotation Values ▼';
-        dropdownToggle.style.backgroundColor = '#444';
-        dropdownToggle.style.color = '#fff';
-        dropdownToggle.style.border = '1px solid #555';
-        dropdownToggle.style.borderRadius = '3px';
-        dropdownToggle.style.padding = '5px 10px';
-        dropdownToggle.style.cursor = 'pointer';
-        dropdownToggle.style.width = '100%';
-        dropdownToggle.style.textAlign = 'left';
-        
-        const rotationValuesList = document.createElement('div');
-        rotationValuesList.style.display = 'none';
-        rotationValuesList.style.marginTop = '5px';
-        rotationValuesList.style.border = '1px solid #555';
-        rotationValuesList.style.borderRadius = '3px';
-        rotationValuesList.style.padding = '5px';
-        rotationValuesList.style.backgroundColor = '#333';
-        rotationValuesList.style.maxHeight = '200px';
-        rotationValuesList.style.overflowY = 'auto';
-        
-        // Function to update rotation values in the dropdown
-        const updateRotationValues = () => {
-            rotationValuesList.innerHTML = '';
-            
-            // Get panel rotation state
-            const panelRotations = model.getPanelRotations();
-            
-            console.log("Updating panel rotation values display:", panelRotations);
-            
-            if (panelRotations && panelRotations.defaultAngles && panelRotations.defaultAngles.length > 0) {
-                // Create rows for each panel
-                panelRotations.defaultAngles.forEach((defaultAngle, index) => {
-                    const valueRow = document.createElement('div');
-                    valueRow.style.display = 'flex';
-                    valueRow.style.justifyContent = 'space-between';
-                    valueRow.style.padding = '3px 0';
-                    valueRow.style.borderBottom = index < panelRotations.defaultAngles.length - 1 ? 
-                        '1px solid #444' : 'none';
-                    
-                    const label = document.createElement('span');
-                    label.textContent = `Panel #${index + 1}:`;
-                    label.style.fontWeight = 'bold';
-                    
-                    const value = document.createElement('span');
-                    const currentAngle = panelRotations.currentAngles[index] !== undefined ? 
-                        panelRotations.currentAngles[index] : defaultAngle;
-                    value.textContent = `${currentAngle.toFixed(0)}° (Base: ${defaultAngle.toFixed(0)}°, Delta: ${panelRotations.currentDelta}°)`;
-                    
-                    valueRow.appendChild(label);
-                    valueRow.appendChild(value);
-                    rotationValuesList.appendChild(valueRow);
-                });
-            } else {
-                const noDataRow = document.createElement('div');
-                noDataRow.textContent = 'No panel rotation data available';
-                noDataRow.style.color = '#999';
-                noDataRow.style.fontStyle = 'italic';
-                rotationValuesList.appendChild(noDataRow);
-            }
-        };
-        
-        // Function to show values (automatically open dropdown)
-        const forceShowValues = () => {
-            rotationValuesList.style.display = 'block';
-            dropdownToggle.textContent = 'Hide Panel Rotation Values ▲';
-            updateRotationValues();
-        };
-        
-        // Toggle dropdown visibility
-        dropdownToggle.addEventListener('click', () => {
-            const isVisible = rotationValuesList.style.display !== 'none';
-            rotationValuesList.style.display = isVisible ? 'none' : 'block';
-            dropdownToggle.textContent = isVisible ? 
-                'Show Panel Rotation Values ▼' : 'Hide Panel Rotation Values ▲';
-            
-            if (!isVisible) {
-                // Update values when showing
-                updateRotationValues();
-            }
-        });
-        
-        dropdownContainer.appendChild(dropdownToggle);
-        dropdownContainer.appendChild(rotationValuesList);
-        container.appendChild(dropdownContainer);
-        
-        // Export functions for external access
-        dropdownContainer.updateValues = updateRotationValues;
-        dropdownContainer.forceShowValues = forceShowValues;
-        
-        // Show values initially to ensure they're visible at startup
-        setTimeout(forceShowValues, 0);
-        
-        return dropdownContainer;
     }
 } 

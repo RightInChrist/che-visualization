@@ -74,6 +74,17 @@ export class RingModel extends CompositeModel {
     }
     
     /**
+     * Update rotation for all children
+     * @param {number} rotationAngle - New rotation angle in degrees for children
+     */
+    updateChildrenRotation(rotationAngle) {
+        // Update rotation for the central CUT
+        if (this.centralCut && typeof this.centralCut.updateChildrenRotation === 'function') {
+            this.centralCut.updateChildrenRotation(rotationAngle);
+        }
+    }
+    
+    /**
      * Override getName to return "Ring"
      * @returns {string} The display name for this model
      */

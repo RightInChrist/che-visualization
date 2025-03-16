@@ -141,6 +141,14 @@ export class BaseModel {
     }
     
     /**
+     * Gets the unique identifier for this model
+     * @returns {string} - The unique ID of the model
+     */
+    getId() {
+        return this.id;
+    }
+    
+    /**
      * Disposes of the model's resources
      */
     dispose() {

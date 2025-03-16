@@ -476,19 +476,36 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
-     * Updates all panel rotations with a delta value applied to their base positions
-     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
+     * Updates the rotation of this model
+     * @param {number} rotationAngle - The rotation angle in degrees
      */
-    updateAllPanelRotations(deltaRotation) {
+    updateRotation(rotationAngle) {
+        // Convert to radians
+        const rotationAngleRadians = (rotationAngle * Math.PI) / 180;
+        
+        // Update root node rotation around Y axis
+        this.rootNode.rotation.y = rotationAngleRadians;
+        
+        // Store the current angle
+        this.options.rotationAngle = rotationAngle;
+        
+        this.debugLog(`Updated ${this.getName()} rotation to ${rotationAngle}°`);
+    }
+    
+    /**
+     * Updates the rotation of all children of this model
+     * @param {number} rotationAngle - The rotation angle in degrees for all children
+     */
+    updateChildrenRotation(rotationAngle) {
         if (!this.panels || this.panels.length === 0) {
-            this.debugLog('No panels to update rotations for');
+            this.debugLog(`No panels to update rotations for in ${this.getName()}`);
             return;
         }
         
         // Update the shared rotation state
-        this.panelRotations.currentDelta = deltaRotation;
+        this.panelRotations.currentDelta = rotationAngle;
         
-        console.log(`Updating all panels with delta rotation: ${deltaRotation}°`);
+        this.debugLog(`Updating all panels in ${this.getName()} with rotation: ${rotationAngle}°`);
         
         // Update each panel using its direct rotation methods
         this.panels.forEach((panel, i) => {
@@ -496,30 +513,27 @@ export class SingleCutModel extends HexagonModel {
                 // Use the panel's own rotation method to handle the delta
                 // When called from user interaction, it's safe to render
                 if (typeof panel.applyRotationDelta === 'function') {
-                    panel.applyRotationDelta(deltaRotation);
+                    panel.applyRotationDelta(rotationAngle);
                 } else {
-                    console.warn(`Panel #${i+1} does not have applyRotationDelta method`);
-                }
-                
-                // Update the current angle in our shared state
-                if (this.panelRotations.defaultAngles[i] !== undefined) {
-                    this.panelRotations.currentAngles[i] = this.panelRotations.defaultAngles[i] + deltaRotation;
-                    console.log(`Panel #${i+1}: Applied rotation delta: ${deltaRotation}° (current: ${this.panelRotations.currentAngles[i]}°, default: ${this.panelRotations.defaultAngles[i]}°)`);
+                    // Fallback if panel doesn't have applyRotationDelta method
+                    const defaultAngle = this.getDefaultPanelRotation(i);
+                    const totalAngle = defaultAngle + (rotationAngle * Math.PI / 180);
+                    
+                    if (panel.rootNode) {
+                        panel.rootNode.rotation.y = totalAngle;
+                    }
                 }
             }
         });
-        
-        // Log the updated rotation state
-        this.debugLog('Panel rotation state after update:');
-        this.debugLog('  Default angles:', this.panelRotations.defaultAngles.map(a => a.toFixed(1) + '°').join(', '));
-        this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
-        this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
-        
-        // Only render if there's a camera (safe to assume we're past initialization)
-        if (this.scene && this.scene.activeCamera) {
-            this.scene.markAllMaterialsAsDirty();
-            this.scene.render();
-        }
+    }
+    
+    /**
+     * @deprecated Use updateChildrenRotation() instead
+     * Updates all panel rotations with a delta value applied to their base positions
+     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
+     */
+    updateAllPanelRotations(deltaRotation) {
+        return this.updateChildrenRotation(deltaRotation);
     }
     
     /**
