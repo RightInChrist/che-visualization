@@ -10,8 +10,6 @@ import { RingModel } from './components/models/RingModel';
 import { CameraController } from './components/controllers/CameraController';
 import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
-import { RadiusControls } from './components/ui/RadiusControls';
-import { RotationControls } from './components/ui/RotationControls';
 import { DebugInfoView } from './components/ui/DebugInfoView';
 
 /**
@@ -28,55 +26,41 @@ class CHEVisualization {
      */
     async init() {
         try {
-            // Get canvas element
-            this.canvas = document.getElementById('renderCanvas');
+            // Initialize engine and create scene
+            const { engine, canvas } = await initializeEngine();
+            this.engine = engine;
+            this.canvas = canvas;
             
-            if (!this.canvas) {
-                console.error('Canvas element not found');
-                this.showError('Canvas element not found. Please check your HTML.');
-                return;
-            }
-            
-            // Initialize the Babylon engine
-            this.engine = await initializeEngine(this.canvas);
-            
-            // Create scene
-            const { scene, shadowGenerator, axesViewer } = createScene(this.engine);
+            // Create scene with camera and lights
+            const scene = createScene(engine, canvas);
             this.scene = scene;
-            this.shadowGenerator = shadowGenerator;
-            
-            // Create ground
-            this.ground = new GroundModel(scene, 5000);
-            
-            // Create Ring Model
-            this.ringModel = new RingModel(scene, new Vector3(0, 0, 0));
-            
-            // Create Star Model
-            this.starModel = new StarModel(scene, new Vector3(0, 0, 0));
-            
-            // Make sure Ring Model is visible
-            this.ringModel.setVisible(true);
-            
-            // Combine all pipe meshes for collision detection
-            const ringPipeMeshes = this.ringModel && typeof this.ringModel.getAllPipes === 'function'
-                ? (this.ringModel.getAllPipes() || []).map(pipe => pipe.pipeMesh)
-                : [];
-                
-            const starPipeMeshes = this.starModel && typeof this.starModel.getAllPipes === 'function'
-                ? (this.starModel.getAllPipes() || []).map(pipe => pipe.pipeMesh)
-                : [];
-                
-            const pipeMeshes = [...ringPipeMeshes, ...starPipeMeshes];
             
             // Create camera controller
             this.cameraController = new CameraController(
                 scene, 
-                this.canvas, 
-                this.ground.mesh, 
-                pipeMeshes
+                canvas, 
+                { 
+                    initialPosition: new Vector3(0, 100, 200),
+                    zoomScaling: 5,
+                    minDistance: 20,
+                    maxDistance: 500
+                }
             );
             
-            // Now that cameras are set up, apply default panel rotations to ensure they're properly displayed
+            // Create ground model
+            this.groundModel = new GroundModel(scene);
+            
+            // Create Ring model (visible by default)
+            this.ringModel = new RingModel(scene, new Vector3(0, 0, 0), {
+                debug: true
+            });
+            
+            // Create Star model (invisible by default)
+            this.starModel = new StarModel(scene, new Vector3(0, 0, 0), {
+                debug: true
+            });
+            
+            // Apply initializations that require a fully set up scene
             this.onRender();
             
             // Create an array of models for the scene editor
@@ -95,16 +79,12 @@ class CHEVisualization {
                     showDebugInfo: true,
                     app: this,
                     controlClasses: {
-                        RadiusControls: RadiusControls,
-                        RotationControls: RotationControls,
                         DebugInfoView: DebugInfoView
                     }
                 }
             );
             
             // Store references to UI components for easier access
-            this.rotationControls = this.uiController.rotationControls;
-            this.radiusControls = this.uiController.radiusControls;
             this.debugInfoView = this.uiController.debugInfoView;
             
             // Register before render callback for LOD updates
@@ -120,24 +100,20 @@ class CHEVisualization {
                     this.sceneEditor.update();
                 }
                 
-                // Update debug info if needed
-                if (this.debugInfoView) {
-                    this.debugInfoView.update();
+                // Update UI controller if needed
+                if (this.uiController) {
+                    this.uiController.update();
                 }
             });
             
-            // Start the render loop
+            // Create render loop
             this.startRenderLoop();
             
-            // Handle window resize events
-            window.addEventListener('resize', () => {
-                this.engine.resize();
-            });
+            console.log('Initialization complete');
             
-            console.log('CHE Visualization initialized successfully');
         } catch (error) {
-            console.error('Error initializing application:', error);
-            this.showError(`Error initializing: ${error.message}`);
+            console.error('Initialization error:', error);
+            this.showError(`Initialization error: ${error.message}`);
         }
     }
     

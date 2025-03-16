@@ -91,28 +91,15 @@ export class UIController {
      * Creates model-specific controls (radius and rotation)
      */
     createModelControls() {
-        const { RadiusControls, RotationControls } = this.options.controlClasses || {};
+        const { DebugInfoView } = this.options.controlClasses || {};
         
-        // Create radius controls if the class is available
-        if (RadiusControls) {
-            this.radiusControls = new RadiusControls(
+        // Create debug info view if the class is available
+        if (DebugInfoView && this.options.showDebugInfo) {
+            this.debugInfoView = new DebugInfoView(
                 this.options.scene,
                 this.models,
                 {
-                    isVisible: false,
-                    modelNames: this.models.map(model => model.getName ? model.getName() : model.constructor.name)
-                }
-            );
-        }
-        
-        // Create rotation controls if the class is available
-        if (RotationControls) {
-            this.rotationControls = new RotationControls(
-                this.options.scene,
-                this.models,
-                {
-                    isVisible: false,
-                    modelNames: this.models.map(model => model.getName ? model.getName() : model.constructor.name)
+                    app: this.options.app
                 }
             );
         }
