@@ -194,8 +194,8 @@ export class RotationControls {
                             rotation.value = rotation.baseRotation + value;
                         });
                         
-                        // Also call the model's method to update visual elements
-                        model.getChildrenRotations(value);
+                        // Apply rotations to the actual panels
+                        this.applyRotationsToModel(model, rotations);
                     }
                 );
                 childRotationContainer.appendChild(deltaSlider);
@@ -225,6 +225,34 @@ export class RotationControls {
         }
         
         return modelSection;
+    }
+    
+    /**
+     * Apply the rotations from the rotation objects to the actual model panels
+     * @param {Object} model - The model containing panels
+     * @param {Array} rotations - Array of rotation objects
+     */
+    applyRotationsToModel(model, rotations) {
+        if (!model || !model.panels || !rotations) return;
+        
+        // For each panel, apply the rotation from the corresponding rotation object
+        for (let i = 0; i < Math.min(model.panels.length, rotations.length); i++) {
+            const panel = model.panels[i];
+            const rotation = rotations[i];
+            
+            if (panel && panel.rootNode && rotation) {
+                // Convert rotation value from degrees to radians
+                const angle = rotation.value * Math.PI / 180;
+                
+                // Apply to panel root node
+                panel.rootNode.rotation.y = angle;
+            }
+        }
+        
+        // Update scene if needed
+        if (this.scene) {
+            this.scene.render();
+        }
     }
     
     /**
@@ -505,8 +533,8 @@ export class RotationControls {
                 rotation.value = rotation.baseRotation + value;
             });
             
-            // Also call the model's method to update visual elements
-            model.getChildrenRotations(value);
+            // Apply the rotations to the model panels
+            this.applyRotationsToModel(model, rotations);
         }
     }
     

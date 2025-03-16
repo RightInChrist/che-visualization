@@ -491,79 +491,14 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
-     * Gets or sets the rotation information for all children (panels)
-     * Implementation for SingleCutModel returns panel rotations by reference
-     * @param {number|null} deltaRotation - When provided, applies this delta rotation to all panels
+     * Gets the rotation information for all children (panels)
+     * Implementation simply returns the rotation objects array by reference
      * @returns {Array} - Array of rotation objects that are passed by reference
      */
-    getChildrenRotations(deltaRotation = null) {
-        // If deltaRotation is provided, apply it to all rotation objects
-        if (deltaRotation !== null) {
-            if (!this.panels || this.panels.length === 0 || !this.rotations) {
-                this.debugLog(`No panels to update rotations for in ${this.getName()}`);
-                return this.rotations || [];
-            }
-            
-            // Update the shared rotation state (for backward compatibility)
-            this.panelRotations.currentDelta = deltaRotation;
-            
-            this.debugLog(`Updating all panels in ${this.getName()} with rotation delta: ${deltaRotation}°`);
-            
-            // Update each rotation object - since these are passed by reference,
-            // this will automatically update any component that has a reference to them
-            this.rotations.forEach((rotation, i) => {
-                rotation.delta = deltaRotation;
-                rotation.value = rotation.baseRotation + deltaRotation;
-                
-                // Update the panel meshes as well
-                const panel = this.panels[i];
-                if (panel && panel.rootNode) {
-                    const totalAngleRad = rotation.value * Math.PI / 180;
-                    panel.rootNode.rotation.y = totalAngleRad;
-                }
-                
-                // Update legacy format for compatibility
-                this.panelRotations.currentAngles[i] = rotation.value;
-            });
-        }
-        
-        // Return the rotations array - external components can modify these objects 
-        // directly as they are passed by reference
+    getChildrenRotations() {
         return this.rotations;
     }
-    
-    /**
-     * Get min delta rotation value for panels
-     * @returns {number} - Minimum delta rotation in degrees
-     */
-    getMinPanelDeltaRotation() {
-        return -180;
-    }
-    
-    /**
-     * Get max delta rotation value for panels
-     * @returns {number} - Maximum delta rotation in degrees
-     */
-    getMaxPanelDeltaRotation() {
-        return 180;
-    }
-    
-    /**
-     * Get default delta rotation value for panels
-     * @returns {number} - Default delta rotation in degrees
-     */
-    getDefaultPanelDeltaRotation() {
-        return 0;
-    }
-    
-    /**
-     * Get current delta rotation value for panels
-     * @returns {number} - Current delta rotation in degrees
-     */
-    getCurrentPanelDeltaRotation() {
-        return this.panelRotations?.currentDelta || 0;
-    }
-    
+
     /**
      * Updates the rotation of this model
      * @param {number} rotationAngle - The rotation angle in degrees
@@ -580,25 +515,7 @@ export class SingleCutModel extends HexagonModel {
         
         this.debugLog(`Updated ${this.getName()} rotation to ${rotationAngle}°`);
     }
-    
-    /**
-     * @deprecated Use getChildrenRotations(deltaRotation) instead
-     * Updates the rotation of all children of this model
-     * @param {number} rotationAngle - The rotation angle in degrees for all children
-     */
-    updateChildrenRotation(rotationAngle) {
-        return this.getChildrenRotations(rotationAngle);
-    }
-    
-    /**
-     * @deprecated Use updateChildrenRotation() instead
-     * Updates all panel rotations with a delta value applied to their base positions
-     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
-     */
-    updateAllPanelRotations(deltaRotation) {
-        return this.updateChildrenRotation(deltaRotation);
-    }
-    
+
     /**
      * Override getName to return "CUT"
      * @returns {string} The display name for this model
