@@ -112,6 +112,9 @@ export class SingleCutModel extends HexagonModel {
             // Create panel with calculated transform
             const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
             
+            // Store the panel's default rotation values for later reference
+            panel.defaultRotationAngle = this.getDefaultPanelRotation(i);
+            
             this.panels.push(panel);
             
             // Check if this panel should be permanently hidden (based on parent model)
@@ -304,7 +307,22 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
-     * Updates all panel rotations with a delta value applied to their original positions
+     * Get the default rotation angle for a panel based on its index
+     * @param {number} index - Panel index (0-5)
+     * @returns {number} - Default rotation angle in radians
+     */
+    getDefaultPanelRotation(index) {
+        if (index === 1 || index === 4) { // Panels 2 and 5
+            return 0; // No additional rotation
+        } else if (index === 2 || index === 5) { // Panels 3 and 6
+            return 120 * Math.PI / 180; // 120 degrees
+        } else { // Panels 1 and 4
+            return 60 * Math.PI / 180; // 60 degrees
+        }
+    }
+    
+    /**
+     * Updates all panel rotations with a delta value applied to their base positions
      * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
      */
     updateAllPanelRotations(deltaRotation) {
@@ -321,19 +339,25 @@ export class SingleCutModel extends HexagonModel {
         // Update each panel
         this.panels.forEach((panel, i) => {
             if (panel && panel.rootNode) {
-                // Get original panel rotation - if not already stored, calculate and store it
-                if (!panel.originalRotation) {
-                    panel.originalRotation = panel.rootNode.rotation.clone();
-                    console.log(`Stored original rotation for Panel #${i+1}: ${(panel.originalRotation.y * 180 / Math.PI).toFixed(0)}°`);
+                // If we don't have the base transform stored yet, store it now
+                if (!panel.baseTransform) {
+                    // Create a fresh transform that doesn't include any previous delta rotations
+                    panel.baseTransform = {
+                        position: panel.rootNode.position.clone(),
+                        rotation: panel.rootNode.rotation.clone(),
+                        defaultRotationAngle: panel.defaultRotationAngle || this.getDefaultPanelRotation(i)
+                    };
+                    console.log(`Stored base transform for Panel #${i+1}, default angle: ${(panel.baseTransform.defaultRotationAngle * 180 / Math.PI).toFixed(0)}°`);
                 }
                 
-                // Reset panel to its original rotation first
-                panel.rootNode.rotation = panel.originalRotation.clone();
+                // Reset the panel to its base transform
+                panel.rootNode.position = panel.baseTransform.position.clone();
+                panel.rootNode.rotation = panel.baseTransform.rotation.clone();
                 
                 // Calculate delta in radians
                 const deltaRadians = (deltaRotation * Math.PI) / 180;
                 
-                // Apply the rotation using rotate() method (same as during panel creation)
+                // Apply the delta rotation on top of the original transform
                 panel.rootNode.rotate(BABYLON.Axis.Y, deltaRadians, BABYLON.Space.LOCAL);
                 
                 // Force Babylon to update the world matrix
@@ -341,22 +365,19 @@ export class SingleCutModel extends HexagonModel {
                 
                 // Force mesh update
                 if (panel.panelMesh) {
-                    // Ensure panel mesh knows it needs to update
                     panel.panelMesh.markAsDirty();
                     panel.panelMesh.refreshBoundingInfo();
                     panel.panelMesh.computeWorldMatrix(true);
                 }
                 
-                console.log(`Panel #${i+1}: Updated rotation with delta: ${deltaRotation}°`);
+                const defaultAngleDeg = (panel.baseTransform.defaultRotationAngle * 180 / Math.PI).toFixed(0);
+                console.log(`Panel #${i+1}: Updated rotation with delta: ${deltaRotation}° (default: ${defaultAngleDeg}°)`);
             }
         });
         
         // Force an immediate render of the scene
         if (this.scene) {
-            // Mark scene as dirty to ensure it gets redrawn
             this.scene.markAllMaterialsAsDirty();
-            
-            // Force render
             this.scene.render();
         }
     }
