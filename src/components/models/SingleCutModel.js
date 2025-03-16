@@ -331,16 +331,19 @@ export class SingleCutModel extends HexagonModel {
                 const originalY = panel.originalRotation.y;
                 let newY = originalY + (deltaRotation * Math.PI / 180); // Convert delta to radians
                 
-                // Apply the new rotation
+                // Reset panel rotation to original position first (important!)
+                panel.rootNode.rotation.y = originalY;
+                
+                // Then apply the new rotation
                 panel.rootNode.rotation.y = newY;
                 
-                // Force Babylon to update the scene
+                // Force Babylon to update the world matrix
+                panel.rootNode.computeWorldMatrix(true);
+                
+                // Force mesh update
                 if (panel.panelMesh) {
-                    // Trigger a small position update to force a refresh
-                    const originalPosition = panel.panelMesh.position.clone();
-                    panel.panelMesh.position = originalPosition;
-                    
-                    // Force update of bounding info
+                    // Ensure panel mesh knows it needs to update
+                    panel.panelMesh.markAsDirty();
                     panel.panelMesh.refreshBoundingInfo();
                     panel.panelMesh.computeWorldMatrix(true);
                 }
@@ -349,8 +352,12 @@ export class SingleCutModel extends HexagonModel {
             }
         });
         
-        // Force an update of the scene
+        // Force an immediate render of the scene
         if (this.scene) {
+            // Mark scene as dirty to ensure it gets redrawn
+            this.scene.markAllMaterialsAsDirty();
+            
+            // Force render
             this.scene.render();
         }
     }
