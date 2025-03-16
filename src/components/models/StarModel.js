@@ -192,9 +192,35 @@ export class StarModel extends CompositeModel {
         }
         
         // Make sure all child models get visibility set correctly
-        this.models.centralCut?.setVisible(isVisible && this.options.visibility.centralCut);
-        this.models.layerOneStar?.setVisible(isVisible && this.options.visibility.layerOne);
-        this.models.layerTwoStar?.setVisible(isVisible && this.options.visibility.layerTwo);
+        if (this.models.centralCut) {
+            console.log(`Setting centralCut visibility to ${isVisible && this.options.visibility.centralCut}`);
+            this.models.centralCut.setVisible(isVisible && this.options.visibility.centralCut);
+        }
+        
+        if (this.models.layerOneStar) {
+            console.log(`Setting layerOneStar visibility to ${isVisible && this.options.visibility.layerOne}`);
+            this.models.layerOneStar.setVisible(isVisible && this.options.visibility.layerOne);
+        }
+        
+        if (this.models.layerTwoStar) {
+            console.log(`Setting layerTwoStar visibility to ${isVisible && this.options.visibility.layerTwo}`);
+            this.models.layerTwoStar.setVisible(isVisible && this.options.visibility.layerTwo);
+            
+            // Force verify the Layer Two Star visibility
+            if (isVisible && this.options.visibility.layerTwo) {
+                const layerTwoVisible = this.models.layerTwoStar.isVisible();
+                console.log(`Verified layerTwoStar visibility: ${layerTwoVisible}`);
+                
+                // If it's not visible but should be, try to force it
+                if (!layerTwoVisible) {
+                    console.log('Forcing layerTwoStar visibility');
+                    this.models.layerTwoStar.setVisible(true);
+                    
+                    // Double-check that it worked
+                    console.log(`Re-verified layerTwoStar visibility: ${this.models.layerTwoStar.isVisible()}`);
+                }
+            }
+        }
         
         console.log(`StarModel.setVisible complete`);
     }

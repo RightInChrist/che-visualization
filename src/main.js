@@ -71,8 +71,16 @@ class CHEVisualization {
                 }
             });
             
-            // Hide the Star model initially (will be reflected in the SceneEditor)
-            this.starModel.setVisible(false);
+            // Make sure both models are visible
+            this.ringModel.setVisible(true);
+            this.starModel.setVisible(true);
+            
+            // Force specific visibility checks on LayerTwoStar
+            console.log('Ensuring LayerTwoStar is visible...');
+            if (this.starModel.models.layerTwoStar) {
+                this.starModel.models.layerTwoStar.setVisible(true);
+                console.log('LayerTwoStar visibility forced:', this.starModel.models.layerTwoStar.isVisible());
+            }
             
             // Add shadows to all pipes in the scene
             // For Ring Model

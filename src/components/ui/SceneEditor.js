@@ -820,6 +820,9 @@ export class SceneEditor {
             // For debugging, log the object
             console.log(`[SceneEditor] Object type: ${object?.constructor?.name}`);
             
+            // Find the Star Model object from sceneObjects
+            const starModelObject = this.sceneObjects['Star Model'];
+            
             // Special handling for toggling the Star Model itself
             if (path === 'Star Model' && object && object.model) {
                 console.log('[SceneEditor] Direct use of model.setVisible for Star Model');
@@ -841,11 +844,8 @@ export class SceneEditor {
                 }
             }
             
-            // Special handling for toggling a child of Star Model
+            // Special handling for toggling any child of Star Model
             if (path.startsWith('Star Model/') && isVisible) {
-                // Find the Star Model object from sceneObjects
-                const starModelObject = this.sceneObjects['Star Model'];
-                
                 if (starModelObject && starModelObject.model) {
                     console.log('[SceneEditor] Making parent Star Model visible for child toggle');
                     
@@ -864,10 +864,11 @@ export class SceneEditor {
                         }
                     }
                     
-                    // For Layer One Star or Layer Two Star visibility
+                    // Direct handling for Layer One Star and Layer Two Star
                     if (path === 'Star Model/Layer One Star' || path === 'Star Model/Layer Two Star') {
-                        console.log(`[SceneEditor] Directly setting visibility for ${path}`);
                         const modelKey = path === 'Star Model/Layer One Star' ? 'layerOne' : 'layerTwo';
+                        
+                        console.log(`[SceneEditor] Setting ${path} visibility to ${isVisible}`);
                         
                         // Update the visibility option in StarModel
                         starModelObject.model.options.visibility[modelKey] = isVisible;
@@ -878,6 +879,26 @@ export class SceneEditor {
                         // Update the checkbox state
                         if (this.checkboxElements[path]) {
                             this.checkboxElements[path].element.checked = isVisible;
+                        }
+                        
+                        // Special case: If we're showing Layer One Star, make sure Layer Two Star is also rendered
+                        if (path === 'Star Model/Layer One Star' && isVisible) {
+                            console.log('[SceneEditor] Also checking Layer Two Star visibility');
+                            
+                            // Check if LayerTwoStar is configured to be visible in options
+                            if (starModelObject.model.options.visibility.layerTwo) {
+                                console.log('[SceneEditor] Ensuring Layer Two Star visibility is applied');
+                                
+                                // Force Layer Two Star to be visible if it's set to be visible in options
+                                if (starModelObject.model.models.layerTwoStar) {
+                                    starModelObject.model.models.layerTwoStar.setVisible(true);
+                                    
+                                    // Make sure checkbox matches
+                                    if (this.checkboxElements['Star Model/Layer Two Star']) {
+                                        this.checkboxElements['Star Model/Layer Two Star'].element.checked = true;
+                                    }
+                                }
+                            }
                         }
                         
                         return; // Early return after handling
