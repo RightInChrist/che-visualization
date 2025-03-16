@@ -166,7 +166,6 @@ export class RadiusControls {
             const hasSingleCutControl = config.model && (
                 (config.model.constructor.name === 'LayerOneStarModel') ||
                 (config.model.constructor.name === 'LayerOneModel') ||
-                (config.model.constructor.name === 'LayerTwoStarModel') ||
                 (config.model.constructor.name === 'SingleCutModel') ||
                 (config.model.children && config.model.children.some(child => 
                     child.constructor.name === 'SingleCutModel'))

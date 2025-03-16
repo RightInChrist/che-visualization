@@ -8,7 +8,6 @@ import { GroundModel } from './components/models/GroundModel';
 import { SingleCutModel } from './components/models/SingleCutModel';
 import { LayerOneModel } from './components/models/LayerOneModel';
 import { LayerOneStarModel } from './components/models/LayerOneStarModel';
-import { LayerTwoStarModel } from './components/models/LayerTwoStarModel';
 import { StarModel } from './components/models/StarModel';
 import { RingModel } from './components/models/RingModel';
 import { CameraController } from './components/controllers/CameraController';
@@ -64,12 +63,11 @@ class CHEVisualization {
                 }
             });
             
-            // Create Star Model (contains Central CUT, Layer One Star, and Layer Two Star)
+            // Create Star Model (contains Central CUT and Layer One Star)
             this.starModel = new StarModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
                     centralCut: true,
-                    layerOne: true,
-                    layerTwo: true  // Layer Two Star visible at startup
+                    layerOne: true
                 }
             });
             
@@ -83,17 +81,6 @@ class CHEVisualization {
             if (this.starModel.models.layerOneStar) {
                 this.starModel.models.layerOneStar.updateAllSingleCutRotations(30);
                 console.log('Applied 30-degree rotation to all SingleCUTs in LayerOneStar');
-            }
-            if (this.starModel.models.layerTwoStar) {
-                this.starModel.models.layerTwoStar.updateAllSingleCutRotations(30);
-                console.log('Applied 30-degree rotation to all SingleCUTs in LayerTwoStar');
-            }
-            
-            // Force specific visibility checks on LayerTwoStar
-            console.log('Ensuring LayerTwoStar is visible...');
-            if (this.starModel.models.layerTwoStar) {
-                this.starModel.models.layerTwoStar.setVisible(true);
-                console.log('LayerTwoStar visibility forced:', this.starModel.models.layerTwoStar.isVisible());
             }
             
             // Add shadows to all pipes in the scene
@@ -161,7 +148,6 @@ class CHEVisualization {
             // Prepare Star Model SingleCUTs for the scene editor
             const starCentralSingleCutObjects = {};
             const starLayerOneSingleCutObjects = {};
-            const starLayerTwoSingleCutObjects = {};
             
             // Add Central CUT from Star Model
             if (starModelSingleCuts.central.length > 0) {
@@ -173,11 +159,6 @@ class CHEVisualization {
             // Add each Layer One SingleCUT from Star Model
             starModelSingleCuts.layerOne.forEach((singleCut, index) => {
                 starLayerOneSingleCutObjects[`Single CUT #${index + 1}`] = singleCut;
-            });
-            
-            // Add each Layer Two SingleCUT from Star Model
-            starModelSingleCuts.layerTwo.forEach((singleCut, index) => {
-                starLayerTwoSingleCutObjects[`Single CUT #${index + 1}`] = singleCut;
             });
             
             // Organize scene objects for the scene editor
@@ -210,10 +191,6 @@ class CHEVisualization {
                         'Layer One Star': {
                             model: this.starModel.models.layerOneStar,
                             children: starLayerOneSingleCutObjects
-                        },
-                        'Layer Two Star': {
-                            model: this.starModel.models.layerTwoStar,
-                            children: starLayerTwoSingleCutObjects
                         }
                     }
                 },
@@ -333,10 +310,8 @@ class CHEVisualization {
             const layerModels = [
                 this.centralCutModel,
                 this.ringModel.models.layerOneRing,
-                this.ringModel.models.layerTwoRing,
                 this.starModel.models.centralCut,
-                this.starModel.models.layerOneStar,
-                this.starModel.models.layerTwoStar
+                this.starModel.models.layerOneStar
             ];
             
             // Create radius controls
@@ -345,7 +320,7 @@ class CHEVisualization {
                 layerModels,
                 {
                     isVisible: false,
-                    modelNames: ["Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
+                    modelNames: ["Central CUT", "Layer One Ring", "Star Central CUT", "Layer One Star"]
                 }
             );
             
@@ -355,7 +330,7 @@ class CHEVisualization {
                 layerModels, 
                 {
                     isVisible: false,
-                    modelNames: ["Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
+                    modelNames: ["Central CUT", "Layer One Ring", "Star Central CUT", "Layer One Star"]
                 }
             );
             
@@ -424,9 +399,7 @@ class CHEVisualization {
                 ringModel: this.ringModel,
                 starModel: this.starModel,
                 layerOneRing: this.ringModel?.models?.layerOneRing,
-                layerTwoRing: this.ringModel?.models?.layerTwoRing,
                 layerOneStar: this.starModel?.models?.layerOneStar,
-                layerTwoStar: this.starModel?.models?.layerTwoStar,
             },
             // Helper functions
             getStats: () => {
@@ -588,7 +561,6 @@ cheDebug.app - Access the main application instance
             if (this.starModel.models) {
                 if (this.starModel.models.centralCut) processModel(this.starModel.models.centralCut);
                 if (this.starModel.models.layerOneStar) processModel(this.starModel.models.layerOneStar);
-                if (this.starModel.models.layerTwoStar) processModel(this.starModel.models.layerTwoStar);
             }
         }
         

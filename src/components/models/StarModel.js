@@ -2,11 +2,10 @@ import { Vector3 } from '@babylonjs/core';
 import { CompositeModel } from './CompositeModel';
 import { SingleCutModel } from './SingleCutModel';
 import { LayerOneStarModel } from './LayerOneStarModel';
-import { LayerTwoStarModel } from './LayerTwoStarModel';
 
 /**
  * StarModel - A composite model containing a central CUT and star-shaped layers
- * Organizes Central CUT, Layer One Star, and Layer Two Star into a single model
+ * Organizes Central CUT and Layer One Star into a single model
  */
 export class StarModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
@@ -15,8 +14,7 @@ export class StarModel extends CompositeModel {
             debug: false,
             visibility: {
                 centralCut: true,
-                layerOne: true,
-                layerTwo: true
+                layerOne: true
             }
         };
         
@@ -26,15 +24,13 @@ export class StarModel extends CompositeModel {
         // Store model references for direct access
         this.models = {
             centralCut: null,
-            layerOneStar: null,
-            layerTwoStar: null
+            layerOneStar: null
         };
         
         // Friendly names for display in SceneEditor
         this.friendlyNames = {
             centralCut: "Star Central CUT",
-            layerOneStar: "Layer One Star",
-            layerTwoStar: "Layer Two Star"
+            layerOneStar: "Layer One Star"
         };
         
         // Create models
@@ -63,14 +59,6 @@ export class StarModel extends CompositeModel {
         this.models.layerOneStar = layerOneStar;
         this.addChild(layerOneStar);
         
-        // Create Layer Two Star model
-        const layerTwoStar = new LayerTwoStarModel(this.scene, new Vector3(0, 0, 0), {
-            parent: this
-        });
-        layerTwoStar.friendlyName = this.friendlyNames.layerTwoStar;
-        this.models.layerTwoStar = layerTwoStar;
-        this.addChild(layerTwoStar);
-        
         // Apply initial visibility settings
         this.setModelVisibility();
         
@@ -91,137 +79,66 @@ export class StarModel extends CompositeModel {
         if (this.models.layerOneStar) {
             this.models.layerOneStar.setVisible(visibility.layerOne);
         }
-        
-        if (this.models.layerTwoStar) {
-            this.models.layerTwoStar.setVisible(visibility.layerTwo);
-        }
     }
     
     /**
-     * Update the visibility of a specific model
-     * @param {string} modelKey - Key of the model to update (centralCut, layerOne, layerTwo)
+     * Update visibility of a model by its key
+     * @param {string} modelKey - Key of the model to update ('centralCut', 'layerOne')
      * @param {boolean} isVisible - Whether the model should be visible
      */
     updateModelVisibility(modelKey, isVisible) {
-        if (this.options.visibility[modelKey] !== undefined) {
+        // Map option keys to model keys
+        const modelKeyMap = {
+            centralCut: 'centralCut',
+            layerOne: 'layerOneStar'
+        };
+        
+        const modelRealKey = modelKeyMap[modelKey];
+        if (modelRealKey && this.models[modelRealKey]) {
+            this.models[modelRealKey].setVisible(isVisible);
             this.options.visibility[modelKey] = isVisible;
-            this.setModelVisibility();
         }
     }
     
     /**
-     * Gets all pipe models from all layers
-     * @returns {Array} - Array of all pipe models
+     * Get all pipes from all SingleCUTs across all layers
+     * @returns {Object} - Object containing all pipes from all layers
      */
     getAllPipes() {
         const allPipes = [];
         
-        // Get pipes from central cut
-        if (this.models.centralCut && this.models.centralCut.pipes) {
-            allPipes.push(...this.models.centralCut.pipes);
+        // Get pipes from Central CUT
+        if (this.models.centralCut) {
+            const centralCutPipes = this.models.centralCut.pipes || [];
+            allPipes.push(...centralCutPipes);
         }
         
-        // Get pipes from layer one star
-        if (this.models.layerOneStar && typeof this.models.layerOneStar.getAllPipes === 'function') {
-            allPipes.push(...this.models.layerOneStar.getAllPipes());
-        }
-        
-        // Get pipes from layer two star
-        if (this.models.layerTwoStar && typeof this.models.layerTwoStar.getAllPipes === 'function') {
-            allPipes.push(...this.models.layerTwoStar.getAllPipes());
+        // Get pipes from Layer One Star
+        if (this.models.layerOneStar) {
+            const layerOneStarPipes = this.models.layerOneStar.getAllPipes() || [];
+            allPipes.push(...layerOneStarPipes);
         }
         
         return allPipes;
     }
     
     /**
-     * Gets all SingleCUT models from all layers
-     * @returns {Object} - Object with keys for each layer containing SingleCUT arrays
+     * Get all SingleCUT models across all layers
+     * @returns {Object} - Object containing all SingleCUT models by layer
      */
     getAllSingleCuts() {
-        const allSingleCuts = {
+        return {
             central: this.models.centralCut ? [this.models.centralCut] : [],
-            layerOne: this.models.layerOneStar && this.models.layerOneStar.singleCuts ? 
-                      this.models.layerOneStar.singleCuts : [],
-            layerTwo: this.models.layerTwoStar && this.models.layerTwoStar.singleCuts ? 
-                      this.models.layerTwoStar.singleCuts : []
+            layerOne: this.models.layerOneStar ? this.models.layerOneStar.getChildren() : [],
+            layerTwo: [] // Empty array for no layerTwo
         };
-        
-        return allSingleCuts;
     }
     
     /**
-     * Get a flat array of all models in this composite, including the top level model
-     * @returns {Array} - Array of all models
+     * Get all models in this composite structure
+     * @returns {Object} - Object containing all component models
      */
     getAllModels() {
-        const models = [this];
-        
-        Object.values(this.models).forEach(model => {
-            if (model) {
-                models.push(model);
-                
-                // If model has SingleCUTs, add them too
-                if (model.singleCuts && Array.isArray(model.singleCuts)) {
-                    models.push(...model.singleCuts);
-                }
-            }
-        });
-        
-        return models;
-    }
-
-    /**
-     * Override the setVisible method to add debugging
-     * @param {boolean} isVisible - Whether the model should be visible
-     */
-    setVisible(isVisible) {
-        console.log(`StarModel.setVisible(${isVisible}) called`);
-        
-        // Check rootNode state before setting visibility
-        if (this.rootNode) {
-            console.log(`StarModel rootNode before: isEnabled=${this.rootNode.isEnabled()}`);
-        }
-        
-        // Call parent class setVisible method
-        super.setVisible(isVisible);
-        
-        // Check rootNode state after setting visibility
-        if (this.rootNode) {
-            console.log(`StarModel rootNode after: isEnabled=${this.rootNode.isEnabled()}`);
-        }
-        
-        // Make sure all child models get visibility set correctly
-        if (this.models.centralCut) {
-            console.log(`Setting centralCut visibility to ${isVisible && this.options.visibility.centralCut}`);
-            this.models.centralCut.setVisible(isVisible && this.options.visibility.centralCut);
-        }
-        
-        if (this.models.layerOneStar) {
-            console.log(`Setting layerOneStar visibility to ${isVisible && this.options.visibility.layerOne}`);
-            this.models.layerOneStar.setVisible(isVisible && this.options.visibility.layerOne);
-        }
-        
-        if (this.models.layerTwoStar) {
-            console.log(`Setting layerTwoStar visibility to ${isVisible && this.options.visibility.layerTwo}`);
-            this.models.layerTwoStar.setVisible(isVisible && this.options.visibility.layerTwo);
-            
-            // Force verify the Layer Two Star visibility
-            if (isVisible && this.options.visibility.layerTwo) {
-                const layerTwoVisible = this.models.layerTwoStar.isVisible();
-                console.log(`Verified layerTwoStar visibility: ${layerTwoVisible}`);
-                
-                // If it's not visible but should be, try to force it
-                if (!layerTwoVisible) {
-                    console.log('Forcing layerTwoStar visibility');
-                    this.models.layerTwoStar.setVisible(true);
-                    
-                    // Double-check that it worked
-                    console.log(`Re-verified layerTwoStar visibility: ${this.models.layerTwoStar.isVisible()}`);
-                }
-            }
-        }
-        
-        console.log(`StarModel.setVisible complete`);
+        return { ...this.models };
     }
 } 
