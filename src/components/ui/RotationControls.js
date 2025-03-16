@@ -130,38 +130,37 @@ export class RotationControls {
         header.appendChild(modelName);
         modelSection.appendChild(header);
         
-        // Check if this model has child SingleCUT models (applies to LayerOne, LayerTwo, etc.)
+        // Check if this model has children that can be rotated
         const model = config.model;
-        const hasSingleCutChildren = model && model.childModels && 
-            model.childModels.some(child => child && child.constructor.name === 'SingleCutModel');
+        const hasChildModels = model && model.childModels && model.childModels.length > 0;
         
-        // Check if model supports global delta rotation control for SingleCUTs
-        const supportsSingleCutDeltaRotation = model && 
+        // Check if model supports child rotation controls
+        const supportsChildRotation = model && 
             typeof model.updateAllSingleCutRotations === 'function';
             
-        // Check if model supports global panel rotation control
-        const supportsPanelDeltaRotation = model && 
+        // Check if model supports panel rotation control
+        const supportsPanelRotation = model && 
             typeof model.updateAllPanelRotations === 'function';
 
-        // Add control for SingleCUT rotation if supported
-        if (hasSingleCutChildren && supportsSingleCutDeltaRotation) {
+        // Add control for child component rotation if supported
+        if (hasChildModels && supportsChildRotation) {
             this.addDeltaRotationControl(
                 modelSection, 
                 model, 
-                "SingleCUT",
+                model.constructor.name.includes("Star") ? "Star" : "SingleCUT",
                 model.getMinSingleCutDeltaRotation?.() ?? -180,
                 model.getMaxSingleCutDeltaRotation?.() ?? 180,
                 model.getDefaultSingleCutDeltaRotation?.() ?? 0,
                 model.getCurrentSingleCutDeltaRotation?.() ?? 0,
                 (value) => {
-                    console.log(`Setting global SingleCUT delta rotation for ${model.constructor.name} to ${value}°`);
+                    console.log(`Setting global child rotation for ${model.constructor.name} to ${value}°`);
                     model.updateAllSingleCutRotations(value);
                 }
             );
         }
         
-        // Add control for Panel rotation if supported (SingleCutModel and potentially others)
-        if (model && supportsPanelDeltaRotation) {
+        // Add control for Panel rotation if supported
+        if (model && supportsPanelRotation) {
             this.addDeltaRotationControl(
                 modelSection,
                 model,
@@ -388,7 +387,7 @@ export class RotationControls {
             childrenContainer.style.marginLeft = `${this.options.defaultIndentation}px`;
             
             // Skip showing child SingleCUTs if we already have the master rotation control
-            const shouldHideChildren = hasSingleCutChildren && supportsSingleCutDeltaRotation;
+            const shouldHideChildren = hasChildModels && supportsChildRotation;
             
             if (!shouldHideChildren) {
                 // Create sections for each child model
@@ -690,7 +689,7 @@ export class RotationControls {
      * Add a delta rotation control for a specific component type (e.g., SingleCUT, Panel)
      * @param {HTMLElement} container - The container to add the control to
      * @param {Object} model - The model to control
-     * @param {string} componentType - The type of component ("SingleCUT", "Panel", etc.)
+     * @param {string} componentType - The type of component ("SingleCUT", "Star", "Panel", etc.)
      * @param {number} min - Minimum rotation value
      * @param {number} max - Maximum rotation value
      * @param {number} defaultValue - Default rotation value
@@ -743,9 +742,9 @@ export class RotationControls {
         // Add the container to the parent container
         container.appendChild(deltaContainer);
         
-        // Add dropdown if this is a SingleCUT control and the model has childModels
-        if (componentType === "SingleCUT" && model.childModels && model.childModels.length > 0) {
-            this.addRotationValuesDropdown(deltaContainer, model);
+        // Add dropdown if model has childModels (for SingleCUT, Star, or other component types)
+        if (componentType !== "Panel" && model.childModels && model.childModels.length > 0) {
+            this.addRotationValuesDropdown(deltaContainer, model, componentType);
         }
     }
     
@@ -753,14 +752,15 @@ export class RotationControls {
      * Add a dropdown to show rotation values for child components
      * @param {HTMLElement} container - The container to add the dropdown to
      * @param {Object} model - The model containing children
+     * @param {string} componentType - The type of component ("SingleCUT", "Star", etc.)
      */
-    addRotationValuesDropdown(container, model) {
+    addRotationValuesDropdown(container, model, componentType) {
         // Add dropdown to view all rotation values
         const dropdownContainer = document.createElement('div');
         dropdownContainer.style.marginTop = '10px';
         
         const dropdownToggle = document.createElement('button');
-        dropdownToggle.textContent = 'Show SingleCUT Rotation Values ▼';
+        dropdownToggle.textContent = `Show ${componentType} Rotation Values ▼`;
         dropdownToggle.style.backgroundColor = '#444';
         dropdownToggle.style.color = '#fff';
         dropdownToggle.style.border = '1px solid #555';
@@ -785,30 +785,26 @@ export class RotationControls {
             rotationValuesList.innerHTML = '';
             
             if (model && model.childModels) {
-                // Only include SingleCutModel children
-                const singleCutChildren = model.childModels.filter(
-                    child => child && child.constructor.name === 'SingleCutModel'
-                );
-                
-                singleCutChildren.forEach((singleCut, index) => {
-                    if (singleCut) {
+                // Include all child models
+                model.childModels.forEach((childModel, index) => {
+                    if (childModel) {
                         const valueRow = document.createElement('div');
                         valueRow.style.display = 'flex';
                         valueRow.style.justifyContent = 'space-between';
                         valueRow.style.padding = '3px 0';
-                        valueRow.style.borderBottom = index < singleCutChildren.length - 1 ? 
+                        valueRow.style.borderBottom = index < model.childModels.length - 1 ? 
                             '1px solid #444' : 'none';
                         
                         const label = document.createElement('span');
-                        label.textContent = `CUT #${index + 1}:`;
+                        label.textContent = `${componentType} #${index + 1}:`;
                         label.style.fontWeight = 'bold';
                         
                         const value = document.createElement('span');
-                        const rotation = singleCut.options?.rotationAngle || 0;
+                        const rotation = childModel.options?.rotationAngle || 0;
                         
                         // Show original rotation if available
-                        if (typeof singleCut.originalRotation !== 'undefined') {
-                            value.textContent = `${rotation.toFixed(0)}° (Base: ${singleCut.originalRotation.toFixed(0)}°)`;
+                        if (typeof childModel.originalRotation !== 'undefined') {
+                            value.textContent = `${rotation.toFixed(0)}° (Base: ${childModel.originalRotation.toFixed(0)}°)`;
                         } else {
                             value.textContent = `${rotation.toFixed(0)}°`;
                         }
@@ -826,7 +822,7 @@ export class RotationControls {
             const isVisible = rotationValuesList.style.display !== 'none';
             rotationValuesList.style.display = isVisible ? 'none' : 'block';
             dropdownToggle.textContent = isVisible ? 
-                'Show SingleCUT Rotation Values ▼' : 'Hide SingleCUT Rotation Values ▲';
+                `Show ${componentType} Rotation Values ▼` : `Hide ${componentType} Rotation Values ▲`;
             
             if (!isVisible) {
                 // Update values when showing
