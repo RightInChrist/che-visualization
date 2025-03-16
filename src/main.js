@@ -5,7 +5,6 @@ import '@babylonjs/gui';
 import { initializeEngine } from './core/engine';
 import { createScene } from './core/scene';
 import { GroundModel } from './components/models/GroundModel';
-import { SingleCutModel } from './components/models/SingleCutModel';
 import { StarModel } from './components/models/StarModel';
 import { RingModel } from './components/models/RingModel';
 import { CameraController } from './components/controllers/CameraController';
@@ -49,10 +48,6 @@ class CHEVisualization {
             // Create ground
             this.ground = new GroundModel(scene, 5000);
             
-            // Create Central CUT model separately
-            this.centralCutModel = new SingleCutModel(scene, new Vector3(0, 0, 0));
-            this.centralCutModel.friendlyName = "Central CUT";
-            
             // Create Ring Model (contains just a central CUT)
             this.ringModel = new RingModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
@@ -70,7 +65,6 @@ class CHEVisualization {
             // Make sure all models are visible
             this.ringModel.setVisible(true);
             this.starModel.setVisible(true);
-            this.centralCutModel.setVisible(true);
             
             // Apply a 30-degree rotation to the star model's central CUT
             console.log('Applying 30-degree rotation to the Star Model central CUT...');
@@ -80,13 +74,6 @@ class CHEVisualization {
             }
             
             // Add shadows to all pipes in the scene
-            // For Central CUT
-            if (this.centralCutModel && this.centralCutModel.pipes) {
-                this.centralCutModel.pipes.forEach(pipe => {
-                    shadowGenerator.addShadowCaster(pipe.pipeMesh);
-                });
-            }
-            
             // For Ring Model
             if (this.ringModel && typeof this.ringModel.getAllPipes === 'function') {
                 const allRingPipes = this.ringModel.getAllPipes() || [];
@@ -104,10 +91,6 @@ class CHEVisualization {
             }
             
             // Combine all pipe meshes for collision detection
-            const centralCutPipeMeshes = this.centralCutModel && this.centralCutModel.pipes 
-                ? this.centralCutModel.pipes.map(pipe => pipe.pipeMesh) 
-                : [];
-                
             const ringPipeMeshes = this.ringModel && typeof this.ringModel.getAllPipes === 'function'
                 ? (this.ringModel.getAllPipes() || []).map(pipe => pipe.pipeMesh)
                 : [];
@@ -116,7 +99,7 @@ class CHEVisualization {
                 ? (this.starModel.getAllPipes() || []).map(pipe => pipe.pipeMesh)
                 : [];
                 
-            const pipeMeshes = [...centralCutPipeMeshes, ...ringPipeMeshes, ...starPipeMeshes];
+            const pipeMeshes = [...ringPipeMeshes, ...starPipeMeshes];
             
             // Create camera controller
             this.cameraController = new CameraController(
@@ -256,7 +239,6 @@ class CHEVisualization {
             
             // Get all layers from both models for radius and rotation controls
             const layerModels = [
-                this.centralCutModel,
                 this.ringModel,
                 this.starModel
             ];
@@ -267,7 +249,7 @@ class CHEVisualization {
                 layerModels,
                 {
                     isVisible: false,
-                    modelNames: ["Central CUT", "Ring Model", "Star Model"]
+                    modelNames: ["Ring Model", "Star Model"]
                 }
             );
             
@@ -277,7 +259,7 @@ class CHEVisualization {
                 layerModels, 
                 {
                     isVisible: false,
-                    modelNames: ["Central CUT", "Ring Model", "Star Model"]
+                    modelNames: ["Ring Model", "Star Model"]
                 }
             );
             
@@ -342,7 +324,6 @@ class CHEVisualization {
         window.cheDebug = {
             app: this,
             models: {
-                centralCutModel: this.centralCutModel,
                 ringModel: this.ringModel,
                 starModel: this.starModel
             },
@@ -463,11 +444,6 @@ cheDebug.app - Access the main application instance
                 });
             }
         };
-        
-        // Apply to Central CUT
-        if (this.centralCutModel) {
-            processModel(this.centralCutModel);
-        }
         
         // Apply to Ring Model and all its children
         if (this.ringModel) {
