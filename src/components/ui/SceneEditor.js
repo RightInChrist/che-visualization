@@ -260,8 +260,9 @@ export class SceneEditor {
         );
         
         // Check if the object has children to determine if we need a collapse button
+        // For Central CUTs, we'll manually handle panels below, so don't count them here
         const hasChildren = this.hasChildren(object) || 
-                           (isCentralCut && object.panels && object.panels.length > 0);
+                           (isCentralCut && object.constructor && object.constructor.name === 'SingleCutModel');
         
         // Create collapse button for items with children
         if (hasChildren) {
@@ -401,28 +402,35 @@ export class SceneEditor {
             
             // Handle different types of objects and their children
             
-            // Add panels and pipes if they exist
-            if (object.pipes || object.panels) {
-                this.addModelChildren(childrenContainer, object, name);
-            }
-            
-            // If the object is a composite model with SingleCUTs, add them
-            if (object.model && object.model.singleCuts) {
-                this.addCompositeModelChildren(childrenContainer, object, name);
-            }
-            
-            // Add regular children for objects with a children property
-            if (object.children && Object.keys(object.children).length > 0) {
-                this.addChildrenObjects(childrenContainer, object.children);
-            }
-            
-            // Special case for Central CUT - add individual panels as children
-            if (isCentralCut && object.panels && object.panels.length > 0) {
-                object.panels.forEach((panel, index) => {
-                    const panelName = `${name}/Panel #${index + 1}`;
-                    const panelItem = this.createObjectListItem(panelName, panel, object);
-                    childrenContainer.appendChild(panelItem);
-                });
+            // Special handling for Central CUT models
+            if (isCentralCut && object.constructor && object.constructor.name === 'SingleCutModel') {
+                // Only add panels directly here, don't rely on addModelChildren for Central CUT
+                if (object.panels && object.panels.length > 0) {
+                    console.log(`[SceneEditor] Adding ${object.panels.length} panels for ${name}`);
+                    object.panels.forEach((panel, index) => {
+                        const panelName = `${name}/Panel #${index + 1}`;
+                        const panelItem = this.createObjectListItem(panelName, panel, object);
+                        childrenContainer.appendChild(panelItem);
+                    });
+                }
+            } else {
+                // Standard handling for other model types
+                
+                // Add panels and pipes if they exist
+                if ((object.pipes || object.panels) && 
+                    !(isCentralCut && object.constructor && object.constructor.name === 'SingleCutModel')) {
+                    this.addModelChildren(childrenContainer, object, name);
+                }
+                
+                // If the object is a composite model with SingleCUTs, add them
+                if (object.model && object.model.singleCuts) {
+                    this.addCompositeModelChildren(childrenContainer, object, name);
+                }
+                
+                // Add regular children for objects with a children property
+                if (object.children && Object.keys(object.children).length > 0) {
+                    this.addChildrenObjects(childrenContainer, object.children);
+                }
             }
             
             listItem.appendChild(childrenContainer);

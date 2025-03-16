@@ -324,6 +324,7 @@ export class SingleCutModel extends HexagonModel {
                 // Get original panel rotation - if not already stored, calculate and store it
                 if (!panel.originalRotation) {
                     panel.originalRotation = panel.rootNode.rotation.clone();
+                    console.log(`Stored original rotation for Panel #${i+1}: ${(panel.originalRotation.y * 180 / Math.PI).toFixed(0)}°`);
                 }
                 
                 // Calculate new Y rotation by adding delta
@@ -333,9 +334,25 @@ export class SingleCutModel extends HexagonModel {
                 // Apply the new rotation
                 panel.rootNode.rotation.y = newY;
                 
+                // Force Babylon to update the scene
+                if (panel.panelMesh) {
+                    // Trigger a small position update to force a refresh
+                    const originalPosition = panel.panelMesh.position.clone();
+                    panel.panelMesh.position = originalPosition;
+                    
+                    // Force update of bounding info
+                    panel.panelMesh.refreshBoundingInfo();
+                    panel.panelMesh.computeWorldMatrix(true);
+                }
+                
                 console.log(`Panel #${i+1}: Updated rotation from ${(originalY * 180 / Math.PI).toFixed(0)}° to ${(newY * 180 / Math.PI).toFixed(0)}° (delta: ${deltaRotation}°)`);
             }
         });
+        
+        // Force an update of the scene
+        if (this.scene) {
+            this.scene.render();
+        }
     }
     
     /**
