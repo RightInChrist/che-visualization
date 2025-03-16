@@ -39,6 +39,13 @@ export class SingleCutModel extends HexagonModel {
         this.pipes = [];
         this.panels = [];
         
+        // Initialize panel rotation state that can be shared by reference
+        this.panelRotations = {
+            currentDelta: 0,
+            defaultAngles: [],
+            currentAngles: []
+        };
+        
         // Debug log
         this.debugLog('Creating SingleCUT model with', this.options.cornerCount, 'pipes and panels');
         
@@ -109,11 +116,17 @@ export class SingleCutModel extends HexagonModel {
             // Calculate position and orientation for the panel
             const transform = this.calculatePanelTransform(i, currentPipePos, nextPipePos);
             
+            // Get default rotation angle for this panel
+            const defaultAngle = this.getDefaultPanelRotation(i);
+            this.panelRotations.defaultAngles[i] = defaultAngle * 180 / Math.PI; // Store in degrees
+            this.panelRotations.currentAngles[i] = this.panelRotations.defaultAngles[i]; // Initialize current to default
+            
             // Create panel with calculated transform
             const panel = this.createPanel(transform.position, transform.rotation, transform.width, i);
             
-            // Store the panel's default rotation values for later reference
-            panel.defaultRotationAngle = this.getDefaultPanelRotation(i);
+            // Share rotation state with the panel
+            panel.rotationState = this.panelRotations;
+            panel.panelIndex = i;
             
             this.panels.push(panel);
             
@@ -331,8 +344,8 @@ export class SingleCutModel extends HexagonModel {
             return;
         }
         
-        // Store the current panel rotation delta
-        this.panelRotationDelta = deltaRotation;
+        // Update the shared rotation state
+        this.panelRotations.currentDelta = deltaRotation;
         
         console.log(`Updating all panels with delta rotation: ${deltaRotation}°`);
         
@@ -342,8 +355,12 @@ export class SingleCutModel extends HexagonModel {
                 // Use the panel's own rotation method to handle the delta
                 panel.applyRotationDelta(deltaRotation);
                 
-                const currentDelta = panel.getCurrentDelta();
-                console.log(`Panel #${i+1}: Applied rotation delta: ${deltaRotation}° (current: ${currentDelta}°)`);
+                // Update the current angle in our shared state
+                if (this.panelRotations.defaultAngles[i] !== undefined) {
+                    this.panelRotations.currentAngles[i] = this.panelRotations.defaultAngles[i] + deltaRotation;
+                }
+                
+                console.log(`Panel #${i+1}: Applied rotation delta: ${deltaRotation}° (current: ${this.panelRotations.currentAngles[i]}°)`);
             }
         });
         
@@ -352,6 +369,15 @@ export class SingleCutModel extends HexagonModel {
             this.scene.markAllMaterialsAsDirty();
             this.scene.render();
         }
+    }
+    
+    /**
+     * Get current panel rotation values for all panels
+     * This can be accessed by the RotationControl component
+     * @returns {Object} - Object containing panel rotation information
+     */
+    getPanelRotations() {
+        return this.panelRotations;
     }
     
     /**
@@ -383,6 +409,6 @@ export class SingleCutModel extends HexagonModel {
      * @returns {number} - Current delta rotation in degrees
      */
     getCurrentPanelDeltaRotation() {
-        return this.panelRotationDelta || 0;
+        return this.panelRotations?.currentDelta || 0;
     }
 } 

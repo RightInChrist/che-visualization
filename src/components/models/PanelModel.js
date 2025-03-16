@@ -27,7 +27,8 @@ export class PanelModel extends BaseModel {
         
         // Initialize rotation tracking
         this.initialRotation = null;
-        this.currentDelta = 0;
+        this.panelIndex = -1;
+        // rotationState will be set by SingleCutModel
         
         // Create panel
         this.createPanel();
@@ -76,7 +77,7 @@ export class PanelModel extends BaseModel {
     storeInitialRotation() {
         if (!this.initialRotation && this.rootNode) {
             this.initialRotation = this.rootNode.rotation.clone();
-            console.log(`Stored initial rotation for panel: (${this.radToDeg(this.initialRotation.x)}°, ${this.radToDeg(this.initialRotation.y)}°, ${this.radToDeg(this.initialRotation.z)}°)`);
+            console.log(`Stored initial rotation for panel ${this.panelIndex}: (${this.radToDeg(this.initialRotation.x)}°, ${this.radToDeg(this.initialRotation.y)}°, ${this.radToDeg(this.initialRotation.z)}°)`);
         }
     }
     
@@ -90,8 +91,10 @@ export class PanelModel extends BaseModel {
         // Store initial rotation if not already stored
         this.storeInitialRotation();
         
-        // Update current delta
-        this.currentDelta = deltaRotation;
+        // Update current delta in the shared state if available
+        if (this.rotationState && this.panelIndex >= 0) {
+            this.rotationState.currentDelta = deltaRotation;
+        }
         
         // Reset to initial rotation
         this.rootNode.rotation = this.initialRotation.clone();
@@ -120,7 +123,12 @@ export class PanelModel extends BaseModel {
      * @returns {number} - Current delta in degrees
      */
     getCurrentDelta() {
-        return this.currentDelta;
+        // Use shared state if available
+        if (this.rotationState) {
+            return this.rotationState.currentDelta;
+        }
+        // Fallback to direct value
+        return 0;
     }
     
     /**
