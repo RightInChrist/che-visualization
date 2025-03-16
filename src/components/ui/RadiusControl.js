@@ -219,7 +219,7 @@ export class RadiusControl {
             this.radiusSlider.type = 'range';
             this.radiusSlider.min = 0;
             this.radiusSlider.max = 100;
-            this.radiusSlider.step = 1;
+            this.radiusSlider.step = 0.01; // Match the input step for hundredth precision
             this.radiusSlider.style.width = this.options.sliderWidth;
             this.radiusSlider.style.marginRight = '10px';
             sliderContainer.appendChild(this.radiusSlider);
@@ -275,18 +275,18 @@ export class RadiusControl {
             const modelInfo = this.radiusModels[index];
             const radius = modelInfo.radius;
             
-            // Update value display
-            this.radiusValueContainer.textContent = `Model: ${modelInfo.name}`;
+            // Update value display with precision to 2 decimal places
+            this.radiusValueContainer.textContent = `Model: ${modelInfo.name} (${parseFloat(radius.value.toFixed(2))})`;
             
             // Update slider values
             this.radiusSlider.min = radius.min || 0;
             this.radiusSlider.max = radius.max || 100;
             this.radiusSlider.value = radius.value;
             
-            // Update input value
+            // Update input value (keep precision)
             this.radiusInput.min = radius.min || 0;
             this.radiusInput.max = radius.max || 100;
-            this.radiusInput.value = radius.value;
+            this.radiusInput.value = parseFloat(radius.value.toFixed(2));
         }
     }
     
@@ -299,11 +299,12 @@ export class RadiusControl {
             const modelInfo = this.radiusModels[this.selectedModelIndex];
             const radius = modelInfo.radius;
             
-            // Update the model's radius
-            radius.value = value;
+            // Update the model's radius with precision to 2 decimal places
+            const preciseValue = parseFloat(value.toFixed(2));
+            radius.value = preciseValue;
             
-            // Update the input field
-            this.radiusInput.value = value;
+            // Update the input field with the precise value
+            this.radiusInput.value = preciseValue;
         }
     }
     
@@ -321,15 +322,18 @@ export class RadiusControl {
             const max = parseFloat(this.radiusSlider.max);
             const clampedValue = Math.max(min, Math.min(max, value));
             
+            // Ensure precision to 2 decimal places
+            const preciseValue = parseFloat(clampedValue.toFixed(2));
+            
             // Update the model's radius
-            radius.value = clampedValue;
+            radius.value = preciseValue;
             
             // Update the slider
-            this.radiusSlider.value = clampedValue;
+            this.radiusSlider.value = preciseValue;
             
             // Update the input if value was clamped
-            if (clampedValue !== value) {
-                this.radiusInput.value = clampedValue;
+            if (preciseValue !== value) {
+                this.radiusInput.value = preciseValue;
             }
         }
     }
