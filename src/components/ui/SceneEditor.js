@@ -2,9 +2,36 @@
  * Scene Editor component for displaying scene objects and toggling visibility
  */
 export class SceneEditor {
-    constructor(scene, sceneObjects) {
+    constructor(scene, models) {
         this.scene = scene;
-        this.sceneObjects = sceneObjects;
+        
+        // Convert array of models to sceneObjects format for backward compatibility
+        this.sceneObjects = {};
+        if (Array.isArray(models)) {
+            models.forEach(model => {
+                if (model) {
+                    const name = model.getName ? model.getName() : 
+                                (model.constructor ? model.constructor.name : 'Unknown Model');
+                    
+                    // Create entry in sceneObjects
+                    this.sceneObjects[name] = {
+                        model: model,
+                        children: {}
+                    };
+                    
+                    // Add central cut if it exists
+                    if (model.centralCut) {
+                        this.sceneObjects[name].children[`${name} Central CUT`] = {
+                            model: model.centralCut
+                        };
+                    }
+                }
+            });
+        } else {
+            // If not an array, assume it's already in sceneObjects format
+            this.sceneObjects = models || {};
+        }
+        
         this.isVisible = false;
         this.lastUpdateTime = 0;
         this.updateInterval = 500; // Update every 500ms when visible

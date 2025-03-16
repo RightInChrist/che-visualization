@@ -99,33 +99,12 @@ class CHEVisualization {
             
             // Create UI controller
             this.uiController = new UIController(this.cameraController);
-            
-            // Get all models for scene editor organization
-            const ringModelSingleCuts = this.ringModel.getAllSingleCuts();
-            const starModelSingleCuts = this.starModel.getAllSingleCuts();
-            
-            // Organize scene objects for the scene editor
-            const sceneObjects = {
-                'Ring Model': {
-                    model: this.ringModel,
-                    children: {
-                        'Ring Central CUT': {
-                            model: this.ringModel.centralCut
-                        }
-                    }
-                },
-                'Star Model': {
-                    model: this.starModel,
-                    children: {
-                        'Star Central CUT': {
-                            model: this.starModel.centralCut
-                        }
-                    }
-                }
-            };
+
+            // Create an array of models for the scene editor
+            const models = [this.ringModel, this.starModel];
             
             // Create scene editor
-            this.sceneEditor = new SceneEditor(scene, sceneObjects);
+            this.sceneEditor = new SceneEditor(scene, models);
             
             // Add debug function to SceneEditor
             this.sceneEditor.logModelInfo = (model) => {
