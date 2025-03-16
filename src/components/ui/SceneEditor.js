@@ -379,11 +379,26 @@ export class SceneEditor {
                 e.stopPropagation();
                 e.preventDefault();
                 
+                // Debug click detection
+                console.log(`Clicked on model label: ${displayName}`);
+                
+                // Debug object type
+                console.log(`Object type: ${object?.constructor?.name || 'unknown'}`);
+                console.log(`Object: `, object);
+                
                 // Log model info
                 if (typeof this.logModelInfo === 'function') {
+                    console.log("Calling logModelInfo function");
                     this.logModelInfo(object);
                 } else {
+                    console.log("WARNING: logModelInfo function not found on SceneEditor instance");
                     console.log("Model Debug Info:", object);
+                    
+                    // Try direct call to logModelDetails if available on the object
+                    if (object && typeof object.logModelDetails === 'function') {
+                        console.log("Calling logModelDetails directly on object");
+                        object.logModelDetails();
+                    }
                 }
             });
         } 

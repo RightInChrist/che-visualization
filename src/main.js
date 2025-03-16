@@ -209,6 +209,10 @@ class CHEVisualization {
             
             // Add debug function to SceneEditor
             this.sceneEditor.logModelInfo = (model) => {
+                // Debug model info before processing
+                console.log("logModelInfo called with model:", model);
+                console.log("Model constructor:", model?.constructor?.name);
+                
                 if (!model) {
                     console.log("No model selected");
                     return;
@@ -216,6 +220,7 @@ class CHEVisualization {
                 
                 // Use the new logModelDetails method if available
                 if (typeof model.logModelDetails === 'function') {
+                    console.log("Using model.logModelDetails() method");
                     model.logModelDetails();
                     return;
                 }
