@@ -115,13 +115,25 @@ export class PanelModel extends BaseModel {
         
         // Apply new delta
         const deltaRadians = (deltaRotation * Math.PI) / 180;
+        
+        // Rotate the panel using the Babylon.js rotate method
         this.rootNode.rotate(Axis.Y, deltaRadians, Space.LOCAL);
         
         // Log the current rotation after applying delta
         console.log(`Panel ${this.panelIndex+1} rotation after delta: (${this.radToDeg(this.rootNode.rotation.y)}°)`);
         
-        // Force updates
-        this.rootNode.computeWorldMatrix(true);
+        // Force update of world matrix and rendering
+        this.forceUpdate();
+    }
+    
+    /**
+     * Force Babylon.js to update the panel mesh and matrices
+     */
+    forceUpdate() {
+        // Force updates to Babylon.js objects
+        if (this.rootNode) {
+            this.rootNode.computeWorldMatrix(true);
+        }
         
         if (this.panelMesh) {
             this.panelMesh.markAsDirty();

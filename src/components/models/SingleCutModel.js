@@ -55,6 +55,9 @@ export class SingleCutModel extends HexagonModel {
         // Only create panels if not skipping them
         if (!this.options.skipPanels) {
             this.createPanels();
+            
+            // Ensure default rotations are properly applied
+            this.applyPanelDefaultRotations();
         } else {
             this.debugLog('Skipping panel creation as requested by skipPanels option');
         }
@@ -166,41 +169,9 @@ export class SingleCutModel extends HexagonModel {
         this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
         this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
         
-        // Ensure the panels are correctly rotated with their default angles
-        // This explicitly applies the rotations in case they weren't applied during creation
-        this.applyPanelDefaultRotations();
-    }
-    
-    /**
-     * Apply default rotations to all panels
-     * This ensures panels have their correct default rotations applied
-     */
-    applyPanelDefaultRotations() {
-        if (!this.panels || this.panels.length === 0) {
-            this.debugLog('No panels to apply default rotations to');
-            return;
-        }
-        
-        this.debugLog('Applying default rotations to all panels');
-        
-        // Apply current delta rotation (if any)
-        const currentDelta = this.panelRotations.currentDelta || 0;
-        if (currentDelta !== 0) {
-            this.updateAllPanelRotations(currentDelta);
-        } else {
-            // Just ensure each panel is correctly rotated by default
-            this.panels.forEach((panel, i) => {
-                if (panel && panel.rootNode) {
-                    // Store initial rotation if not already stored
-                    panel.storeInitialRotation();
-                    
-                    // No need to apply additional rotation as the panels are already
-                    // initialized with their correct orientations during creation
-                    
-                    // Log the current state
-                    this.debugLog(`Panel #${i+1}: default angles properly applied`);
-                }
-            });
+        // Force a scene rendering to ensure panels are visible with correct rotations
+        if (this.scene) {
+            this.scene.render();
         }
     }
     
@@ -254,9 +225,9 @@ export class SingleCutModel extends HexagonModel {
         });
         
         // Apply base rotation from the angle between pipes
-        panel.rootNode.rotation = rotation;
+        panel.rootNode.rotation = rotation.clone();
         
-        this.debugLog(`Panel ${index+1}: Initial rotation: ` +
+        this.debugLog(`Panel ${index+1}: Initial rotation from pipe angle: ` +
                      `X: ${this.radToDeg(rotation.x)}, Y: ${this.radToDeg(rotation.y)}, Z: ${this.radToDeg(rotation.z)}`);
         
         // Apply panel-specific rotations
@@ -407,43 +378,51 @@ export class SingleCutModel extends HexagonModel {
     }
     
     /**
-     * Updates all panel rotations with a delta value applied to their base positions
-     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
+     * Apply default rotations to all panels
+     * This ensures panels have their correct default rotations applied
      */
-    updateAllPanelRotations(deltaRotation) {
+    applyPanelDefaultRotations() {
         if (!this.panels || this.panels.length === 0) {
-            this.debugLog('No panels to update rotations for');
+            this.debugLog('No panels to apply default rotations to');
             return;
         }
         
-        // Update the shared rotation state
-        this.panelRotations.currentDelta = deltaRotation;
+        this.debugLog('Applying default rotations to all panels');
         
-        console.log(`Updating all panels with delta rotation: ${deltaRotation}°`);
+        // Current delta rotation (if any)
+        const currentDelta = this.panelRotations.currentDelta || 0;
         
-        // Update each panel using its direct rotation methods
+        // Apply to each panel individually
         this.panels.forEach((panel, i) => {
-            if (panel) {
-                // Use the panel's own rotation method to handle the delta
-                panel.applyRotationDelta(deltaRotation);
+            if (panel && panel.rootNode) {
+                // Store initial rotation if not already stored
+                if (!panel.initialRotation) {
+                    panel.storeInitialRotation();
+                }
                 
-                // Update the current angle in our shared state
-                if (this.panelRotations.defaultAngles[i] !== undefined) {
-                    this.panelRotations.currentAngles[i] = this.panelRotations.defaultAngles[i] + deltaRotation;
-                    console.log(`Panel #${i+1}: Applied rotation delta: ${deltaRotation}° (current: ${this.panelRotations.currentAngles[i]}°, default: ${this.panelRotations.defaultAngles[i]}°)`);
+                // Get the default rotation angle for this panel (in radians)
+                const defaultAngle = this.getDefaultPanelRotation(i);
+                const defaultAngleDegrees = defaultAngle * 180 / Math.PI;
+                
+                this.debugLog(`Panel #${i+1}: Ensuring default angle of ${defaultAngleDegrees.toFixed(1)}° is applied`);
+                
+                // If there's a current delta, apply it
+                if (currentDelta !== 0) {
+                    panel.applyRotationDelta(currentDelta);
+                }
+                
+                // Force update
+                panel.rootNode.computeWorldMatrix(true);
+                if (panel.panelMesh) {
+                    panel.panelMesh.markAsDirty();
+                    panel.panelMesh.refreshBoundingInfo();
+                    panel.panelMesh.computeWorldMatrix(true);
                 }
             }
         });
         
-        // Log the updated rotation state
-        this.debugLog('Panel rotation state after update:');
-        this.debugLog('  Default angles:', this.panelRotations.defaultAngles.map(a => a.toFixed(1) + '°').join(', '));
-        this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
-        this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
-        
-        // Force an immediate render of the scene
+        // Force a scene render to update the visuals
         if (this.scene) {
-            this.scene.markAllMaterialsAsDirty();
             this.scene.render();
         }
     }
@@ -487,5 +466,47 @@ export class SingleCutModel extends HexagonModel {
      */
     getCurrentPanelDeltaRotation() {
         return this.panelRotations?.currentDelta || 0;
+    }
+    
+    /**
+     * Updates all panel rotations with a delta value applied to their base positions
+     * @param {number} deltaRotation - The delta rotation in degrees (-180 to 180)
+     */
+    updateAllPanelRotations(deltaRotation) {
+        if (!this.panels || this.panels.length === 0) {
+            this.debugLog('No panels to update rotations for');
+            return;
+        }
+        
+        // Update the shared rotation state
+        this.panelRotations.currentDelta = deltaRotation;
+        
+        console.log(`Updating all panels with delta rotation: ${deltaRotation}°`);
+        
+        // Update each panel using its direct rotation methods
+        this.panels.forEach((panel, i) => {
+            if (panel) {
+                // Use the panel's own rotation method to handle the delta
+                panel.applyRotationDelta(deltaRotation);
+                
+                // Update the current angle in our shared state
+                if (this.panelRotations.defaultAngles[i] !== undefined) {
+                    this.panelRotations.currentAngles[i] = this.panelRotations.defaultAngles[i] + deltaRotation;
+                    console.log(`Panel #${i+1}: Applied rotation delta: ${deltaRotation}° (current: ${this.panelRotations.currentAngles[i]}°, default: ${this.panelRotations.defaultAngles[i]}°)`);
+                }
+            }
+        });
+        
+        // Log the updated rotation state
+        this.debugLog('Panel rotation state after update:');
+        this.debugLog('  Default angles:', this.panelRotations.defaultAngles.map(a => a.toFixed(1) + '°').join(', '));
+        this.debugLog('  Current angles:', this.panelRotations.currentAngles.map(a => a.toFixed(1) + '°').join(', '));
+        this.debugLog('  Current delta:', this.panelRotations.currentDelta + '°');
+        
+        // Force an immediate render of the scene
+        if (this.scene) {
+            this.scene.markAllMaterialsAsDirty();
+            this.scene.render();
+        }
     }
 } 
