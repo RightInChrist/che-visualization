@@ -95,7 +95,7 @@ class CHEVisualization {
             );
             
             // Now that cameras are set up, apply default panel rotations to ensure they're properly displayed
-            this.applyDefaultPanelRotations();
+            this.onRender();
             
             // Create UI controller
             this.uiController = new UIController(this.cameraController);
@@ -407,16 +407,19 @@ cheDebug.app - Access the main application instance
     }
     
     /**
-     * Apply default panel rotations to all models after scene is initialized
-     * This ensures panels have the correct default rotations (60°, 0°, 120°)
+     * Execute render initialization for all models in the scene
+     * This ensures all models are properly initialized after scene setup
      */
-    applyDefaultPanelRotations() {
-        console.log('Applying default panel rotations to all models after scene initialization');
+    onRender() {
+        console.log('Initializing models after scene setup');
         
         // Function to process a model and its children
         const processModel = (model) => {
             // Apply to this model if it has the method
-            if (model && typeof model.applyPanelDefaultRotations === 'function') {
+            if (model && typeof model.onRender === 'function') {
+                model.onRender();
+            } else if (model && typeof model.applyPanelDefaultRotations === 'function') {
+                // For backward compatibility
                 model.applyPanelDefaultRotations();
             }
             
@@ -438,7 +441,7 @@ cheDebug.app - Access the main application instance
             processModel(this.starModel);
         }
         
-        console.log('Default panel rotations successfully applied');
+        console.log('Model initialization complete');
     }
 }
 
