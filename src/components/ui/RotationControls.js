@@ -62,7 +62,7 @@ export class RotationControls {
             this.panel = document.createElement('div');
             this.panel.id = 'rotationControlPanel';
             this.panel.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-            this.panel.style.padding = '10px';
+            this.panel.style.padding = '6px';  // Reduced from 10px
             this.panel.style.borderRadius = '5px';
             this.panel.style.color = this.options.textColor;
             this.panel.style.display = this.options.isVisible ? 'block' : 'none';
@@ -76,7 +76,8 @@ export class RotationControls {
             // Create title
             const title = document.createElement('h3');
             title.textContent = 'Rotation Controls';
-            title.style.margin = '0 0 10px 0';
+            title.style.margin = '0 0 5px 0'; // Reduced from 10px
+            title.style.fontSize = '14px'; // Reduced font size
             this.panel.appendChild(title);
             
             // Create model sections for each model
@@ -108,15 +109,15 @@ export class RotationControls {
         // Create model section container
         const modelSection = document.createElement('div');
         modelSection.className = 'model-section';
-        modelSection.style.marginBottom = '15px';
-        modelSection.style.marginLeft = `${level * this.options.defaultIndentation}px`;
-        modelSection.style.paddingLeft = level > 0 ? '10px' : '0';
+        modelSection.style.marginBottom = '8px'; // Reduced from 15px
+        modelSection.style.marginLeft = `${level * (this.options.defaultIndentation - 5)}px`; // Reduced indentation
+        modelSection.style.paddingLeft = level > 0 ? '5px' : '0'; // Reduced from 10px
         modelSection.style.borderLeft = level > 0 ? '1px solid #444' : 'none';
         
         // Create header with model name
         const header = document.createElement('div');
         header.className = 'model-header';
-        header.style.marginBottom = '10px';
+        header.style.marginBottom = '5px'; // Reduced from 10px
         header.style.display = 'flex';
         header.style.justifyContent = 'space-between';
         header.style.alignItems = 'center';
@@ -125,6 +126,7 @@ export class RotationControls {
         modelName.textContent = config.name;
         modelName.style.margin = '0';
         modelName.style.color = '#eee';
+        modelName.style.fontSize = '13px'; // Reduced font size
         
         header.appendChild(modelName);
         modelSection.appendChild(header);
@@ -156,14 +158,14 @@ export class RotationControls {
                 const childRotationContainer = document.createElement('div');
                 childRotationContainer.className = 'child-rotation-container';
                 childRotationContainer.style.border = '1px solid #555';
-                childRotationContainer.style.borderRadius = '5px';
-                childRotationContainer.style.padding = '10px';
-                childRotationContainer.style.marginBottom = '15px';
+                childRotationContainer.style.borderRadius = '4px';
+                childRotationContainer.style.padding = '6px'; // Reduced from 10px
+                childRotationContainer.style.marginBottom = '8px'; // Reduced from 15px
                 childRotationContainer.style.backgroundColor = 'rgba(0, 50, 100, 0.2)';
                 
                 // Create header for control
                 const headerContainer = document.createElement('div');
-                headerContainer.style.marginBottom = '8px';
+                headerContainer.style.marginBottom = '4px'; // Reduced from 8px
                 headerContainer.style.display = 'flex';
                 headerContainer.style.justifyContent = 'space-between';
                 headerContainer.style.alignItems = 'center';
@@ -173,6 +175,7 @@ export class RotationControls {
                 title.style.margin = '0';
                 title.style.color = '#4CAF50';
                 title.style.fontWeight = 'bold';
+                title.style.fontSize = '12px'; // Reduced font size
                 
                 headerContainer.appendChild(title);
                 childRotationContainer.appendChild(headerContainer);
@@ -218,8 +221,8 @@ export class RotationControls {
             // Create container for child models
             const childrenContainer = document.createElement('div');
             childrenContainer.className = 'children-container';
-            childrenContainer.style.marginTop = '10px';
-            childrenContainer.style.marginLeft = `${this.options.defaultIndentation}px`;
+            childrenContainer.style.marginTop = '5px'; // Reduced from 10px
+            childrenContainer.style.marginLeft = `${this.options.defaultIndentation - 5}px`; // Reduced indentation
             
             // Create sections for each child model
             config.children.forEach((childConfig, childIndex) => {
@@ -274,23 +277,24 @@ export class RotationControls {
         console.log(`Creating slider for ${label} with min=${min}, max=${max}, value=${value}`);
         
         const container = document.createElement('div');
-        container.style.marginBottom = '15px';
-        container.style.padding = '8px';
+        container.style.marginBottom = '8px'; // Reduced from 15px
+        container.style.padding = '5px'; // Reduced from 8px
         container.style.backgroundColor = 'rgba(0, 0, 0, 0.3)';
-        container.style.borderRadius = '4px';
+        container.style.borderRadius = '3px'; // Reduced from 4px
         
         // Create label
         const labelElement = document.createElement('div');
         labelElement.textContent = label;
-        labelElement.style.marginBottom = '8px';
+        labelElement.style.marginBottom = '4px'; // Reduced from 8px
         labelElement.style.fontWeight = 'bold';
+        labelElement.style.fontSize = '11px'; // Reduced font size
         container.appendChild(labelElement);
         
         // Create slider row
         const sliderRow = document.createElement('div');
         sliderRow.style.display = 'flex';
         sliderRow.style.alignItems = 'center';
-        sliderRow.style.gap = '10px';
+        sliderRow.style.gap = '5px'; // Reduced from 10px
         
         // Create slider
         const slider = document.createElement('input');
@@ -299,16 +303,16 @@ export class RotationControls {
         slider.max = max;
         slider.value = value;
         slider.style.flex = '1';
-        slider.style.height = '20px';
+        slider.style.height = '16px'; // Reduced from 20px
         slider.style.accentColor = '#00aaff';
         
         // Create value display
         const valueDisplay = document.createElement('span');
         valueDisplay.textContent = `${value}°`;
-        valueDisplay.style.minWidth = '50px';
+        valueDisplay.style.minWidth = '40px'; // Reduced from 50px
         valueDisplay.style.textAlign = 'right';
         valueDisplay.style.fontWeight = 'bold';
-        valueDisplay.style.fontSize = '14px';
+        valueDisplay.style.fontSize = '11px'; // Reduced from 14px
         
         // Create precise input field
         const preciseInput = document.createElement('input');
@@ -317,13 +321,14 @@ export class RotationControls {
         preciseInput.max = max;
         preciseInput.step = '1';
         preciseInput.value = value;
-        preciseInput.style.width = '60px';
-        preciseInput.style.padding = '3px 5px';
-        preciseInput.style.marginLeft = '5px';
-        preciseInput.style.borderRadius = '3px';
+        preciseInput.style.width = '45px'; // Reduced from 60px
+        preciseInput.style.padding = '2px 3px'; // Reduced from 3px 5px
+        preciseInput.style.marginLeft = '3px'; // Reduced from 5px
+        preciseInput.style.borderRadius = '2px'; // Reduced from 3px
         preciseInput.style.border = '1px solid #555';
         preciseInput.style.backgroundColor = '#333';
         preciseInput.style.color = '#fff';
+        preciseInput.style.fontSize = '10px'; // Reduced font size
         
         // Add event listener for slider
         slider.addEventListener('input', () => {
@@ -591,28 +596,29 @@ export class RotationControls {
         // Add dropdown to view all rotation values
         const dropdownContainer = document.createElement('div');
         dropdownContainer.className = 'rotation-dropdown-container';
-        dropdownContainer.style.marginTop = '10px';
+        dropdownContainer.style.marginTop = '5px'; // Reduced from 10px
         
         const dropdownToggle = document.createElement('button');
         dropdownToggle.textContent = `Show Child Rotation Values ▼`;
         dropdownToggle.style.backgroundColor = '#444';
         dropdownToggle.style.color = '#fff';
         dropdownToggle.style.border = '1px solid #555';
-        dropdownToggle.style.borderRadius = '3px';
-        dropdownToggle.style.padding = '5px 10px';
+        dropdownToggle.style.borderRadius = '2px'; // Reduced from 3px
+        dropdownToggle.style.padding = '3px 6px'; // Reduced from 5px 10px
         dropdownToggle.style.cursor = 'pointer';
         dropdownToggle.style.width = '100%';
         dropdownToggle.style.textAlign = 'left';
+        dropdownToggle.style.fontSize = '10px'; // Reduced font size
         
         const rotationValuesList = document.createElement('div');
         rotationValuesList.className = 'rotation-values-list';
         rotationValuesList.style.display = 'none';
-        rotationValuesList.style.marginTop = '5px';
+        rotationValuesList.style.marginTop = '3px'; // Reduced from 5px
         rotationValuesList.style.border = '1px solid #555';
-        rotationValuesList.style.borderRadius = '3px';
-        rotationValuesList.style.padding = '5px';
+        rotationValuesList.style.borderRadius = '2px'; // Reduced from 3px
+        rotationValuesList.style.padding = '3px'; // Reduced from 5px
         rotationValuesList.style.backgroundColor = '#333';
-        rotationValuesList.style.maxHeight = '200px';
+        rotationValuesList.style.maxHeight = '150px'; // Reduced from 200px
         rotationValuesList.style.overflowY = 'auto';
         
         // Function to update rotation values in the dropdown
@@ -627,9 +633,10 @@ export class RotationControls {
                 const valueRow = document.createElement('div');
                 valueRow.style.display = 'flex';
                 valueRow.style.justifyContent = 'space-between';
-                valueRow.style.padding = '3px 0';
+                valueRow.style.padding = '2px 0'; // Reduced from 3px 0
                 valueRow.style.borderBottom = index < rotations.length - 1 ? 
                     '1px solid #444' : 'none';
+                valueRow.style.fontSize = '10px'; // Reduced font size
                 
                 const label = document.createElement('span');
                 label.textContent = rotation.name || `Child ${index + 1}`;
