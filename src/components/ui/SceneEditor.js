@@ -813,30 +813,74 @@ export class SceneEditor {
     toggleObjectVisibility(path, object, isVisible) {
         console.log(`[SceneEditor] Toggling visibility of "${path}" to ${isVisible ? 'visible' : 'hidden'}`);
         
-        // Handle the Star Model case explicitly
+        // Handle the Star Model and its children explicitly
         if (path === 'Star Model' || path.startsWith('Star Model/')) {
             console.log(`[SceneEditor] Special handling for Star Model path: ${path}`);
             
             // For debugging, log the object
             console.log(`[SceneEditor] Object type: ${object?.constructor?.name}`);
             
-            // For objects with a model property
-            if (object && object.model) {
-                console.log(`[SceneEditor] Star Model's model property type: ${object.model.constructor.name}`);
-                console.log(`[SceneEditor] Initial visibility: ${object.model.rootNode?.isEnabled()}`);
+            // Special handling for toggling the Star Model itself
+            if (path === 'Star Model' && object && object.model) {
+                console.log('[SceneEditor] Direct use of model.setVisible for Star Model');
+                try {
+                    // Directly use the model's setVisible method
+                    object.model.setVisible(isVisible);
+                    
+                    // Check if the visibility was actually set
+                    console.log(`[SceneEditor] After toggle, Star Model rootNode.isEnabled(): ${object.model.rootNode?.isEnabled()}`);
+                    
+                    // Update the checkbox state
+                    if (this.checkboxElements[path]) {
+                        this.checkboxElements[path].element.checked = isVisible;
+                    }
+                    
+                    return; // Early return after special handling
+                } catch (error) {
+                    console.error('[SceneEditor] Error setting Star Model visibility:', error);
+                }
+            }
+            
+            // Special handling for toggling a child of Star Model
+            if (path.startsWith('Star Model/') && isVisible) {
+                // Find the Star Model object from sceneObjects
+                const starModelObject = this.sceneObjects['Star Model'];
                 
-                // Special handling for toggling the Star Model
-                if (path === 'Star Model' && object.model) {
-                    console.log('[SceneEditor] Direct use of model.setVisible for Star Model');
-                    try {
-                        // Directly use the model's setVisible method
-                        object.model.setVisible(isVisible);
+                if (starModelObject && starModelObject.model) {
+                    console.log('[SceneEditor] Making parent Star Model visible for child toggle');
+                    
+                    // Check if Star Model is currently invisible
+                    const starModelVisible = this.getObjectVisibility(starModelObject);
+                    
+                    if (!starModelVisible) {
+                        console.log('[SceneEditor] Star Model is invisible, making it visible first');
                         
-                        // Check if the visibility was actually set
-                        console.log(`[SceneEditor] After toggle, Star Model rootNode.isEnabled(): ${object.model.rootNode?.isEnabled()}`);
-                        return; // Early return after special handling
-                    } catch (error) {
-                        console.error('[SceneEditor] Error setting Star Model visibility:', error);
+                        // Make Star Model visible first
+                        starModelObject.model.setVisible(true);
+                        
+                        // Update the checkbox state for Star Model
+                        if (this.checkboxElements['Star Model']) {
+                            this.checkboxElements['Star Model'].element.checked = true;
+                        }
+                    }
+                    
+                    // For Layer One Star or Layer Two Star visibility
+                    if (path === 'Star Model/Layer One Star' || path === 'Star Model/Layer Two Star') {
+                        console.log(`[SceneEditor] Directly setting visibility for ${path}`);
+                        const modelKey = path === 'Star Model/Layer One Star' ? 'layerOne' : 'layerTwo';
+                        
+                        // Update the visibility option in StarModel
+                        starModelObject.model.options.visibility[modelKey] = isVisible;
+                        
+                        // Apply the visibility settings
+                        starModelObject.model.setModelVisibility();
+                        
+                        // Update the checkbox state
+                        if (this.checkboxElements[path]) {
+                            this.checkboxElements[path].element.checked = isVisible;
+                        }
+                        
+                        return; // Early return after handling
                     }
                 }
             }
