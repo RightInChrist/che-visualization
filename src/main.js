@@ -166,7 +166,9 @@ class CHEVisualization {
                     },
                     starModel: {
                         childCount: this.starModel.childModels ? this.starModel.childModels.length : 0,
-                        radius: this.starModel.options ? this.starModel.options.outerRadius : 'unknown'
+                        radius: this.starModel.options ? this.starModel.options.outerRadius : 'unknown',
+                        layerOneRadius: this.starModel.layerOneStar && this.starModel.layerOneStar.options ? 
+                            this.starModel.layerOneStar.options.radius.toFixed(1) : 'unknown'
                     }
                 };
             },
@@ -188,7 +190,7 @@ class CHEVisualization {
                     const outerRadius = this.starModel.options ? this.starModel.options.outerRadius : 72.52;
                     const singleCutRadius = this.starModel.options ? this.starModel.options.singleCutRadius : 21;
                     this.starModel.updateRadiusSettings(outerRadius, singleCutRadius);
-                    console.log(`Updated Star Model positions with radius=${outerRadius}`);
+                    console.log(`Updated Star Model positions with outer radius=${outerRadius}`);
                 }
                 
                 return "Force updated all model positions";
