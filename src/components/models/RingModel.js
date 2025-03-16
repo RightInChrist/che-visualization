@@ -5,8 +5,9 @@ import { LayerOneModel } from './LayerOneModel';
 import { LayerTwoModel } from './LayerTwoModel';
 
 /**
- * RingModel - A composite model containing a central CUT and ring-shaped layers
- * Organizes Central CUT, Layer One Ring, and Layer Two Ring into a single model
+ * RingModel - A composite model containing ring-shaped layers
+ * Organizes Layer One Ring and Layer Two Ring into a single model
+ * (Central CUT has been moved out of the RingModel)
  */
 export class RingModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
@@ -14,7 +15,6 @@ export class RingModel extends CompositeModel {
         const defaultOptions = {
             debug: false,
             visibility: {
-                centralCut: true,
                 layerOne: true,
                 layerTwo: true
             }
@@ -25,14 +25,12 @@ export class RingModel extends CompositeModel {
         
         // Store model references for direct access
         this.models = {
-            centralCut: null,
             layerOneRing: null,
             layerTwoRing: null
         };
         
         // Friendly names for display in SceneEditor
         this.friendlyNames = {
-            centralCut: "Central CUT",
             layerOneRing: "Layer One Ring",
             layerTwoRing: "Layer Two Ring"
         };
@@ -46,14 +44,6 @@ export class RingModel extends CompositeModel {
      */
     createModels() {
         this.debugLog('Creating Ring Model with all layers');
-        
-        // Create Central CUT model
-        const centralCut = new SingleCutModel(this.scene, new Vector3(0, 0, 0), {
-            parent: this
-        });
-        centralCut.friendlyName = this.friendlyNames.centralCut;
-        this.models.centralCut = centralCut;
-        this.addChild(centralCut);
         
         // Create Layer One Ring model
         const layerOneRing = new LayerOneModel(this.scene, new Vector3(0, 0, 0), {
@@ -84,10 +74,6 @@ export class RingModel extends CompositeModel {
         const { visibility } = this.options;
         
         // Set visibility for each component
-        if (this.models.centralCut) {
-            this.models.centralCut.setVisible(visibility.centralCut);
-        }
-        
         if (this.models.layerOneRing) {
             this.models.layerOneRing.setVisible(visibility.layerOne);
         }
@@ -98,76 +84,63 @@ export class RingModel extends CompositeModel {
     }
     
     /**
-     * Update the visibility of a specific model
-     * @param {string} modelKey - Key of the model to update (centralCut, layerOne, layerTwo)
+     * Update visibility of a model by its key
+     * @param {string} modelKey - Key of the model to update ('layerOne' or 'layerTwo')
      * @param {boolean} isVisible - Whether the model should be visible
      */
     updateModelVisibility(modelKey, isVisible) {
-        if (this.options.visibility[modelKey] !== undefined) {
+        // Map option keys to model keys
+        const modelKeyMap = {
+            layerOne: 'layerOneRing',
+            layerTwo: 'layerTwoRing'
+        };
+        
+        const modelRealKey = modelKeyMap[modelKey];
+        if (modelRealKey && this.models[modelRealKey]) {
+            this.models[modelRealKey].setVisible(isVisible);
             this.options.visibility[modelKey] = isVisible;
-            this.setModelVisibility();
         }
     }
     
     /**
-     * Gets all pipe models from all layers
-     * @returns {Array} - Array of all pipe models
+     * Get all pipes from all SingleCUTs across all layers
+     * @returns {Object} - Object containing all pipes from all layers
      */
     getAllPipes() {
         const allPipes = [];
         
-        // Get pipes from central cut
-        if (this.models.centralCut && this.models.centralCut.pipes) {
-            allPipes.push(...this.models.centralCut.pipes);
+        // Get pipes from Layer One Ring
+        if (this.models.layerOneRing) {
+            const layerOnePipes = this.models.layerOneRing.getAllPipes() || [];
+            allPipes.push(...layerOnePipes);
         }
         
-        // Get pipes from layer one ring
-        if (this.models.layerOneRing && typeof this.models.layerOneRing.getAllPipes === 'function') {
-            allPipes.push(...this.models.layerOneRing.getAllPipes());
-        }
-        
-        // Get pipes from layer two ring
-        if (this.models.layerTwoRing && typeof this.models.layerTwoRing.getAllPipes === 'function') {
-            allPipes.push(...this.models.layerTwoRing.getAllPipes());
+        // Get pipes from Layer Two Ring
+        if (this.models.layerTwoRing) {
+            const layerTwoPipes = this.models.layerTwoRing.getAllPipes() || [];
+            allPipes.push(...layerTwoPipes);
         }
         
         return allPipes;
     }
     
     /**
-     * Gets all SingleCUT models from all layers
-     * @returns {Object} - Object with keys for each layer containing SingleCUT arrays
+     * Get all SingleCUT models across all layers
+     * @returns {Object} - Object containing all SingleCUT models by layer
      */
     getAllSingleCuts() {
-        const allSingleCuts = {
-            central: this.models.centralCut ? [this.models.centralCut] : [],
-            layerOne: this.models.layerOneRing && this.models.layerOneRing.singleCuts ? 
-                      this.models.layerOneRing.singleCuts : [],
-            layerTwo: this.models.layerTwoRing && this.models.layerTwoRing.singleCuts ? 
-                      this.models.layerTwoRing.singleCuts : []
+        return {
+            central: [], // Empty as central CUT has been moved out
+            layerOne: this.models.layerOneRing ? this.models.layerOneRing.getChildren() : [],
+            layerTwo: this.models.layerTwoRing ? this.models.layerTwoRing.getChildren() : []
         };
-        
-        return allSingleCuts;
     }
     
     /**
-     * Get a flat array of all models in this composite, including the top level model
-     * @returns {Array} - Array of all models
+     * Get all models in this composite structure
+     * @returns {Object} - Object containing all component models
      */
     getAllModels() {
-        const models = [this];
-        
-        Object.values(this.models).forEach(model => {
-            if (model) {
-                models.push(model);
-                
-                // If model has SingleCUTs, add them too
-                if (model.singleCuts && Array.isArray(model.singleCuts)) {
-                    models.push(...model.singleCuts);
-                }
-            }
-        });
-        
-        return models;
+        return { ...this.models };
     }
 } 

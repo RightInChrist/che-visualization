@@ -53,10 +53,13 @@ class CHEVisualization {
             // Create ground
             this.ground = new GroundModel(scene, 5000);
             
-            // Create Ring Model (contains Central CUT, Layer One Ring, and Layer Two Ring)
+            // Create Central CUT model separately
+            this.centralCutModel = new SingleCutModel(scene, new Vector3(0, 0, 0));
+            this.centralCutModel.friendlyName = "Central CUT";
+            
+            // Create Ring Model (contains Layer One Ring and Layer Two Ring)
             this.ringModel = new RingModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
-                    centralCut: true,
                     layerOne: true,
                     layerTwo: true  // Layer Two Ring visible at startup
                 }
@@ -74,6 +77,7 @@ class CHEVisualization {
             // Make sure both models are visible
             this.ringModel.setVisible(true);
             this.starModel.setVisible(true);
+            this.centralCutModel.setVisible(true);
             
             // Apply a 30-degree global rotation to all SingleCUTs in the Star models for better appearance
             console.log('Applying 30-degree global rotation to all SingleCUTs in the Star models...');
@@ -94,6 +98,13 @@ class CHEVisualization {
             }
             
             // Add shadows to all pipes in the scene
+            // For Central CUT
+            if (this.centralCutModel && this.centralCutModel.pipes) {
+                this.centralCutModel.pipes.forEach(pipe => {
+                    shadowGenerator.addShadowCaster(pipe.pipeMesh);
+                });
+            }
+            
             // For Ring Model
             const allRingPipes = this.ringModel.getAllPipes();
             allRingPipes.forEach(pipe => {
@@ -107,9 +118,10 @@ class CHEVisualization {
             });
             
             // Combine all pipe meshes for collision detection
+            const centralCutPipeMeshes = this.centralCutModel.pipes ? this.centralCutModel.pipes.map(pipe => pipe.pipeMesh) : [];
             const ringPipeMeshes = allRingPipes.map(pipe => pipe.pipeMesh);
             const starPipeMeshes = allStarPipes.map(pipe => pipe.pipeMesh);
-            const pipeMeshes = [...ringPipeMeshes, ...starPipeMeshes];
+            const pipeMeshes = [...centralCutPipeMeshes, ...ringPipeMeshes, ...starPipeMeshes];
             
             // Create camera controller
             this.cameraController = new CameraController(
@@ -134,12 +146,8 @@ class CHEVisualization {
             const ringLayerOneSingleCutObjects = {};
             const ringLayerTwoSingleCutObjects = {};
             
-            // Add Central CUT from Ring Model
-            if (ringModelSingleCuts.central.length > 0) {
-                ringModelSingleCuts.central.forEach((singleCut, index) => {
-                    ringCentralSingleCutObjects['Central CUT'] = singleCut;
-                });
-            }
+            // Add Central CUT directly
+            ringCentralSingleCutObjects['Central CUT'] = this.centralCutModel;
             
             // Add each Layer One SingleCUT from Ring Model
             ringModelSingleCuts.layerOne.forEach((singleCut, index) => {
@@ -180,7 +188,7 @@ class CHEVisualization {
                     model: this.ringModel,
                     children: {
                         'Central CUT': {
-                            model: this.ringModel.models.centralCut,
+                            model: this.centralCutModel,
                             children: ringCentralSingleCutObjects
                         },
                         'Layer One Ring': {
@@ -324,7 +332,7 @@ class CHEVisualization {
             
             // Get all layers from both models for radius and rotation controls
             const layerModels = [
-                this.ringModel.models.centralCut,
+                this.centralCutModel,
                 this.ringModel.models.layerOneRing,
                 this.ringModel.models.layerTwoRing,
                 this.starModel.models.centralCut,
@@ -338,7 +346,7 @@ class CHEVisualization {
                 layerModels,
                 {
                     isVisible: false,
-                    modelNames: ["Ring Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
+                    modelNames: ["Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
                 }
             );
             
@@ -348,7 +356,7 @@ class CHEVisualization {
                 layerModels, 
                 {
                     isVisible: false,
-                    modelNames: ["Ring Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
+                    modelNames: ["Central CUT", "Layer One Ring", "Layer Two Ring", "Star Central CUT", "Layer One Star", "Layer Two Star"]
                 }
             );
             
@@ -413,6 +421,7 @@ class CHEVisualization {
         window.cheDebug = {
             app: this,
             models: {
+                centralCutModel: this.centralCutModel,
                 ringModel: this.ringModel,
                 starModel: this.starModel,
                 layerOneRing: this.ringModel?.models?.layerOneRing,
@@ -556,13 +565,17 @@ cheDebug.app - Access the main application instance
             }
         };
         
+        // Apply to Central CUT
+        if (this.centralCutModel) {
+            processModel(this.centralCutModel);
+        }
+        
         // Apply to Ring Model and all its children
         if (this.ringModel) {
             processModel(this.ringModel);
             
             // Also process each main component directly
             if (this.ringModel.models) {
-                if (this.ringModel.models.centralCut) processModel(this.ringModel.models.centralCut);
                 if (this.ringModel.models.layerOneRing) processModel(this.ringModel.models.layerOneRing);
                 if (this.ringModel.models.layerTwoRing) processModel(this.ringModel.models.layerTwoRing);
             }
