@@ -3,6 +3,7 @@ import {
     StandardMaterial, 
     Color3, 
     Vector3,
+    Vector4,
     Axis,
     Space
 } from '@babylonjs/core';
@@ -100,7 +101,7 @@ export class PanelModel extends BaseModel {
         // Set UV for each face (0-5) - the mapping depends on how you want each face to look
         // For panels, we want the front and back to be the primary faces
         for (let i = 0; i < 6; i++) {
-            faceUV[i] = new BABYLON.Vector4(0, 0, 1, 1);
+            faceUV[i] = new Vector4(0, 0, 1, 1);
         }
         
         return faceUV;
