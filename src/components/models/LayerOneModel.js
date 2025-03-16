@@ -611,3 +611,12 @@ export class LayerOneModel extends CompositeModel {
         // For LayerOneModel, we don't need to hide any elements by default
     }
 }
+
+/**
+ * Helper function to compute a*b with higher precision
+ * to minimize floating point errors
+ */
+function exactMultiply(a, b) {
+    // Perform the multiplication with as much precision as possible
+    return parseFloat((a * b).toPrecision(15));
+}

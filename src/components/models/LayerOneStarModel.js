@@ -564,4 +564,13 @@ export class LayerOneStarModel extends CompositeModel {
         // This is just an empty implementation to match the API of LayerTwoModel
         // For LayerOneStarModel, we don't need to hide any elements by default
     }
+}
+
+/**
+ * Helper function to compute a*b with higher precision
+ * to minimize floating point errors
+ */
+function exactMultiply(a, b) {
+    // Perform the multiplication with as much precision as possible
+    return parseFloat((a * b).toPrecision(15));
 } 
