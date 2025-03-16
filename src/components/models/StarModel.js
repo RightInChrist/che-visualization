@@ -32,7 +32,7 @@ export class StarModel extends CompositeModel {
         
         // Friendly names for display in SceneEditor
         this.friendlyNames = {
-            centralCut: "Central CUT",
+            centralCut: "Star Central CUT",
             layerOneStar: "Layer One Star",
             layerTwoStar: "Layer Two Star"
         };

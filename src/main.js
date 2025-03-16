@@ -174,7 +174,7 @@ class CHEVisualization {
                 'Star Model': {
                     model: this.starModel,
                     children: {
-                        'Central CUT': {
+                        'Star Central CUT': {
                             model: this.starModel.models.centralCut,
                             children: starCentralSingleCutObjects
                         },
