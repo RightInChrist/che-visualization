@@ -40,7 +40,8 @@ export class HexagonModel extends CompositeModel {
         
         // Apply initial rotation if specified
         if (this.options.rotationAngle !== 0) {
-            this.updateRotation(this.options.rotationAngle);
+            const rotation = this.getRotation();
+            rotation.angle = this.options.rotationAngle;
         }
     }
     
@@ -247,17 +248,6 @@ export class HexagonModel extends CompositeModel {
                 this.sideNodes[i].rotation = new Vector3(0, angle, 0);
             }
         }
-    }
-    
-    /**
-     * Updates the rotation of this model. Base implementation does nothing.
-     * Child classes should override this if they need rotation functionality.
-     * @param {number} rotationAngle - The rotation angle in degrees
-     * @deprecated Use getRotation() to get a reference to the rotation object and modify it directly
-     */
-    updateRotation(rotationAngle) {
-        // Base implementation does nothing
-        // Subclasses should override this if they need rotation functionality
     }
     
     /**

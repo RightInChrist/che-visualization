@@ -483,20 +483,6 @@ export class SingleCutModel extends HexagonModel {
     }
 
     /**
-     * Updates the rotation of this model
-     * @param {number} rotationAngle - The rotation angle in degrees
-     * @deprecated Use getRotation() to get a reference to the rotation object and modify it directly
-     */
-    updateRotation(rotationAngle) {
-        // Get the rotation object and update its angle
-        const rotation = this.getRotation();
-        rotation.angle = rotationAngle;
-        
-        // Apply the rotation
-        this.applyModelRotation(rotationAngle);
-    }
-    
-    /**
      * Apply the rotation to the model's physical representation
      * @param {number} rotationAngle - The rotation angle in degrees
      */

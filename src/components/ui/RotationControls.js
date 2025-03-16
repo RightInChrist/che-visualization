@@ -151,20 +151,6 @@ export class RotationControls {
             );
             modelSection.appendChild(yRotationContainer);
         }
-        // For backward compatibility
-        else if (model && typeof model.updateRotation === 'function') {
-            const yRotationContainer = this.createSliderRow(
-                "Y Rotation",
-                0,
-                360,
-                model.options?.rotationAngle || 0,
-                (value) => {
-                    console.log(`Setting rotation for ${model.getName?.() || model.constructor.name} to ${value}°`);
-                    model.updateRotation(value);
-                }
-            );
-            modelSection.appendChild(yRotationContainer);
-        }
         
         // Add child rotation control if model supports getChildrenRotations
         if (model && typeof model.getChildrenRotations === 'function') {
@@ -503,42 +489,18 @@ export class RotationControls {
         
         console.log(`Rotation change: model=${model.constructor.name}, axis=${axis}, value=${value}`);
         
-        // First, check if this is a model that only supports Y-axis rotation with a single parameter
-        // like LayerOneModel or LayerOneStarModel
-        if (axis === 'y' && typeof model.updateRotation === 'function' && 
-            typeof model.getDefaultRotation === 'function' && 
-            typeof model.getMinRotation === 'function' && 
-            typeof model.getMaxRotation === 'function') {
-            
-            console.log(`Using single-parameter updateRotation for ${model.constructor.name}`);
-            
-            // This appears to be a model that uses the single parameter rotation pattern
-            // Call it with degrees directly
-            model.updateRotation(value);
-            
-            // The parent model's updateRotation method should handle updating child SingleCutModels properly
+        // For models that support getRotation (using the new pattern)
+        if (axis === 'y' && typeof model.getRotation === 'function') {
+            const rotation = model.getRotation();
+            rotation.angle = value;
             return;
         }
         
-        // Handle rotation specifically for SingleCutModel
-        if (model.constructor.name === 'SingleCutModel') {
-            console.log(`Updating SingleCutModel rotation to ${value} degrees`);
-            
-            // Call the updateRotation method directly with the degree value
-            if (typeof model.updateRotation === 'function') {
-                model.updateRotation(value);
-            }
-            return;
-        }
-        
-        // For models that support multi-axis rotation with radians
+        // For models that support multi-axis rotation with radians (legacy)
         // Convert from degrees to radians
         const valueInRadians = (value * Math.PI) / 180;
         
-        // Update the model's rotation
-        if (model && typeof model.updateRotation === 'function') {
-            model.updateRotation(axis, valueInRadians);
-        }
+        console.log(`Warning: Using legacy rotation method for ${model.constructor.name}`);
     }
     
     /**
