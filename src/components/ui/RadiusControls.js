@@ -246,6 +246,35 @@ export class RadiusControls {
             
             modelSection.appendChild(radiusContainer);
             
+            // Add panel rotation control for SingleCutModel
+            if (typeof config.model.updateRotation === 'function') {
+                // Get current rotation value or default to 0
+                let rotation = config.model.options && config.model.options.rotationAngle !== undefined ? 
+                    config.model.options.rotationAngle : 0;
+                
+                // Create rotation slider
+                const rotationContainer = this.createSliderRow(
+                    "Panel Rotation",
+                    0,
+                    360,
+                    rotation,
+                    (value) => {
+                        if (config.model && typeof config.model.updateRotation === 'function') {
+                            config.model.updateRotation(value);
+                            console.log(`Updated SingleCutModel panel rotation to ${value}°`);
+                        }
+                    },
+                    1 // Step of 1 degree
+                );
+                
+                // Style the rotation control to stand out
+                rotationContainer.style.borderLeft = '3px solid #ff9900';
+                rotationContainer.style.backgroundColor = 'rgba(255, 153, 0, 0.1)';
+                rotationContainer.style.paddingLeft = '10px';
+                
+                modelSection.appendChild(rotationContainer);
+            }
+            
             // Create panel distance indicator
             this.createPanelDistanceIndicator(modelSection, config.model);
         }
