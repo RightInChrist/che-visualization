@@ -32,8 +32,10 @@ class CHEVisualization {
             this.canvas = canvas;
             
             // Create scene with camera and lights
-            const scene = createScene(engine, canvas);
+            const { scene, shadowGenerator, axesViewer } = createScene(engine);
             this.scene = scene;
+            this.shadowGenerator = shadowGenerator;
+            this.axesViewer = axesViewer;
             
             // Create camera controller
             this.cameraController = new CameraController(

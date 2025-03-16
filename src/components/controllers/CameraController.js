@@ -21,11 +21,19 @@ export const CAMERA_MODES = {
  * Controller for managing different camera modes
  */
 export class CameraController {
-    constructor(scene, canvas, ground, pipes) {
+    constructor(scene, canvas, options = {}) {
         this.scene = scene;
         this.canvas = canvas;
-        this.ground = ground;
-        this.pipes = pipes;
+        
+        // Initialize from options
+        this.options = {
+            initialPosition: new Vector3(0, 100, 200),
+            zoomScaling: 5,
+            minDistance: 20,
+            maxDistance: 500,
+            ...options
+        };
+        
         this.currentMode = CAMERA_MODES.ORBIT;
         this.currentCamera = null;
         this.cameraMoveSpeed = 1.0;
@@ -59,15 +67,27 @@ export class CameraController {
      */
     setupCameras() {
         // Create orbit camera
-        this.orbitCamera = new ArcRotateCamera('orbitCamera', -Math.PI / 2, Math.PI / 3, 500, new Vector3(0, 0, 0), this.scene);
-        this.orbitCamera.lowerRadiusLimit = 10;
-        this.orbitCamera.upperRadiusLimit = 2000;
-        this.orbitCamera.wheelDeltaPercentage = 0.01;
+        this.orbitCamera = new ArcRotateCamera(
+            'orbitCamera', 
+            -Math.PI / 2, 
+            Math.PI / 3, 
+            this.options.maxDistance / 2, 
+            new Vector3(0, 0, 0), 
+            this.scene
+        );
+        
+        this.orbitCamera.lowerRadiusLimit = this.options.minDistance || 10;
+        this.orbitCamera.upperRadiusLimit = this.options.maxDistance || 2000;
+        this.orbitCamera.wheelDeltaPercentage = this.options.zoomScaling ? this.options.zoomScaling / 500 : 0.01;
         this.orbitCamera.panningSensibility = 50;
-        this.orbitCamera.checkCollisions = true;
+        this.orbitCamera.checkCollisions = false; // Turn off automatic collision
         
         // Create first person camera
-        this.firstPersonCamera = new UniversalCamera('firstPersonCamera', new Vector3(0, this.minHeightAboveGround, -50), this.scene);
+        this.firstPersonCamera = new UniversalCamera(
+            'firstPersonCamera', 
+            this.options.initialPosition || new Vector3(0, this.minHeightAboveGround, -50), 
+            this.scene
+        );
         this.firstPersonCamera.fov = 1.2;
         this.firstPersonCamera.minZ = 0.1;
         this.firstPersonCamera.checkCollisions = true;
@@ -220,98 +240,135 @@ export class CameraController {
     }
     
     /**
-     * Handles camera movement based on input
+     * Update camera movement for first person and flight modes
      */
     updateCameraMovement() {
-        if (this.isTransitioning) return;
+        // Return if not in a movement-enabled camera mode
+        if (this.currentMode === CAMERA_MODES.ORBIT || !this.currentCamera) {
+            return;
+        }
         
-        if (this.currentMode === CAMERA_MODES.FIRST_PERSON || this.currentMode === CAMERA_MODES.FLIGHT) {
-            const camera = this.currentCamera;
+        // Get camera position
+        const camera = this.currentCamera;
+        const currentPosition = camera.position.clone();
+        
+        // Movement direction
+        let direction = Vector3.Zero();
+        
+        // Forward/backward movement in camera direction
+        if (this.keys.w) {
+            const forward = this.currentCamera.getDirection(Vector3.Forward());
+            direction.addInPlace(forward);
+        }
+        if (this.keys.s) {
+            const backward = this.currentCamera.getDirection(Vector3.Backward());
+            direction.addInPlace(backward);
+        }
+        
+        // Left/right movement perpendicular to camera direction
+        if (this.keys.a) {
+            const left = this.currentCamera.getDirection(Vector3.Left());
+            direction.addInPlace(left);
+        }
+        if (this.keys.d) {
+            const right = this.currentCamera.getDirection(Vector3.Right());
+            direction.addInPlace(right);
+        }
+        
+        // Up/down movement
+        if (this.keys.space) {
+            direction.addInPlace(Vector3.Up());
+        }
+        if (this.keys.shift) {
+            direction.addInPlace(Vector3.Down());
+        }
+        
+        // Only move if there's a direction
+        if (direction.length() > 0) {
+            // Normalize and scale movement
+            direction.normalize();
+            direction.scaleInPlace(this.cameraMoveSpeed);
             
-            // Get camera forward, right, and up directions
-            const forward = camera.getDirection(Vector3.Forward());
-            const right = camera.getDirection(Vector3.Right());
-            const up = Vector3.Up();
+            // Calculate next position
+            const nextPosition = currentPosition.add(direction);
             
-            // Calculate movement vector
-            const movement = new Vector3(0, 0, 0);
-            
-            // Forward/backward
-            if (this.keys.w) {
-                movement.addInPlace(forward.scale(this.cameraMoveSpeed));
+            // Ensure we don't go below the ground
+            if (nextPosition.y < this.minHeightAboveGround) {
+                nextPosition.y = this.minHeightAboveGround;
             }
-            if (this.keys.s) {
-                movement.addInPlace(forward.scale(-this.cameraMoveSpeed));
-            }
             
-            // Left/right
-            if (this.keys.a) {
-                movement.addInPlace(right.scale(-this.cameraMoveSpeed));
-            }
-            if (this.keys.d) {
-                movement.addInPlace(right.scale(this.cameraMoveSpeed));
-            }
+            // Check for collisions if collision objects exist
+            const hasCollision = this.options.pipes && this.options.pipes.length > 0 ? 
+                this.checkCollisions(currentPosition, nextPosition) : false;
             
-            // Up/down (flight mode only)
-            if (this.currentMode === CAMERA_MODES.FLIGHT) {
-                if (this.keys.space) {
-                    movement.addInPlace(up.scale(this.cameraMoveSpeed));
-                }
-                if (this.keys.shift) {
-                    movement.addInPlace(up.scale(-this.cameraMoveSpeed));
-                }
-            }
-            
-            // Apply collision detection
-            const newPosition = camera.position.add(movement);
-            
-            // Check for collisions
-            if (!this.checkCollisions(camera.position, newPosition)) {
-                camera.position = newPosition;
-            }
-            
-            // Ensure minimum height above ground
-            const groundHeight = this.ground.position.y;
-            if (camera.position.y < groundHeight + this.minHeightAboveGround) {
-                camera.position.y = groundHeight + this.minHeightAboveGround;
+            // Move camera if no collision
+            if (!hasCollision) {
+                camera.position = nextPosition;
             }
         }
     }
     
     /**
-     * Check for collisions with objects
-     * @param {Vector3} fromPosition - Starting position
-     * @param {Vector3} toPosition - Ending position
-     * @returns {boolean} - True if collision detected
+     * Check for collisions between camera and objects
+     * @param {Vector3} fromPosition - Start position for ray
+     * @param {Vector3} toPosition - End position for ray
+     * @returns {boolean} - Whether a collision was detected
      */
     checkCollisions(fromPosition, toPosition) {
-        // Create direction vector
-        const direction = toPosition.subtract(fromPosition).normalize();
-        
-        // Check for collisions with meshes
-        const ray = new Ray(fromPosition, direction, this.collisionDistance);
-        const hit = this.scene.pickWithRay(ray);
-        
-        // Visualize collision rays if debug mode is enabled
-        if (this.showCollisionRays) {
-            // Clean up old rays
-            this.collisionRayHelpers.forEach(helper => helper.dispose());
-            this.collisionRayHelpers = [];
-            
-            // Create new ray visualization
-            const rayHelper = new MeshBuilder.CreateLines('rayHelper', {
-                points: [fromPosition, fromPosition.add(direction.scale(this.collisionDistance))],
-                updatable: false
-            }, this.scene);
-            
-            const material = new StandardMaterial('rayMaterial', this.scene);
-            material.emissiveColor = hit.hit ? Color3.Red() : Color3.Green();
-            rayHelper.material = material;
-            
-            this.collisionRayHelpers.push(rayHelper);
+        // Skip collision check if no pipes are defined
+        if (!this.options.pipes || this.options.pipes.length === 0) {
+            return false;
         }
         
-        return hit.hit;
+        // Get direction and distance
+        const direction = toPosition.subtract(fromPosition);
+        const distance = direction.length();
+        const ray = new Ray(fromPosition, direction.normalize(), distance);
+        
+        // Store whether a collision was found
+        let hasCollision = false;
+        
+        // Check for collisions with pipes
+        const hits = this.options.pipes.some(mesh => {
+            if (!mesh || !mesh.isEnabled() || !mesh.isPickable) return false;
+            
+            // Check for intersection
+            const hit = ray.intersectsMesh(mesh);
+            return hit.hit;
+        });
+        
+        // Visualize rays for debugging
+        if (this.showCollisionRays) {
+            this.visualizeCollisionRay(ray, hits);
+        }
+        
+        return hits;
+    }
+    
+    /**
+     * Visualize a collision ray for debugging
+     * @param {Ray} ray - The ray to visualize
+     * @param {boolean} hit - Whether the ray hit something
+     */
+    visualizeCollisionRay(ray, hit) {
+        // Clean up old rays
+        this.collisionRayHelpers.forEach(helper => helper.dispose());
+        this.collisionRayHelpers = [];
+        
+        // Create new ray visualization
+        const rayHelper = new MeshBuilder.CreateLines('rayHelper', {
+            points: [
+                ray.origin, 
+                ray.origin.add(ray.direction.scale(ray.length))
+            ],
+            updatable: false
+        }, this.scene);
+        
+        const material = new StandardMaterial('rayMaterial', this.scene);
+        material.emissiveColor = hit ? Color3.Red() : Color3.Green();
+        rayHelper.material = material;
+        
+        this.collisionRayHelpers.push(rayHelper);
     }
     
     /**
