@@ -373,6 +373,28 @@ export class SceneEditor {
             });
         }
         
+        // Add debug logging when clicking on model labels
+        if (object && (object.constructor && 
+            (object.constructor.name.includes('Model') || 
+             object.constructor.name.includes('SingleCut')))) {
+            
+            objectLabel.style.cursor = 'pointer';
+            objectLabel.style.textDecoration = 'underline dotted';
+            objectLabel.style.color = '#4CAF50';
+            
+            objectLabel.addEventListener('click', (e) => {
+                // Stop propagation to prevent collapse toggle if applicable
+                e.stopPropagation();
+                
+                // Log model info
+                if (typeof this.logModelInfo === 'function') {
+                    this.logModelInfo(object);
+                } else {
+                    console.log("Model Debug Info:", object);
+                }
+            });
+        }
+        
         objectContainer.appendChild(objectLabel);
         
         // Add the object container to the list item
