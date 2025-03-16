@@ -33,6 +33,10 @@ export class LayerTwoModel extends CompositeModel {
         // Create the models
         this.createModels();
         
+        // Ensure consistent positioning using the same logic as radius updates
+        // This guarantees that all model positions use the exact same calculation
+        this.updateChildPositions();
+        
         // Draw radius lines if enabled
         if (this.options.showRadiusLines) {
             this.drawRadiusLines();
