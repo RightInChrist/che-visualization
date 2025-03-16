@@ -327,15 +327,14 @@ export class SingleCutModel extends HexagonModel {
                     console.log(`Stored original rotation for Panel #${i+1}: ${(panel.originalRotation.y * 180 / Math.PI).toFixed(0)}°`);
                 }
                 
-                // Calculate new Y rotation by adding delta
-                const originalY = panel.originalRotation.y;
-                let newY = originalY + (deltaRotation * Math.PI / 180); // Convert delta to radians
+                // Reset panel to its original rotation first
+                panel.rootNode.rotation = panel.originalRotation.clone();
                 
-                // Reset panel rotation to original position first (important!)
-                panel.rootNode.rotation.y = originalY;
+                // Calculate delta in radians
+                const deltaRadians = (deltaRotation * Math.PI) / 180;
                 
-                // Then apply the new rotation
-                panel.rootNode.rotation.y = newY;
+                // Apply the rotation using rotate() method (same as during panel creation)
+                panel.rootNode.rotate(BABYLON.Axis.Y, deltaRadians, BABYLON.Space.LOCAL);
                 
                 // Force Babylon to update the world matrix
                 panel.rootNode.computeWorldMatrix(true);
@@ -348,7 +347,7 @@ export class SingleCutModel extends HexagonModel {
                     panel.panelMesh.computeWorldMatrix(true);
                 }
                 
-                console.log(`Panel #${i+1}: Updated rotation from ${(originalY * 180 / Math.PI).toFixed(0)}° to ${(newY * 180 / Math.PI).toFixed(0)}° (delta: ${deltaRotation}°)`);
+                console.log(`Panel #${i+1}: Updated rotation with delta: ${deltaRotation}°`);
             }
         });
         
