@@ -16,7 +16,7 @@ export class RingModel extends CompositeModel {
             visibility: {
                 centralCut: true,
                 layerOne: true,
-                layerTwo: false
+                layerTwo: true
             }
         };
         

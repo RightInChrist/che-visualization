@@ -16,7 +16,7 @@ export class StarModel extends CompositeModel {
             visibility: {
                 centralCut: true,
                 layerOne: true,
-                layerTwo: false
+                layerTwo: true
             }
         };
         
