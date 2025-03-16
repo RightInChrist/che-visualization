@@ -53,30 +53,30 @@ class CHEVisualization {
             this.centralCutModel = new SingleCutModel(scene, new Vector3(0, 0, 0));
             this.centralCutModel.friendlyName = "Central CUT";
             
-            // Create Ring Model (contains ring of SingleCUTs)
+            // Create Ring Model (contains just a central CUT)
             this.ringModel = new RingModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
                     ring: true
                 }
             });
             
-            // Create Star Model (contains central SingleCUT and star arrangement)
+            // Create Star Model (contains just a central CUT)
             this.starModel = new StarModel(scene, new Vector3(0, 0, 0), {
                 visibility: {
                     centralCut: true
                 }
             });
             
-            // Make sure both models are visible
+            // Make sure all models are visible
             this.ringModel.setVisible(true);
             this.starModel.setVisible(true);
             this.centralCutModel.setVisible(true);
             
-            // Apply a 30-degree global rotation to all SingleCUTs in the Star models for better appearance
-            console.log('Applying 30-degree global rotation to all SingleCUTs in the Star models...');
+            // Apply a 30-degree rotation to the star model's central CUT
+            console.log('Applying 30-degree rotation to the Star Model central CUT...');
             if (this.starModel.updateAllSingleCutRotations) {
                 this.starModel.updateAllSingleCutRotations(30);
-                console.log('Applied 30-degree rotation to all SingleCUTs in Star model');
+                console.log('Applied 30-degree rotation to Star Model central CUT');
             }
             
             // Add shadows to all pipes in the scene
@@ -136,33 +136,7 @@ class CHEVisualization {
             const ringModelSingleCuts = this.ringModel.getAllSingleCuts();
             const starModelSingleCuts = this.starModel.getAllSingleCuts();
             
-            // Prepare SingleCUTs for the scene editor
-            const ringCentralSingleCutObjects = {};
-            const ringLayerOneSingleCutObjects = {};
-            
-            // Add Central CUT directly
-            ringCentralSingleCutObjects['Central CUT'] = this.centralCutModel;
-            
-            // Add each Layer One SingleCUT from Ring Model
-            ringModelSingleCuts.layerOne.forEach((singleCut, index) => {
-                ringLayerOneSingleCutObjects[`Single CUT #${index + 1}`] = singleCut;
-            });
-            
-            // Prepare Star Model SingleCUTs for the scene editor
-            const starCentralSingleCutObjects = {};
-            const starLayerOneSingleCutObjects = {};
-            
-            // Add Central CUT from Star Model
-            if (starModelSingleCuts.central.length > 0) {
-                starModelSingleCuts.central.forEach((singleCut, index) => {
-                    starCentralSingleCutObjects['Central CUT'] = singleCut;
-                });
-            }
-            
-            // Add each Layer One SingleCUT from Star Model
-            starModelSingleCuts.layerOne.forEach((singleCut, index) => {
-                starLayerOneSingleCutObjects[`Single CUT #${index + 1}`] = singleCut;
-            });
+            // No need to prepare arrays of SingleCUTs as we only have central CUTs
             
             // Organize scene objects for the scene editor
             const sceneObjects = {
@@ -170,9 +144,8 @@ class CHEVisualization {
                 'Ring Model': {
                     model: this.ringModel,
                     children: {
-                        'Ring CUTs': {
-                            model: null,
-                            children: ringLayerOneSingleCutObjects
+                        'Ring Central CUT': {
+                            model: this.ringModel.centralCut
                         }
                     }
                 },
@@ -183,12 +156,7 @@ class CHEVisualization {
                     model: this.starModel,
                     children: {
                         'Star Central CUT': {
-                            model: this.starModel.centralCut,
-                            children: starCentralSingleCutObjects
-                        },
-                        'Star Outer CUTs': {
-                            model: null,
-                            children: starLayerOneSingleCutObjects
+                            model: this.starModel.centralCut
                         }
                     }
                 },

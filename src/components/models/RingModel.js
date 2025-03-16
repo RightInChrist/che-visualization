@@ -3,18 +3,15 @@ import { CompositeModel } from './CompositeModel';
 import { SingleCutModel } from './SingleCutModel';
 
 /**
- * RingModel - A simplified composite model
- * Contains a ring of SingleCUT models
+ * RingModel - A simplified model with just a central CUT
  */
 export class RingModel extends CompositeModel {
     constructor(scene, position = new Vector3(0, 0, 0), options = {}) {
         // Default options
         const defaultOptions = {
             debug: false,
-            outerRadius: 72.52,       // Radius for positioning SingleCUTs
-            singleCutRadius: 21,      // Radius for each SingleCUT
-            numModels: 12,            // Number of SingleCUTs in the ring
-            rotationAngle: 30,        // Overall rotation angle
+            singleCutRadius: 21,    // Radius for the SingleCUT
+            rotationAngle: 30,      // Default rotation angle
             visibility: {
                 ring: true
             }
@@ -23,88 +20,65 @@ export class RingModel extends CompositeModel {
         // Call parent constructor with merged options
         super(scene, position, { ...defaultOptions, ...options });
         
-        // Create the SingleCUT models in a ring
+        // Create the central CUT
         this.createModels();
     }
     
     /**
-     * Create all SingleCUT models arranged in a ring
+     * Create the central SingleCUT model
      */
     createModels() {
-        this.debugLog('Creating Ring Model with SingleCUTs');
+        this.debugLog('Creating Ring Model with central CUT');
         
-        const { outerRadius, singleCutRadius, numModels, rotationAngle } = this.options;
+        const { singleCutRadius, rotationAngle } = this.options;
         
-        // Create SingleCUTs arranged in a ring
-        for (let i = 0; i < numModels; i++) {
-            // Calculate angle
-            const angle = (i * 2 * Math.PI) / numModels;
-            
-            // Calculate position
-            const x = outerRadius * Math.cos(angle);
-            const z = outerRadius * Math.sin(angle);
-            const position = new Vector3(x, 0, z);
-            
-            // Create a SingleCUT model
-            const singleCut = new SingleCutModel(this.scene, position, {
-                radius: singleCutRadius,
-                rotationAngle: rotationAngle,
-                parent: this
-            });
-            
-            // Add to the model children
-            this.addChild(singleCut);
-        }
+        // Create a central SingleCUT
+        const centralCut = new SingleCutModel(this.scene, new Vector3(0, 0, 0), {
+            radius: singleCutRadius,
+            rotationAngle: rotationAngle,
+            parent: this
+        });
+        
+        // Store reference to the central cut for direct access
+        this.centralCut = centralCut;
+        this.addChild(centralCut);
         
         this.debugLog('Ring Model creation complete');
     }
     
     /**
-     * Update the radius settings for all SingleCUTs
-     * @param {number} outerRadius - New outer radius for positioning
-     * @param {number} singleCutRadius - New radius for each SingleCUT
+     * Update the radius settings for the central CUT
+     * @param {number} outerRadius - Not used in this simplified model
+     * @param {number} singleCutRadius - New radius for the SingleCUT
      */
     updateRadiusSettings(outerRadius, singleCutRadius) {
-        this.options.outerRadius = outerRadius;
         this.options.singleCutRadius = singleCutRadius;
         
-        // Update positions of all SingleCUTs
-        this.childModels.forEach((singleCut, i) => {
-            // Calculate angle
-            const angle = (i * 2 * Math.PI) / this.options.numModels;
-            
-            // Calculate new position
-            const x = outerRadius * Math.cos(angle);
-            const z = outerRadius * Math.sin(angle);
-            const position = new Vector3(x, 0, z);
-            
-            // Update SingleCUT position
-            if (singleCut.rootNode) {
-                singleCut.rootNode.position = position;
-            }
-            
-            // Update SingleCUT radius
-            if (typeof singleCut.updateRadius === 'function') {
-                singleCut.updateRadius(singleCutRadius);
-            }
-        });
+        // Update the central SingleCUT radius
+        if (this.centralCut && typeof this.centralCut.updateRadius === 'function') {
+            this.centralCut.updateRadius(singleCutRadius);
+        }
     }
     
     /**
-     * Get all pipes from all SingleCUTs
+     * Update rotation for the central CUT
+     * @param {number} rotationAngle - New rotation angle in degrees
+     */
+    updateRotation(rotationAngle) {
+        this.options.rotationAngle = rotationAngle;
+        
+        // Update rotation for the central CUT
+        if (this.centralCut && typeof this.centralCut.updateRotation === 'function') {
+            this.centralCut.updateRotation(rotationAngle);
+        }
+    }
+    
+    /**
+     * Get all pipes from the central CUT
      * @returns {Array} - Array of all pipe objects
      */
     getAllPipes() {
-        const allPipes = [];
-        
-        // Collect pipes from all SingleCUTs
-        this.childModels.forEach(singleCut => {
-            if (singleCut.pipes) {
-                allPipes.push(...singleCut.pipes);
-            }
-        });
-        
-        return allPipes;
+        return this.centralCut && this.centralCut.pipes ? [...this.centralCut.pipes] : [];
     }
     
     /**
@@ -113,18 +87,8 @@ export class RingModel extends CompositeModel {
      */
     getAllSingleCuts() {
         return {
-            central: [], // Empty as central CUT has been moved out
-            layerOne: this.childModels || []
+            central: this.centralCut ? [this.centralCut] : [],
+            layerOne: [] // Empty since we only have the central CUT
         };
-    }
-    
-    /**
-     * Calculate the distance between opposite panels
-     * @returns {number} - The distance between panels in meters
-     */
-    calculatePanelDistance() {
-        // For hexagons, distance between opposite sides is 2 * radius * sin(60°)
-        // or simply radius * √3
-        return this.options.outerRadius * Math.sqrt(3);
     }
 } 
