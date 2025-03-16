@@ -160,7 +160,7 @@ export class PanelModel extends BaseModel {
         } else {
             console.warn(`Panel ${this.panelIndex+1} missing initial rotation, creating one`);
             // If no initial rotation stored, create one now
-            this.initialRotation = new BABYLON.Vector3(0, 0, 0);
+            this.initialRotation = new Vector3(0, 0, 0);
             this.rootNode.rotation = this.initialRotation.clone();
         }
         

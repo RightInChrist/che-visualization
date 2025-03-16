@@ -18,15 +18,15 @@ export const createScene = (engine) => {
     
     // Add ambient light for general illumination
     const hemisphericLight = new HemisphericLight('hemisphericLight', new Vector3(0, 1, 0), scene);
-    hemisphericLight.intensity = 0.5; // Reduced intensity for better contrast
+    hemisphericLight.intensity = 0.7; // Increased for better ambient lighting
     hemisphericLight.diffuse = new Color3(1, 1, 1);
     hemisphericLight.groundColor = new Color3(0.3, 0.3, 0.4); // Cooler ground reflection
     hemisphericLight.specular = new Color3(0.2, 0.2, 0.2); // Lower specular intensity
     
     // Main directional light (sun)
-    const directionalLight = new DirectionalLight('directionalLight', new Vector3(0.5, -1, 0.6), scene);
-    directionalLight.intensity = 0.8;
-    directionalLight.diffuse = new Color3(1, 0.95, 0.8); // Warmer sunlight color
+    const directionalLight = new DirectionalLight('directionalLight', new Vector3(0.3, -0.8, 0.5), scene);
+    directionalLight.intensity = 0.6; // Reduced for softer shadows
+    directionalLight.diffuse = new Color3(1, 0.97, 0.9); // Slightly warmer sunlight color
     directionalLight.specular = new Color3(0.9, 0.9, 0.9); // Bright specular highlights
     
     // Add a supplementary spotlight to create visual interest
@@ -37,14 +37,20 @@ export const createScene = (engine) => {
     
     // Create enhanced shadow generator
     // For better quality shadows, use CascadedShadowGenerator instead of standard ShadowGenerator
-    const shadowGenerator = new CascadedShadowGenerator(1024, directionalLight);
+    const shadowGenerator = new CascadedShadowGenerator(2048, directionalLight);
     shadowGenerator.usePercentageCloserFiltering = true; // Enables PCF which gives softer shadow edges
     shadowGenerator.filteringQuality = ShadowGenerator.QUALITY_HIGH;
     shadowGenerator.numCascades = 4; // More cascades for better shadow detail at different distances
     shadowGenerator.lambda = 0.8; // Controls the split between cascades
-    shadowGenerator.cascadeBlendPercentage = 0.1; // Smooth transition between cascades
+    shadowGenerator.cascadeBlendPercentage = 0.2; // Smooth transition between cascades
     shadowGenerator.depthClamp = true; // Improve shadow quality
     shadowGenerator.shadowMaxZ = 5000; // Extended shadow range
+    shadowGenerator.darkness = 0.6; // Make shadows less dark (0-1 scale, lower is lighter)
+    shadowGenerator.transparencyShadow = true; // Better handling of transparent objects
+    
+    // Adjust bias to fix shadow acne and peter panning
+    shadowGenerator.bias = 0.0001; // Helps prevent shadow acne
+    shadowGenerator.normalBias = 0.02; // Helps prevent peter panning effect
     
     // Set better defaults for the scene
     scene.ambientColor = new Color3(0.1, 0.1, 0.15); // Subtle ambient color
