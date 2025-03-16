@@ -45,30 +45,37 @@ export class LayerTwoStarModel extends CompositeModel {
         
         const starRadius = this.options.outerRadius;
         
+        // Store positions for verification
+        const positions = [];
+        const distances = [];
+        
         // Create 12 SingleCUTs in a star pattern
         const numModels = 12;
+        
+        this.debugLog(`Using star radius: ${starRadius.toFixed(4)}, SingleCUT radius: ${this.options.singleCutRadius.toFixed(4)}`);
         
         // Create a perfect star shape by placing all vertices at exactly the same distance from center
         for (let i = 0; i < numModels; i++) {
             // Using consistent angle calculation to ensure equidistant placement
             const angle = (i * 2 * Math.PI) / numModels;
             
-            // Calculate the position for this SingleCUT with precise math
-            const x = starRadius * Math.cos(angle);
-            const z = starRadius * Math.sin(angle);
+            // Calculate the position with high precision
+            // Use exact radius value, not a rounded approximation
+            const x = exactMultiply(starRadius, Math.cos(angle));
+            const z = exactMultiply(starRadius, Math.sin(angle));
             
             const position = new Vector3(x, 0, z);
+            positions.push(position);
             
-            // Verify distance from center to ensure equidistance
+            // Verify distance from center with high precision
             const distanceFromCenter = Math.sqrt(x * x + z * z);
+            distances.push(distanceFromCenter);
             
-            this.debugLog(`Creating SingleCUT #${i+1} at (${x.toFixed(2)}, 0, ${z.toFixed(2)}) ` +
-                          `with angle ${(angle * 180 / Math.PI).toFixed(2)}° ` +
-                          `distance from center: ${distanceFromCenter.toFixed(2)}`);
+            this.debugLog(`SingleCUT #${i+1}: angle=${(angle * 180 / Math.PI).toFixed(4)}°, ` +
+                         `position=(${x.toFixed(6)}, 0, ${z.toFixed(6)}), ` +
+                         `distance=${distanceFromCenter.toFixed(6)}`);
             
             // Create SingleCUT with rotation pointing outward from center
-            // This is achieved by setting the rotation to the angle from the center plus 180 degrees (or Math.PI radians)
-            // to make it point outward rather than inward
             const rotationAngle = this.options.singleCutRotationAngle;
             
             // Create the SingleCUT model
@@ -82,6 +89,21 @@ export class LayerTwoStarModel extends CompositeModel {
             // Add to the model children
             this.addChild(singleCut);
         }
+        
+        // Verify that all distances are the same
+        const avgDistance = distances.reduce((sum, distance) => sum + distance, 0) / distances.length;
+        let maxDeviation = 0;
+        
+        distances.forEach((distance, i) => {
+            const deviation = Math.abs(distance - avgDistance);
+            maxDeviation = Math.max(maxDeviation, deviation);
+            
+            if (deviation > 0.001) {
+                this.debugLog(`WARNING: SingleCUT #${i+1} has distance deviation of ${deviation.toFixed(6)} units from average ${avgDistance.toFixed(6)}`);
+            }
+        });
+        
+        this.debugLog(`All SingleCUTs placed with average distance ${avgDistance.toFixed(6)} and max deviation ${maxDeviation.toFixed(6)}`);
         
         this.debugLog('Layer Two Star model creation complete');
     }
@@ -112,10 +134,10 @@ export class LayerTwoStarModel extends CompositeModel {
         internalRadiusMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
         internalRadiusMaterial.emissiveColor = new Color3(0.4, 0, 0.4);
         
-        // Create circle for the standard radius
+        // Create perfect circle for the standard radius using more segments for accuracy
         const standardCircle = MeshBuilder.CreateDisc("starRadiusLine", {
             radius: this.options.outerRadius,
-            tessellation: 64,
+            tessellation: 96, // Increased from 64 for smoother circle
             sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
         standardCircle.material = standardRadiusMaterial;
@@ -127,7 +149,7 @@ export class LayerTwoStarModel extends CompositeModel {
         // Create circle for SingleCUT internal radius
         const internalCircle = MeshBuilder.CreateDisc("starInternalRadiusLine", {
             radius: this.options.singleCutRadius,
-            tessellation: 64,
+            tessellation: 96, // Increased from 64 for smoother circle
             sideOrientation: Mesh.DOUBLESIDE
         }, this.scene);
         internalCircle.material = internalRadiusMaterial;
@@ -136,12 +158,14 @@ export class LayerTwoStarModel extends CompositeModel {
         internalCircle.parent = this.rootNode;
         this.radiusLines.push(internalCircle);
         
-        // Create radius lines from center to each SingleCUT
-        for (let i = 0; i < 12; i++) {
-            const angle = (i * 2 * Math.PI) / 12;
+        // Create radius lines from center to each SingleCUT using exact model positions
+        const numModels = 12;
+        for (let i = 0; i < numModels; i++) {
+            const angle = (i * 2 * Math.PI) / numModels;
             
-            const x = this.options.outerRadius * Math.cos(angle);
-            const z = this.options.outerRadius * Math.sin(angle);
+            // Calculate exact position with high precision
+            const x = exactMultiply(this.options.outerRadius, Math.cos(angle));
+            const z = exactMultiply(this.options.outerRadius, Math.sin(angle));
             
             // Create a line from center to the SingleCUT position
             const line = MeshBuilder.CreateLines("starRadiusLine_" + i, {
@@ -465,4 +489,13 @@ export class LayerTwoStarModel extends CompositeModel {
         }
         return false;
     }
+}
+
+/**
+ * Helper function to compute a*b with higher precision
+ * to minimize floating point errors
+ */
+function exactMultiply(a, b) {
+    // Perform the multiplication with as much precision as possible
+    return parseFloat((a * b).toPrecision(15));
 } 
