@@ -150,10 +150,10 @@ export class RotationControls {
         
         // Add child rotation control if model supports getChildrenRotations
         if (model && typeof model.getChildrenRotations === 'function') {
-            // Get current child rotations
-            const childRotations = model.getChildrenRotations();
+            // Get current child rotations - this returns an array of rotation objects by reference
+            const rotations = model.getChildrenRotations();
             
-            if (childRotations) {
+            if (rotations && rotations.length > 0) {
                 const childRotationContainer = document.createElement('div');
                 childRotationContainer.className = 'child-rotation-container';
                 childRotationContainer.style.border = '1px solid #555';
@@ -178,14 +178,23 @@ export class RotationControls {
                 headerContainer.appendChild(title);
                 childRotationContainer.appendChild(headerContainer);
                 
+                // Calculate current delta (if any)
+                const currentDelta = rotations.length > 0 ? rotations[0].delta : 0;
+                
                 // Create slider for global delta
                 const deltaSlider = this.createSliderRow(
                     "Delta Rotation",
                     -180,
                     180,
-                    childRotations.currentDelta || 0,
+                    currentDelta,
                     (value) => {
-                        // Call getChildrenRotations with the delta value to apply it
+                        // Apply the delta directly to all rotation objects
+                        rotations.forEach(rotation => {
+                            rotation.delta = value;
+                            rotation.value = rotation.baseRotation + value;
+                        });
+                        
+                        // Also call the model's method to update visual elements
                         model.getChildrenRotations(value);
                     }
                 );
@@ -486,8 +495,17 @@ export class RotationControls {
         
         console.log(`Children rotation change: model=${model.getName?.() || model.constructor.name}, value=${value}`);
         
-        // Call getChildrenRotations with the delta value to apply it
+        // Get the rotation objects array
         if (typeof model.getChildrenRotations === 'function') {
+            const rotations = model.getChildrenRotations();
+            
+            // Apply the delta directly to all rotation objects
+            rotations.forEach(rotation => {
+                rotation.delta = value;
+                rotation.value = rotation.baseRotation + value;
+            });
+            
+            // Also call the model's method to update visual elements
             model.getChildrenRotations(value);
         }
     }
@@ -511,10 +529,10 @@ export class RotationControls {
      * @param {Object} model - The model to get child rotations from
      */
     addChildRotationValuesDropdown(container, model) {
-        // Get child rotations
-        const childRotations = model.getChildrenRotations();
+        // Get child rotations - this is an array of rotation objects passed by reference
+        const rotations = model.getChildrenRotations();
         
-        if (!childRotations || !childRotations.children || childRotations.children.length === 0) {
+        if (!rotations || rotations.length === 0) {
             return;
         }
         
@@ -547,26 +565,22 @@ export class RotationControls {
         const updateRotationValues = () => {
             rotationValuesList.innerHTML = '';
             
-            // Display information for each child
-            childRotations.children.forEach((child, index) => {
+            // Display information for each rotation object
+            rotations.forEach((rotation, index) => {
                 const valueRow = document.createElement('div');
                 valueRow.style.display = 'flex';
                 valueRow.style.justifyContent = 'space-between';
                 valueRow.style.padding = '3px 0';
-                valueRow.style.borderBottom = index < childRotations.children.length - 1 ? 
+                valueRow.style.borderBottom = index < rotations.length - 1 ? 
                     '1px solid #444' : 'none';
                 
                 const label = document.createElement('span');
-                label.textContent = child.name || `Child ${index + 1}`;
+                label.textContent = rotation.name || `Child ${index + 1}`;
                 label.style.fontWeight = 'bold';
-                label.title = `ID: ${child.id || index}`;
+                label.title = `ID: ${rotation.id || index}`;
                 
                 const value = document.createElement('span');
-                if (child.baseRotation !== undefined) {
-                    value.textContent = `${child.rotation.toFixed(0)}° (Base: ${child.baseRotation.toFixed(0)}°, Delta: ${child.delta || 0}°)`;
-                } else {
-                    value.textContent = `${child.rotation.toFixed(0)}°`;
-                }
+                value.textContent = `${rotation.value.toFixed(0)}° (Base: ${rotation.baseRotation.toFixed(0)}°, Delta: ${rotation.delta}°)`;
                 
                 valueRow.appendChild(label);
                 valueRow.appendChild(value);
