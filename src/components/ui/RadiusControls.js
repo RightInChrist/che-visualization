@@ -161,6 +161,72 @@ export class RadiusControls {
             );
             modelSection.appendChild(radiusContainer);
             
+            // Add panel radius controls if model supports getChildrenRadii
+            if (model && typeof model.getChildrenRadii === 'function') {
+                // Get panel radii objects - this returns an array of objects by reference
+                const panelRadii = model.getChildrenRadii();
+                
+                if (panelRadii && panelRadii.length > 0) {
+                    // Create a container for panel width controls
+                    const panelWidthsContainer = document.createElement('div');
+                    panelWidthsContainer.className = 'panel-widths-container';
+                    panelWidthsContainer.style.marginTop = '15px';
+                    panelWidthsContainer.style.padding = '10px';
+                    panelWidthsContainer.style.backgroundColor = 'rgba(0, 0, 100, 0.1)';
+                    panelWidthsContainer.style.borderLeft = '3px solid #5599ff';
+                    
+                    // Add header for panel widths section
+                    const panelWidthsHeader = document.createElement('h5');
+                    panelWidthsHeader.textContent = 'Panel Widths';
+                    panelWidthsHeader.style.margin = '0 0 10px 0';
+                    panelWidthsHeader.style.fontWeight = 'bold';
+                    panelWidthsContainer.appendChild(panelWidthsHeader);
+                    
+                    // Add a global control to adjust all panel widths
+                    const allPanelsContainer = this.createSliderRow(
+                        "All Panels",
+                        5, // Min width
+                        30, // Max width
+                        panelRadii[0].value, // Use first panel's width as default
+                        (value) => {
+                            // Apply this width to all panels
+                            model.getChildrenRadii(value);
+                        },
+                        0.1 // Allow tenths precision
+                    );
+                    
+                    // Style the global control
+                    allPanelsContainer.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
+                    allPanelsContainer.style.paddingBottom = '10px';
+                    allPanelsContainer.style.marginBottom = '10px';
+                    
+                    panelWidthsContainer.appendChild(allPanelsContainer);
+                    
+                    // Add individual panel width controls
+                    panelRadii.forEach((panelRadius, index) => {
+                        const panelContainer = this.createSliderRow(
+                            `Panel ${index + 1}`,
+                            panelRadius.min,
+                            panelRadius.max,
+                            panelRadius.value,
+                            (value) => {
+                                // Update just this panel's width
+                                panelRadius.value = value;
+                            },
+                            0.1 // Allow tenths precision
+                        );
+                        
+                        // Style individual panel controls
+                        panelContainer.style.paddingLeft = '15px';
+                        panelContainer.style.fontSize = '0.9em';
+                        
+                        panelWidthsContainer.appendChild(panelContainer);
+                    });
+                    
+                    modelSection.appendChild(panelWidthsContainer);
+                }
+            }
+            
             // Create panel distance indicator
             this.createPanelDistanceIndicator(modelSection, model);
         }

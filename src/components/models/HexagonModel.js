@@ -406,4 +406,14 @@ export class HexagonModel extends CompositeModel {
         // Call parent dispose method
         super.dispose();
     }
+    
+    /**
+     * Gets or sets radius information for child models
+     * Base implementation that returns null, to be overridden by subclasses
+     * @param {number|null} value - When provided, applies this radius value to children
+     * @returns {Array|null} - Array of radius objects for child elements, or null if not supported
+     */
+    getChildrenRadii(value = null) {
+        return null; // Base implementation returns null
+    }
 } 

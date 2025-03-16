@@ -481,6 +481,58 @@ export class SingleCutModel extends HexagonModel {
     getChildrenRotations() {
         return this.rotations;
     }
+    
+    /**
+     * Gets or sets radius information for child models (panels)
+     * @param {number|null} value - When provided, applies this radius value to children
+     * @returns {Array|null} - Array of radius objects for panels, or null if not supported
+     */
+    getChildrenRadii(value = null) {
+        // Initialize panel radii array if it doesn't exist
+        if (!this._panelRadii) {
+            this._panelRadii = this.panels.map((panel, index) => {
+                // Each panel gets its own radius object
+                return {
+                    value: panel.options?.width || this.options.panelWidth || 10,
+                    min: 5,  // Minimum sensible panel width
+                    max: 30, // Maximum sensible panel width
+                    default: panel.options?.width || this.options.panelWidth || 10,
+                    index: index, // Store panel index for reference
+                    panel: panel  // Reference to the actual panel
+                };
+            });
+            
+            // Add setters to each radius object that update the panel when changed
+            this._panelRadii.forEach(radiusObj => {
+                Object.defineProperty(radiusObj, 'value', {
+                    get: function() {
+                        return this._value || this.default;
+                    },
+                    set: function(newValue) {
+                        this._value = newValue;
+                        // Update the panel if it exists
+                        if (this.panel && this.panel.panelMesh) {
+                            // Update the panel width
+                            this.panel.panelMesh.scaling.x = newValue / this.default;
+                            // Store the new width
+                            if (this.panel.options) {
+                                this.panel.options.width = newValue;
+                            }
+                        }
+                    }
+                });
+            });
+        }
+        
+        // If a value is provided, update all radii
+        if (value !== null) {
+            this._panelRadii.forEach(radiusObj => {
+                radiusObj.value = value;
+            });
+        }
+        
+        return this._panelRadii;
+    }
 
     /**
      * Apply the rotation to the model's physical representation
