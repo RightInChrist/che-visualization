@@ -164,15 +164,15 @@ class CHEVisualization {
                     scene: this.scene,
                     models: [this.ringModel], // Only include ringModel
                     sceneEditor: this.sceneEditor,
-                    showDebugInfo: true,
-                    showRadiusControl: true,
+                    showDebugInfo: false, // Disable debug info by default
+                    showRadiusControl: false, // Disable radius control by default
                     app: this,
                     controlClasses: {
                         DebugInfoView: DebugInfoView,
                         RadiusControl: RadiusControl
                     },
                     // Only show debug toggle in bottom right
-                    showOnlyDebugToggle: true
+                    showOnlyDebugToggle: false // Hide debug toggle by default
                 }
             );
             
