@@ -12,12 +12,86 @@ import { UIController } from './components/ui/UIController';
 import { SceneEditor } from './components/ui/SceneEditor';
 import { DebugInfoView } from './components/ui/DebugInfoView';
 import { RadiusControl } from './components/ui/RadiusControl';
+import { QualitySettingsController } from './components/ui/QualitySettingsController';
+
+/**
+ * Performance metrics tracker for measuring load times
+ */
+class PerformanceTracker {
+    constructor() {
+        this.startTime = performance.now();
+        this.markers = {
+            'start': this.startTime
+        };
+        this.durations = {};
+        
+        console.log(`[PERF] Starting performance measurement at ${new Date().toISOString()}`);
+    }
+    
+    /**
+     * Mark a timing point
+     * @param {string} name - The name of the timing marker
+     */
+    mark(name) {
+        const time = performance.now();
+        this.markers[name] = time;
+        
+        // Calculate duration from start
+        const durationFromStart = time - this.startTime;
+        this.durations[name] = durationFromStart;
+        
+        console.log(`[PERF] ${name}: ${durationFromStart.toFixed(2)}ms`);
+    }
+    
+    /**
+     * Get the summary of all timings
+     * @returns {Object} - Object containing all timing information
+     */
+    getSummary() {
+        return {
+            markers: this.markers,
+            durations: this.durations,
+            totalTime: this.durations['complete'] || (performance.now() - this.startTime)
+        };
+    }
+    
+    /**
+     * Log a full performance summary to console
+     */
+    logSummary() {
+        const totalTime = this.durations['complete'] || (performance.now() - this.startTime);
+        
+        console.group('%c[PERFORMANCE SUMMARY]', 'color: #4CAF50; font-weight: bold;');
+        console.log(`%cTotal load time: ${totalTime.toFixed(2)}ms`, 'font-weight: bold;');
+        
+        // Log individual timings
+        Object.keys(this.durations).forEach(key => {
+            const percentage = ((this.durations[key] / totalTime) * 100).toFixed(1);
+            console.log(`${key}: ${this.durations[key].toFixed(2)}ms (${percentage}%)`);
+        });
+        
+        // Log browser and performance info
+        console.log('\nEnvironment:');
+        console.log(`User Agent: ${navigator.userAgent}`);
+        console.log(`CPU Cores: ${navigator.hardwareConcurrency || 'unknown'}`);
+        console.log(`Memory: ${navigator.deviceMemory ? navigator.deviceMemory + 'GB' : 'unknown'}`);
+        console.log(`Date: ${new Date().toISOString()}`);
+        console.log(`Quality Level: ${window.cheDebug?.app?.qualityController?.currentQuality || 'unknown'}`);
+        
+        console.groupEnd();
+        
+        return totalTime;
+    }
+}
 
 /**
  * Main application entry point
  */
 class CHEVisualization {
     constructor() {
+        // Create performance tracker
+        this.performanceTracker = new PerformanceTracker();
+        
         // Initialize application
         this.init();
     }
@@ -32,11 +106,15 @@ class CHEVisualization {
             this.engine = engine;
             this.canvas = canvas;
             
+            this.performanceTracker.mark('engineInitialized');
+            
             // Create scene with camera and lights
             const { scene, shadowGenerator, axesViewer } = createScene(engine);
             this.scene = scene;
             this.shadowGenerator = shadowGenerator;
             this.axesViewer = axesViewer;
+            
+            this.performanceTracker.mark('sceneCreated');
             
             // Create camera controller
             this.cameraController = new CameraController(
@@ -50,6 +128,8 @@ class CHEVisualization {
                 }
             );
             
+            this.performanceTracker.mark('cameraCreated');
+            
             // Create ground model
             this.groundModel = new GroundModel(scene, 2000);
             
@@ -58,16 +138,21 @@ class CHEVisualization {
                 debug: true
             });
             
-            // Create Star model (invisible by default)
-            this.starModel = new StarModel(scene, new Vector3(0, 0, 0), {
-                debug: true
-            });
+            this.performanceTracker.mark('ringModelCreated');
+            
+            // Create Star model but don't add it to the scene
+            // Keep the reference for compatibility with existing code
+            this.starModel = null; // Set to null instead of creating the model
+            
+            this.performanceTracker.mark('starModelCreated');
             
             // Apply initializations that require a fully set up scene
             this.onRender();
             
-            // Create an array of models for the scene editor
-            const models = [this.ringModel, this.starModel];
+            this.performanceTracker.mark('modelsInitialized');
+            
+            // Create an array of models for the scene editor - exclude starModel
+            const models = [this.ringModel];
             
             // Create scene editor
             this.sceneEditor = new SceneEditor(scene, models);
@@ -77,7 +162,7 @@ class CHEVisualization {
                 this.cameraController,
                 {
                     scene: this.scene,
-                    models: [this.ringModel, this.starModel],
+                    models: [this.ringModel], // Only include ringModel
                     sceneEditor: this.sceneEditor,
                     showDebugInfo: true,
                     showRadiusControl: true,
@@ -91,16 +176,21 @@ class CHEVisualization {
                 }
             );
             
+            this.performanceTracker.mark('uiCreated');
+            
             // Store references to UI components for easier access
             this.debugInfoView = this.uiController.debugInfoView;
+            
+            // Setup quality settings controller
+            this.qualityController = new QualitySettingsController(this.scene, this.engine);
             
             // Register before render callback for LOD updates
             scene.registerBeforeRender(() => {
                 const cameraPosition = this.scene.activeCamera.position;
                 
-                // Update LOD for both models
+                // Update LOD for ringModel only
                 this.ringModel.updateLOD(cameraPosition);
-                this.starModel.updateLOD(cameraPosition);
+                // Don't update starModel's LOD since it's not created
                 
                 // Update scene editor if needed
                 if (this.sceneEditor) {
@@ -116,9 +206,27 @@ class CHEVisualization {
             // Create render loop
             this.startRenderLoop();
             
+            this.performanceTracker.mark('renderLoopStarted');
+            
+            // First frame rendered - mark as complete
+            // We use requestAnimationFrame to ensure we've actually rendered a frame
+            requestAnimationFrame(() => {
+                this.performanceTracker.mark('firstFrameRendered');
+                
+                // Wait for a second frame to ensure stability
+                requestAnimationFrame(() => {
+                    this.performanceTracker.mark('complete');
+                    
+                    // Log the performance summary
+                    const totalTime = this.performanceTracker.logSummary();
+                    console.log(`%cCHE Visualization loaded in ${totalTime.toFixed(2)}ms`, 'color: #4CAF50; font-size: 14px; font-weight: bold;');
+                });
+            });
+            
             console.log('Initialization complete');
             
         } catch (error) {
+            this.performanceTracker.mark('error');
             console.error('Initialization error:', error);
             this.showError(`Initialization error: ${error.message}`);
         }
@@ -140,11 +248,12 @@ class CHEVisualization {
             app: this,
             models: {
                 ringModel: this.ringModel,
-                starModel: this.starModel
+                // Still include reference for debugging API compatibility
+                starModel: null
             },
             // Helper functions
             getStats: () => {
-                if (!this.ringModel || !this.starModel) {
+                if (!this.ringModel) {
                     return "Models not initialized yet";
                 }
                 
@@ -164,19 +273,12 @@ class CHEVisualization {
                         layerFiveRadius: this.ringModel.layerFiveRing && this.ringModel.layerFiveRing.options ? 
                             this.ringModel.layerFiveRing.options.radius.toFixed(1) : 'unknown'
                     },
-                    starModel: {
-                        childCount: this.starModel.childModels ? this.starModel.childModels.length : 0,
-                        radius: this.starModel.options ? this.starModel.options.outerRadius : 'unknown',
-                        layerOneRadius: this.starModel.layerOneStar && this.starModel.layerOneStar.options ? 
-                            this.starModel.layerOneStar.options.radius.toFixed(1) : 'unknown',
-                        layerTwoRadius: this.starModel.layerTwoStar && this.starModel.layerTwoStar.options ? 
-                            this.starModel.layerTwoStar.options.radius.toFixed(1) : 'unknown',
-                        layerThreeRadius: this.starModel.layerThreeStar && this.starModel.layerThreeStar.options ? 
-                            this.starModel.layerThreeStar.options.radius.toFixed(1) : 'unknown',
-                        layerFourRadius: this.starModel.layerFourStar && this.starModel.layerFourStar.options ? 
-                            this.starModel.layerFourStar.options.radius.toFixed(1) : 'unknown'
-                    }
+                    starModel: 'Not loaded' // Simplified output for star model
                 };
+            },
+            // Get performance data
+            getPerformance: () => {
+                return this.performanceTracker ? this.performanceTracker.getSummary() : 'Performance tracking not available';
             },
             // Force a complete recalculation and update of child positions
             forceUpdatePositions: () => {
@@ -191,15 +293,17 @@ class CHEVisualization {
                     console.log(`Updated Ring Model positions with outer radius=${outerRadius}`);
                 }
                 
-                // Update Star Model positions
-                if (this.starModel && typeof this.starModel.updateRadiusSettings === 'function') {
-                    const outerRadius = this.starModel.options ? this.starModel.options.outerRadius : 72.52;
-                    const singleCutRadius = this.starModel.options ? this.starModel.options.singleCutRadius : 21;
-                    this.starModel.updateRadiusSettings(outerRadius, singleCutRadius);
-                    console.log(`Updated Star Model positions with outer radius=${outerRadius}`);
-                }
+                // Star model is not loaded, so no update needed
                 
                 return "Force updated all model positions";
+            },
+            // Add quality control to global debug
+            setQuality: (level) => {
+                if (this.qualityController) {
+                    this.qualityController.setQuality(level);
+                    return `Quality set to: ${level}`;
+                }
+                return "Quality controller not initialized";
             },
             
             // Helper to explain how to use debug functions
@@ -208,7 +312,9 @@ class CHEVisualization {
 CHE Visualization Debug Console Commands:
 ----------------------------------------
 cheDebug.getStats() - Get basic statistics about models
+cheDebug.getPerformance() - Get performance timing data
 cheDebug.forceUpdatePositions() - Force complete recalculation and update of positions
+cheDebug.setQuality(level) - Set quality level ('low', 'medium', 'high', 'auto')
 cheDebug.models - Access all models directly
 cheDebug.app - Access the main application instance
 `);
@@ -288,10 +394,7 @@ cheDebug.app - Access the main application instance
             processModel(this.ringModel);
         }
         
-        // Apply to Star Model and all its children
-        if (this.starModel) {
-            processModel(this.starModel);
-        }
+        // Star model is not created, so no need to initialize it
         
         console.log('Model initialization complete');
     }
