@@ -16,7 +16,7 @@ export class SingleCutModel extends HexagonModel {
             pipeHeight: 1000, // meters
             pipeColor: new Color3(0.7, 0.7, 0.7),
             panelWidth: 50, // meters
-            panelHeight: 1000, // meters
+            panelHeight: 930, // meters - changed from 1000 to 930
             panelDepth: 0.1, // meters (thin panels)
             panelColor: new Color3(0.2, 0.6, 0.8),
             skipPanels: false, // Option to skip creating panels, for models that share panels across SingleCUTs
@@ -217,6 +217,9 @@ export class SingleCutModel extends HexagonModel {
     calculatePanelTransform(index, pipePos, nextPipePos) {
         // Calculate midpoint between pipes for panel position
         const position = pipePos.add(nextPipePos).scale(0.5);
+        
+        // Set Y position to 70 meters (panel starts 70m above ground)
+        position.y = 70;
         
         // Calculate direction vector from current pipe to next pipe
         const direction = nextPipePos.subtract(pipePos).normalize();
