@@ -157,6 +157,9 @@ export class PipeModel extends BaseModel {
         // Make text billboard face camera
         plane.billboardMode = Mesh.BILLBOARDMODE_ALL;
         
+        // Set visibility to false - these are just placeholders and not actual text
+        plane.isVisible = false;
+        
         // Parent to the marker
         plane.parent = parent;
         
